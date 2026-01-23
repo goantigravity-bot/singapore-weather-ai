@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Data Folders (Too large for GitHub)
+satellite_data/
+processed_data/
+processed_images/
+dummy_data/
+
+# Data Files
+real_sensor_data.csv
+*.nc
+*.npy
+*.pth
+*.DS_Store
+
+# IDEs
+.vscode/
+.idea/

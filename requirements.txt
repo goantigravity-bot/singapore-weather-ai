@@ -1,0 +1,10 @@
+torch
+pandas
+numpy
+matplotlib
+requests
+xarray
+netCDF4
+tqdm
+scipy
+boto3
