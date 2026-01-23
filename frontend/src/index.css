@@ -1,0 +1,242 @@
+:root {
+  --bg-color: #050b14;
+  --panel-bg: rgba(13, 19, 32, 0.85);
+  --panel-border: rgba(64, 224, 208, 0.2);
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --accent-cyan: #00f2ff;
+  --accent-green: #00ff9d;
+  --accent-red: #ff4d4d;
+
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  overflow: hidden;
+  /* Full screen app */
+  width: 100vw;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+#app-root {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Map Container Override */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-color);
+  z-index: 1;
+}
+
+/* Dark Mode Map Tiles Filter */
+.leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+/* UI Overlay Panel */
+.dashboard-overlay {
+  position: absolute;
+  top: 100px;
+  /* Moved down from 20px to clear Search Bar on Desktop */
+  left: 20px;
+  width: 380px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  padding: 24px;
+  z-index: 1000;
+  /* Above map */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: calc(100vh - 120px);
+  /* Adjust max-height */
+  overflow-y: auto;
+}
+
+.search-bar {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  z-index: 1100;
+  /* Higher than panel */
+}
+
+/* ... */
+
+.quick-links-mobile {
+  position: absolute;
+  top: 80px;
+  width: 100%;
+  z-index: 1050;
+  /* Middle layer */
+  display: flex;
+  display: flex;
+  justify-content: center;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--panel-bg);
+  border: 1px solid var(--accent-cyan);
+  color: var(--text-primary);
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-size: 16px;
+  outline: none;
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.quick-link-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--accent-cyan);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-family: var(--font-family);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.quick-link-chip:hover {
+  background: var(--accent-cyan);
+  color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+}
+
+.quick-link-icon {
+  font-size: 16px;
+}
+
+
+/* --- Global Helpers for Responsiveness --- */
+.mobile-only {
+  display: none !important;
+}
+
+.desktop-only {
+  display: flex !important;
+  /* Default for desktop-only items */
+}
+
+/* --- Quick Links Mobile styling (Hidden on desktop via .mobile-only) --- */
+.quick-links-mobile {
+  position: absolute;
+  top: 80px;
+  width: 100%;
+  z-index: 1050;
+  display: flex;
+  justify-content: center;
+}
+
+.quick-links-select {
+  width: 92%;
+  margin: 0 auto;
+  display: block;
+  background: rgba(13, 19, 32, 0.85);
+  border: 1px solid var(--accent-cyan);
+  color: var(--text-primary);
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-size: 16px;
+  outline: none;
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300f2ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+}
+
+
+/* --- Mobile Responsiveness (Max Width: 768px) --- */
+@media (max-width: 768px) {
+
+  /* Toggle Visibility */
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: flex !important;
+  }
+
+
+
+  /* Search Bar: Top & Full Width */
+  .search-bar {
+    width: 92%;
+    top: 15px;
+    z-index: 1100;
+    box-sizing: border-box;
+  }
+
+  .search-input {
+    box-sizing: border-box;
+  }
+
+  /* Forecast Panel: Bottom Sheet Styled */
+  .dashboard-overlay {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 85vh;
+    z-index: 1000;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding-bottom: 40px;
+    box-sizing: border-box;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  /* Adjust Quick Links container if needed (though desktop-only handles it) */
+  .quick-links-container.desktop-only {
+    display: none !important;
+  }
+}

@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import torch
 import pandas as pd
@@ -18,6 +19,15 @@ from predict import (
 )
 
 app = FastAPI(title="Singapore Weather AI API")
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for dev
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Global variables to hold model and data
 model = None
@@ -41,6 +51,11 @@ def health_check():
     if model is None:
         return {"status": "error", "message": "Model not loaded"}
     return {"status": "ok"}
+
+@app.get("/stations")
+def get_stations():
+    global stations_meta
+    return stations_meta
 
 @app.get("/predict")
 def predict_weather(
@@ -95,6 +110,23 @@ def predict_weather(
     with torch.no_grad():
         pred_val = model(sat_in.to(DEVICE), sensor_in.to(DEVICE)).item()
 
+    # Retrieve current readings (Temperature/Humidity) from the input data or DF
+    # We want the latest reading available for this sensor AT or BEFORE last_ts
+    cur_temp = None
+    cur_hum = None
+
+    try:
+        sensor_data = df[df['sensor_id'] == target_sensor_id]
+        if not sensor_data.empty:
+            # Sort by time
+            relevant = sensor_data[sensor_data['timestamp'] <= last_ts].sort_values('timestamp')
+            if not relevant.empty:
+                latest_record = relevant.iloc[-1]
+                cur_temp = float(latest_record['temperature'])
+                cur_hum = float(latest_record['humidity'])
+    except Exception as e:
+        print(f"Error fetching current readings: {e}")
+
     # Interpretation
     desc = "Clear / No Rain"
     if pred_val >= 2.0: desc = "Heavy Rain / Storm"
@@ -110,6 +142,10 @@ def predict_weather(
         "forecast": {
             "rainfall_mm_next_10min": round(pred_val, 4),
             "description": desc
+        },
+        "current_weather": {
+            "temperature": cur_temp,
+            "humidity": cur_hum
         }
     }
 
