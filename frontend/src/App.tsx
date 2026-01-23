@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MapComponent from './components/MapComponent';
 import ForecastPanel from './components/ForecastPanel';
+import SettingsPage from './pages/SettingsPage';
+import { ConfigProvider } from './context/ConfigContext';
 import './App.css';
 import { API_BASE_URL } from './config';
 
@@ -34,7 +37,7 @@ function App() {
     const defaultLat = 1.3521;
     const defaultLon = 103.8198;
 
-    const useDefaultLocation = () => {
+    const fallbackToDefault = () => {
       console.log("Using default location fallback.");
       fetchForecast({ lat: defaultLat, lon: defaultLon });
     };
@@ -50,7 +53,7 @@ function App() {
         },
         (error) => {
           console.warn("Geolocation denied or failed:", error);
-          useDefaultLocation();
+          fallbackToDefault();
         },
         {
           enableHighAccuracy: false,
@@ -59,7 +62,7 @@ function App() {
         }
       );
     } else {
-      useDefaultLocation();
+      fallbackToDefault();
     }
   }, []);
 
@@ -95,28 +98,36 @@ function App() {
   };
 
   return (
-    <div id="app-root">
-      {/* Search Bar */}
-      <form className="search-bar" onSubmit={handleSearch}>
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Enter location (e.g. Sentosa)..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </form>
+    <ConfigProvider>
+      <BrowserRouter>
+        <div id="app-root">
+          {/* Always Visible Components */}
+          <form className="search-bar" onSubmit={handleSearch}>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Enter location (e.g. Sentosa)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </form>
 
-      {/* Forecast Overlay */}
-      <ForecastPanel data={forecast} loading={loading} error={error} />
+          <MapComponent
+            onStationClick={handleMapClick}
+            flyToCoords={flyTo}
+            highlightedStationId={forecast?.nearest_station.id}
+          />
 
-      {/* Map */}
-      <MapComponent
-        onStationClick={handleMapClick}
-        flyToCoords={flyTo}
-        highlightedStationId={forecast?.nearest_station.id}
-      />
-    </div>
+          {/* Overlay Router */}
+          <Routes>
+            <Route path="/" element={
+              <ForecastPanel data={forecast} loading={loading} error={error} />
+            } />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </ConfigProvider>
   );
 }
 

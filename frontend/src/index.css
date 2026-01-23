@@ -21,6 +21,8 @@ body {
   /* Full screen app */
   width: 100vw;
   height: 100vh;
+  /* Dynamic height for mobile */
+  height: 100dvh;
 }
 
 #root {
@@ -54,19 +56,19 @@ body {
   top: 100px;
   /* Moved down from 20px to clear Search Bar on Desktop */
   left: 20px;
-  width: 380px;
+  width: 340px;
   background: var(--panel-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--panel-border);
   border-radius: 16px;
-  padding: 24px;
+  padding: 16px;
   z-index: 1000;
   /* Above map */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   max-height: calc(100vh - 120px);
   /* Adjust max-height */
   overflow-y: auto;
@@ -125,6 +127,7 @@ body {
   align-items: center;
   gap: 8px;
   transition: all 0.3s ease;
+  text-decoration: none;
 }
 
 .quick-link-chip:hover {
@@ -215,14 +218,19 @@ body {
     width: 100%;
     max-width: 100%;
     border-radius: 20px 20px 0 0;
-    max-height: 85vh;
+    /* Use dvh (dynamic viewport height) to account for mobile browser bars */
+    max-height: 60dvh;
     z-index: 1000;
     border-left: none;
     border-right: none;
     border-bottom: none;
-    padding-bottom: 40px;
+    /* Extra padding to clear iOS bottom toolbar and home indicator */
+    padding-bottom: max(120px, env(safe-area-inset-bottom));
     box-sizing: border-box;
     animation: slideUp 0.3s ease-out;
+    /* Ensure scrolling is smooth */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   @keyframes slideUp {

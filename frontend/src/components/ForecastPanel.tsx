@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useConfig } from '../context/ConfigContext';
+import { Link } from 'react-router-dom';
 
 interface ForecastData {
     timestamp: string;
@@ -23,21 +25,9 @@ interface Props {
     error: string | null;
 }
 
-type Metric = 'rain' | 'temp' | 'hum';
-
 const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
-    // Enable all by default or just rain
-    const [metrics, setMetrics] = useState<Set<Metric>>(new Set(['rain']));
-
-    const toggleMetric = (m: Metric) => {
-        const newMetrics = new Set(metrics);
-        if (newMetrics.has(m)) {
-            newMetrics.delete(m);
-        } else {
-            newMetrics.add(m);
-        }
-        setMetrics(newMetrics);
-    };
+    const { metrics } = useConfig();
+    const [isMinimized, setIsMinimized] = React.useState(true);
 
     if (loading) return <div className="dashboard-overlay"><h3>Loading...</h3></div>;
     if (error) return <div className="dashboard-overlay"><h3 style={{ color: 'var(--accent-red)' }}>Error: {error}</h3></div>;
@@ -46,109 +36,130 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
     const isRain = data.forecast.description.includes("Rain") || data.forecast.description.includes("Storm");
     const statusColor = isRain ? "var(--accent-red)" : "var(--accent-green)";
 
+    // Minimized State: Just a small floating button
+    if (isMinimized) {
+        return (
+            <div
+                className="dashboard-overlay"
+                style={{
+                    height: 'auto',
+                    padding: '0',
+                    width: 'auto',
+                    minWidth: 'auto',
+                    background: 'transparent',
+                    border: 'none',
+                    boxShadow: 'none',
+                    backdropFilter: 'none',
+                    pointerEvents: 'none', // Let clicks pass through transparent area
+                    bottom: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)'
+                }}
+            >
+                <div style={{ pointerEvents: 'auto' }}>
+                    <button
+                        onClick={() => setIsMinimized(false)}
+                        className="quick-link-chip"
+                        style={{
+                            background: 'var(--panel-bg)',
+                            border: '1px solid var(--accent-cyan)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                            padding: '10px 20px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            gap: '8px',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <span>👀</span> Show Forecast
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="dashboard-overlay">
-            <div className="status-badge">
-                <div className="status-dot"></div>
-                Live Status: Active
-            </div>
-
-            {/* Metric Selection Toggles (Checkboxes style) */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                <button
-                    onClick={() => toggleMetric('rain')}
-                    className="quick-link-chip"
-                    style={{
-                        background: metrics.has('rain') ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.05)',
-                        color: metrics.has('rain') ? '#000' : '#fff',
-                        flex: 1, justifyContent: 'center'
-                    }}
-                >
-                    {metrics.has('rain') ? '☑' : '☐'} Rain
-                </button>
-                <button
-                    onClick={() => toggleMetric('temp')}
-                    className="quick-link-chip"
-                    style={{
-                        background: metrics.has('temp') ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.05)',
-                        color: metrics.has('temp') ? '#000' : '#fff',
-                        flex: 1, justifyContent: 'center'
-                    }}
-                >
-                    {metrics.has('temp') ? '☑' : '☐'} Temp
-                </button>
-                <button
-                    onClick={() => toggleMetric('hum')}
-                    className="quick-link-chip"
-                    style={{
-                        background: metrics.has('hum') ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.05)',
-                        color: metrics.has('hum') ? '#000' : '#fff',
-                        flex: 1, justifyContent: 'center'
-                    }}
-                >
-                    {metrics.has('hum') ? '☑' : '☐'} Hum
-                </button>
-            </div>
-
-            <div>
-                <div className="metric-label">Location</div>
-                <div className="location-title">{data.nearest_station.name}</div>
-                <div style={{ fontSize: '12px', color: 'gray' }}>Query: {data.location_query}</div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {metrics.has('rain') && (
-                    <div className="metric-card" style={{ borderColor: statusColor }}>
-                        <div className="metric-icon">
-                            {isRain ? '🌧️' : '☁️'}
-                        </div>
-                        <div className="metric-info">
-                            <div className="metric-label">Rainfall Prediction (10m)</div>
-                            <div className="metric-value" style={{ color: statusColor }}>
-                                {data.forecast.rainfall_mm_next_10min} mm
-                            </div>
-                            <div style={{ fontSize: '14px', color: statusColor }}>
-                                {data.forecast.description}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {metrics.has('temp') && (
-                    <div className="metric-card">
-                        <div className="metric-icon">🌡️</div>
-                        <div className="metric-info">
-                            <div className="metric-label">Current Temperature</div>
-                            <div className="metric-value" style={{ color: "var(--accent-cyan)" }}>
-                                {data.current_weather?.temperature != null ? `${data.current_weather.temperature} °C` : "N/A"}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {metrics.has('hum') && (
-                    <div className="metric-card">
-                        <div className="metric-icon">💧</div>
-                        <div className="metric-info">
-                            <div className="metric-label">Relative Humidity</div>
-                            <div className="metric-value" style={{ color: "var(--accent-cyan)" }}>
-                                {data.current_weather?.humidity != null ? `${data.current_weather.humidity} %` : "N/A"}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="metric-card" style={{ marginTop: '10px' }}>
-                <div className="metric-icon">📡</div>
-                <div className="metric-info">
-                    <div className="metric-label">Nearest Sensor</div>
-                    <div className="metric-value">{data.nearest_station.id}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div className="status-badge">
+                    <div className="status-dot"></div>
+                    Live
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        onClick={() => setIsMinimized(true)}
+                        className="quick-link-chip"
+                        style={{ padding: '4px 10px', fontSize: '1.2rem' }}
+                        title="Hide Completely"
+                    >
+                        ➖
+                    </button>
+                    <Link to="/settings" className="quick-link-chip" style={{ padding: '4px 10px' }}>
+                        ⚙️
+                    </Link>
                 </div>
             </div>
 
-            <div style={{ fontSize: '10px', color: '#666', marginTop: 'auto' }}>
-                Last Updated: {new Date(data.timestamp).toLocaleTimeString()}
+            {/* 1. Location Name on Top */}
+            <div style={{ marginBottom: '20px' }}>
+                <div className="location-title" style={{ fontSize: '1.5rem', fontWeight: 600 }}>
+                    {data.nearest_station.name}
+                </div>
+            </div>
+
+            {/* 3. Horizontal Metric Layout */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '20px' }}>
+
+                {/* Metric 1: Rain */}
+                {metrics.has('rain') && (
+                    <div className="metric-card" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '12px 4px', borderColor: statusColor }}>
+                        <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>
+                            {isRain ? '🌧️' : '☁️'}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '2px' }}>Rain</div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: statusColor }}>
+                            {isRain ? 'Yes' : 'No'}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: statusColor, marginTop: '2px' }}>
+                            {data.forecast.rainfall_mm_next_10min} mm
+                        </div>
+                    </div>
+                )}
+
+                {/* Metric 2: Temperature */}
+                {metrics.has('temp') && (
+                    <div className="metric-card" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '12px 4px' }}>
+                        <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🌡️</div>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '2px' }}>Temperature</div>
+                        <div style={{ fontSize: '1rem', color: "var(--accent-cyan)", fontWeight: 'bold' }}>
+                            {data.current_weather?.temperature != null ? `${data.current_weather.temperature}°` : "N/A"}
+                        </div>
+                    </div>
+                )}
+
+                {/* Metric 3: Humidity */}
+                {metrics.has('hum') && (
+                    <div className="metric-card" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '12px 4px' }}>
+                        <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>💧</div>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '2px' }}>Humidity</div>
+                        <div style={{ fontSize: '1rem', color: "var(--accent-cyan)", fontWeight: 'bold' }}>
+                            {data.current_weather?.humidity != null ? `${data.current_weather.humidity}%` : "N/A"}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* 4. Nearest Sensor at Bottom */}
+            <div className="metric-card" style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.03)' }}>
+                <div className="metric-icon" style={{ fontSize: '1.2rem' }}>📡</div>
+                <div className="metric-info">
+                    <div className="metric-label">Sensor Site</div>
+                    <div className="metric-value" style={{ fontSize: '0.9rem' }}>{data.nearest_station.id}</div>
+                </div>
+            </div>
+
+            <div style={{ fontSize: '10px', color: '#666', marginTop: '10px', textAlign: 'center' }}>
+                Updated: {new Date(data.timestamp).toLocaleTimeString()}
             </div>
         </div>
     );
