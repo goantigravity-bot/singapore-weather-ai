@@ -8,3 +8,7 @@ netCDF4
 tqdm
 scipy
 boto3
+fastapi
+uvicorn
+pytest
+httpx
