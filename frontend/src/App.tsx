@@ -3,6 +3,7 @@ import axios from 'axios';
 import MapComponent from './components/MapComponent';
 import ForecastPanel from './components/ForecastPanel';
 import './App.css';
+import { API_BASE_URL } from './config';
 
 interface ForecastResult {
   timestamp: string;
@@ -66,10 +67,10 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('http://127.0.0.1:8000/predict', { params });
+      const res = await axios.get(`${API_BASE_URL}/predict`, { params });
       setForecast(res.data);
 
-      const stationsRes = await axios.get('http://127.0.0.1:8000/stations');
+      const stationsRes = await axios.get(`${API_BASE_URL}/stations`);
       const station = stationsRes.data.find((s: any) => s.id === res.data.nearest_station.id);
       if (station) {
         setFlyTo({ lat: station.location.latitude, lon: station.location.longitude });

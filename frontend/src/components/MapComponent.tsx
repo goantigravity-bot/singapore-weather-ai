@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 're
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { API_BASE_URL } from '../config';
 
 // Fix leafet marker icons
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -64,7 +65,7 @@ const MapComponent: React.FC<Props & { highlightedStationId?: string }> = ({ onS
 
     useEffect(() => {
         // Fetch stations on load
-        axios.get('http://127.0.0.1:8000/stations')
+        axios.get(`${API_BASE_URL}/stations`)
             .then(res => setStations(res.data))
             .catch(err => console.error("Failed to fetch stations", err));
     }, []);
