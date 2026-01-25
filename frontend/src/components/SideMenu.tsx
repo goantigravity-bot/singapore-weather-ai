@@ -38,9 +38,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
                         <span style={{ fontSize: '1.2rem' }}>ℹ️</span> About
                     </Link>
                 </div>
-                <div style={{ position: 'absolute', bottom: '20px', width: '100%', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', opacity: 0.7 }}>
-                    v0.1
-                </div>
+
             </div>
         </>
     );

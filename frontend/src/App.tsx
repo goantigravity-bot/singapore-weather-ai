@@ -33,6 +33,7 @@ interface ForecastResult {
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [forecast, setForecast] = useState<ForecastResult | null>(null);
+  const [pathForecast, setPathForecast] = useState<any>(null); // New State for Path
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<{ lat: number, lon: number } | null>(null);
@@ -75,20 +76,59 @@ function App() {
   const fetchForecast = async (params: any) => {
     setLoading(true);
     setError(null);
+    setPathForecast(null); // Reset path
+
     try {
+      // 1. If searching by string, try Path Prediction FIRST
+      if (params.location && !params.lat) {
+        try {
+          console.log("Attempting Path Forecast for:", params.location);
+          const pathRes = await axios.get(`${API_BASE_URL}/predict/path`, { params: { query: params.location } });
+
+          if (pathRes.data && pathRes.data.points && pathRes.data.points.length > 0) {
+            // Success! It's a path.
+            const points = pathRes.data.points;
+
+            // Construct path data for Map
+            setPathForecast({
+              path: points.map((p: any) => [p.lat, p.lon]),
+              points: points
+            });
+
+            // Focus Map on first point
+            setFlyTo({ lat: points[0].lat, lon: points[0].lon });
+
+            // Set 'forecast' to a summary or just the first point to show something in standard panel
+            const first = points[0];
+            setForecast({
+              timestamp: new Date().toISOString(),
+              location_query: params.location,
+              nearest_station: { id: 'path', name: `${params.location} (Path)` },
+              forecast: {
+                rainfall_mm_next_10min: first.forecast.rainfall, // Just show first point data as summary
+                description: "Path Forecast (See Map)"
+              },
+              current_weather: {
+                temperature: first.forecast.temperature,
+                humidity: null
+              }
+            });
+            return; // Stop here, don't do single point forecast
+          }
+        } catch (e) {
+          console.log("Path forecast failed or not a path, falling back to single point.", e);
+          // Ignore error, fallback to normal
+        }
+      }
+
+      // 2. Normal Single Point Forecast (Fallback or Lat/Lon)
       const res = await axios.get(`${API_BASE_URL}/predict`, { params });
       setForecast(res.data);
 
       const stationsRes = await axios.get(`${API_BASE_URL}/stations`);
-      // Update flyTo if it was a search query, but if it was a map click (lat/lon in params), 
-      // we usually want flyTo to match that.
-      // If params has lat/lon, update flyTo to that (Red Marker position).
       if (params.lat && params.lon) {
         setFlyTo({ lat: params.lat, lon: params.lon });
       } else {
-        // Search query -> Set flyTo to the primary station or geocoded center
-        // We can assume the API returns coordinates implicitly via the station or we fetch them.
-        // For now, if searching by name, let's fly to the nearest station location found.
         const station = stationsRes.data.find((s: any) => s.id === res.data.nearest_station.id);
         if (station) {
           setFlyTo({ lat: station.location.latitude, lon: station.location.longitude });
@@ -102,6 +142,7 @@ function App() {
       setLoading(false);
     }
   };
+
 
   const logSearch = async (query: string) => {
     try {
@@ -158,6 +199,7 @@ function App() {
             onStationClick={handleMapClick}
             flyToCoords={flyTo}
             contributingStationIds={forecast?.contributing_stations}
+            pathData={pathForecast}
           />
 
           {/* Overlay Router */}

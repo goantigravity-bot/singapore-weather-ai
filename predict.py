@@ -225,7 +225,7 @@ def geocode_location(address):
     Convert address string to (lat, lon) using OpenStreetMap Nominatim API.
     """
     # Nominatim requires a User-Agent
-    headers = {'User-Agent': 'SingaporeWeatherAI/0.2'}
+    headers = {'User-Agent': 'SingaporeWeatherAI/0.3'}
     url = "https://nominatim.openstreetmap.org/search"
     
     # Append ", Singapore" to ensure we search locally
@@ -259,7 +259,7 @@ def reverse_geocode(lat, lon):
     """
     Convert (lat, lon) to address string using OpenStreetMap Nominatim API.
     """
-    headers = {'User-Agent': 'SingaporeWeatherAI/0.2'}
+    headers = {'User-Agent': 'SingaporeWeatherAI/0.3'}
     url = "https://nominatim.openstreetmap.org/reverse"
     
     params = {
@@ -301,9 +301,91 @@ def reverse_geocode(lat, lon):
             print(f"DEBUG: No display_name in reverse geocode resp for {lat},{lon}")
             return f"{lat:.3f}, {lon:.3f}"
             
+        return None
+        
     except Exception as e:
         print(f"Reverse Geocoding error: {e}")
         return None
+
+# --- Helper: OSM Path Fetching ---
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371
+    dlat = np.radians(lat2 - lat1)
+    dlon = np.radians(lon2 - lon1)
+    a = np.sin(dlat/2)**2 + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon/2)**2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+    return R * c
+
+def fetch_osm_path(query):
+    print(f"Querying Overpass API for: {query}")
+    overpass_url = "http://overpass-api.de/api/interpreter"
+    
+    # Singapore Bounding Box (approx) instead of Area search for speed/reliability
+    # South, West, North, East
+    bbox = "1.15,103.55,1.48,104.1"
+    
+    overpass_query = f"""
+    [out:json][timeout:45];
+    (
+      way["name"~"{query}",i]({bbox});
+      relation["name"~"{query}",i]({bbox});
+    );
+    out geom;
+    """
+    
+    try:
+        response = requests.get(overpass_url, params={'data': overpass_query}, timeout=50)
+        data = response.json()
+        return data
+    except Exception as e:
+        print(f"Overpass Error: {e}")
+        return None
+
+def process_and_sample_path(data, sample_dist_km=2.0):
+    if not data or 'elements' not in data:
+        return []
+        
+    all_points = []
+    
+    for el in data['elements']:
+        if 'geometry' in el:
+            for pt in el['geometry']:
+                all_points.append([pt['lat'], pt['lon']])
+        elif 'members' in el:
+            for member in el['members']:
+                if 'geometry' in member:
+                    for pt in member['geometry']:
+                        all_points.append([pt['lat'], pt['lon']])
+
+    if not all_points:
+        return []
+        
+    points = np.array(all_points)
+    
+    # 1. Remove duplicates
+    _, unique_idx = np.unique(points.round(decimals=4), axis=0, return_index=True)
+    points = points[unique_idx]
+    
+    # 2. Sort by Latitude (Heuristic for simple linear features like Rail Corridor)
+    # This is not perfect for complex shapes but works for the specific user request.
+    sorted_points = points[np.argsort(points[:, 0])[::-1]] # North to South
+    
+    if len(sorted_points) == 0:
+        return []
+        
+    final_samples = [sorted_points[0]]
+    
+    for i in range(1, len(sorted_points)):
+        curr = sorted_points[i]
+        last = final_samples[-1]
+        
+        # Dist in km
+        dist = haversine(last[0], last[1], curr[0], curr[1])
+        
+        if dist >= sample_dist_km:
+            final_samples.append(curr)
+            
+    return final_samples
 
 # --- Helper: Get Station Metadata ---
 def get_station_mapping():

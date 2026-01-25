@@ -26,9 +26,8 @@ const AboutPage: React.FC = () => {
                     borderRadius: '12px',
                     fontSize: '0.9rem',
                     fontWeight: 'bold',
-                    marginBottom: '20px'
                 }}>
-                    v0.1 Prototype
+                    v0.3
                 </div>
 
                 <p style={{ color: '#aaa', lineHeight: '1.6', margin: '0 0 20px 0' }}>
@@ -40,7 +39,7 @@ const AboutPage: React.FC = () => {
                     © 2026 Singapore Weather AI
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

@@ -13,10 +13,11 @@ from predict import (
     get_station_mapping, 
     find_sensor_id, 
     get_input_data, 
-    find_nearest_sensor,
     find_nearest_n_sensors,
     reverse_geocode,
     geocode_location,
+    fetch_osm_path,
+    process_and_sample_path,
     DEVICE
 )
 import numpy as np
@@ -121,6 +122,132 @@ def get_popular_searches():
     except Exception as e:
         print(f"Error fetching popular searches: {e}")
         return []
+
+@app.get("/predict/path")
+def predict_weather_path(
+    query: str = Query(..., description="Name of the landmark or path (e.g. 'Rail Corridor')")
+):
+    global model, df, stations_meta
+    
+    if model is None:
+        raise HTTPException(status_code=503, detail="System not ready")
+
+    print(f"Path Prediction Request for: {query}")
+    
+    # 1. Fetch Path Logic
+    path_data = fetch_osm_path(query)
+    if not path_data:
+        raise HTTPException(status_code=404, detail=f"Could not fetch path data for '{query}' from OpenStreetMap (Overpass)")
+        
+    # 2. Sample Points
+    samples = process_and_sample_path(path_data, sample_dist_km=2.0)
+    print(f"Sampled {len(samples)} points along path.")
+    
+    if not samples:
+        raise HTTPException(status_code=404, detail=f"Path found but geometry extraction failed or path is too short.")
+        
+    results = []
+    
+    # 3. Predict for each point (Reuse predict logic by calling internal helper if separated, 
+    # or just replicate simplified flow here). 
+    # We'll use a simplified flow to avoid overhead of full 'predict_weather' call which does extra arg parsing.
+    
+    # Common Time Setup
+    now = datetime.now()
+    minute_floored = (now.minute // 10) * 10
+    now = now.replace(minute=minute_floored, second=0, microsecond=0)
+    max_ts = df['timestamp'].max()
+    ref_date = max_ts.date() - timedelta(days=1)
+    target_query_time = datetime.combine(ref_date, now.time())
+    if df['timestamp'].dt.tz is not None:
+        target_query_time = pd.Timestamp(target_query_time).tz_localize(df['timestamp'].dt.tz)
+    last_ts = target_query_time
+    
+    # Reuse the IDW helper inside this scope or move it to global scope. 
+    # For now, duplicate or move. Let's move it to global scope later, but for speed, duplicate small helper.
+    def calculate_idw(values, distances, power=2):
+        if not values or not distances: return None
+        if len(values) == 1: return values[0]
+        for v, d in zip(values, distances):
+            if d < 0.1: return v
+        weights = [1.0 / (d**power) for d in distances]
+        weighted_sum = sum(v * w for v, w in zip(values, weights))
+        return weighted_sum / sum(weights)
+        
+    for i, pt in enumerate(samples):
+        lat, lon = pt[0], pt[1]
+        
+        # Determine Target Sensors (3 nearest)
+        target_sensors = find_nearest_n_sensors(lat, lon, stations_meta, n=3)
+        if not target_sensors: continue
+        
+        # Predict Rain
+        rain_preds = []
+        temp_values = []
+        hum_values = []
+        valid_distances = []
+        
+        primary_id = target_sensors[0][0]
+        
+        for sid, dist in target_sensors:
+            sat_in, sensor_in = get_input_data(df, sid, last_ts)
+            
+            # Fallback
+            if sat_in is None:
+                 try:
+                     nearest_valid = df[df['sensor_id'] == sid]['timestamp']
+                     deltas = abs(nearest_valid - last_ts)
+                     closest_ts = nearest_valid.iloc[deltas.argmin()]
+                     sat_in, sensor_in = get_input_data(df, sid, closest_ts)
+                 except: pass
+            
+            if sat_in is not None and sensor_in is not None:
+                with torch.no_grad():
+                    pred = model(sat_in.to(DEVICE), sensor_in.to(DEVICE)).item()
+                    rain_preds.append(pred)
+                    
+            # Current Readings
+            try:
+                sensor_data = df[df['sensor_id'] == sid]
+                relevant = sensor_data[sensor_data['timestamp'] <= last_ts].sort_values('timestamp')
+                if not relevant.empty:
+                    rec = relevant.iloc[-1]
+                    temp_values.append(float(rec['temperature']))
+                    hum_values.append(float(rec['humidity']))
+                    if sat_in is not None:
+                        valid_distances.append(dist)
+            except: pass
+            
+        # Aggregate
+        min_len = min(len(rain_preds), len(temp_values), len(hum_values), len(valid_distances))
+        
+        final_rain = 0.0
+        desc = "No Data"
+        
+        if min_len > 0:
+            v_dists = valid_distances[:min_len]
+            final_rain = calculate_idw(rain_preds[:min_len], v_dists)
+            final_temp = calculate_idw(temp_values[:min_len], v_dists)
+            final_hum = calculate_idw(hum_values[:min_len], v_dists)
+            
+            if final_rain >= 2.0: desc = "Heavy Rain"
+            elif final_rain >= 0.1: desc = "Light Rain"
+            else: desc = "Clear"
+            
+            results.append({
+                "lat": lat,
+                "lon": lon,
+                "forecast": {
+                    "rainfall": round(final_rain, 4),
+                    "description": desc,
+                    "temperature": round(final_temp, 1) if final_temp else None
+                }
+            })
+            
+    return {
+        "query": query,
+        "points": results
+    }
 
 @app.get("/predict")
 def predict_weather(

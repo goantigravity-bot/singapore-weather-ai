@@ -78,7 +78,21 @@ const GreenIcon = createIcon('https://raw.githubusercontent.com/pointhi/leaflet-
 const RedIcon = createIcon('https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png');
 
 
-const MapComponent: React.FC<Props & { contributingStationIds?: string[] }> = ({ onStationClick, flyToCoords, contributingStationIds }) => {
+const MapComponent: React.FC<Props & {
+    contributingStationIds?: string[],
+    pathData?: {
+        path: [number, number][];
+        points: {
+            lat: number;
+            lon: number;
+            forecast: {
+                rainfall: number;
+                description: string;
+                temperature: number | null;
+            }
+        }[];
+    } | null
+}> = ({ onStationClick, flyToCoords, contributingStationIds, pathData }) => {
     const [stations, setStations] = useState<Station[]>([]);
     const { showTriangle } = useConfig();
 
@@ -124,6 +138,34 @@ const MapComponent: React.FC<Props & { contributingStationIds?: string[] }> = ({
                         pathOptions={{ color: 'orange', dashArray: '10, 10', fillColor: 'orange', fillOpacity: 0.1, weight: 2 }}
                     />
                 )
+            )}
+
+            {/* Path Rendering */}
+            {pathData && (
+                <>
+                    {/* The Path Line */}
+                    <Polyline
+                        positions={pathData.path}
+                        pathOptions={{ color: 'purple', weight: 4, opacity: 0.7 }}
+                    />
+
+                    {/* Forecast Points along Path */}
+                    {pathData.points.map((pt, idx) => (
+                        <Marker
+                            key={`path-pt-${idx}`}
+                            position={[pt.lat, pt.lon]}
+                            icon={RedIcon}
+                            zIndexOffset={1500}
+                        >
+                            <Popup>
+                                <strong>Path Point {idx + 1}</strong><br />
+                                Rainfall: {pt.forecast.rainfall}mm<br />
+                                {pt.forecast.description}<br />
+                                {pt.forecast.temperature && `Temp: ${pt.forecast.temperature}°C`}
+                            </Popup>
+                        </Marker>
+                    ))}
+                </>
             )}
 
             {/* 1. Render User Selected Location (Red) */}
