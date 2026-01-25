@@ -1,0 +1,301 @@
+2026-01-25 21:08:40,915 - __main__ - INFO - ================================================================================
+2026-01-25 21:08:40,915 - __main__ - INFO - 🚀 开始自动化训练流程
+2026-01-25 21:08:40,915 - __main__ - INFO - 开始时间: 2026-01-25 21:08:40.915528
+2026-01-25 21:08:40,915 - __main__ - INFO - ================================================================================
+2026-01-25 21:08:40,915 - __main__ - INFO - 
+📡 步骤 1/5: 下载卫星数据
+2026-01-25 21:08:40,915 - __main__ - INFO - ============================================================
+2026-01-25 21:08:40,915 - __main__ - INFO - 开始执行: 下载卫星数据
+2026-01-25 21:08:40,915 - __main__ - INFO - 命令: python3 download_jaxa_data.py --mode batch --hours 24
+2026-01-25 21:08:40,915 - __main__ - INFO - ============================================================
+2026-01-25 21:08:40,956 - __main__ - INFO - ✅ 下载卫星数据 完成
+2026-01-25 21:08:40,956 - __main__ - INFO - 
+🌡️ 步骤 2/5: 下载传感器数据
+2026-01-25 21:08:40,956 - __main__ - INFO - 数据范围: 2026-01-06 至 2026-01-25
+2026-01-25 21:08:40,956 - __main__ - INFO - ============================================================
+2026-01-25 21:08:40,956 - __main__ - INFO - 开始执行: 下载传感器数据
+2026-01-25 21:08:40,956 - __main__ - INFO - 命令: python3 fetch_and_process_gov_data.py
+2026-01-25 21:08:40,956 - __main__ - INFO - ============================================================
+2026-01-25 21:10:44,951 - __main__ - INFO - ✅ 下载传感器数据 完成
+2026-01-25 21:10:44,951 - __main__ - INFO - 输出:
+Scheduled to fetch 7 days: ['2026-01-01', '2026-01-14', '2026-01-15', '2026-01-17', '2026-01-18', '2026-01-19', '2026-01-20']
+Processing 2026-01-01...
+  Fetching temperature for 2026-01-01...
+  Fetching rainfall for 2026-01-01...
+  Fetching humidity for 2026-01-01...
+Processing 2026-01-14...
+  Fetching temperature for 2026-01-14...
+  Fetching rainfall for 2026-01-14...
+  Fetching humidity for 2026-01-14...
+Processing 2026-01-15...
+  Fetching temperature for 2026-01-15...
+  Fetching rainfall for 2026-01-15...
+  Fetching humidity for 2026-01-15...
+Processing 2026-01-17...
+  Fetching temperature for 2026-01-17...
+  Fetching rainfall for 2026-01-17...
+  Fetching humidity for 2026-01-17...
+Processing 2026-01-18...
+  Fetching temperature for 2026-01-18...
+  Fetching rainfall for 2026-01-18...
+  Fetching humidity for 2026-01-18...
+Processing 2026-01-19...
+  Fetching temperature for 2026-01-19...
+  Fetching rainfall for 2026-01-19...
+  Fetching humidity for 2026-01-19...
+Processing 2026-01-20...
+  Fetching temperature for 2026-01-20...
+  Fetching rainfall for 2026-01-20...
+  Fetching humidity for 2026-01-20...
+Merging all days...
+Saving 230713 rows to real_sensor_data.csv...
+Done! You can now use this file in train.py
+Example:
+type                 timestamp sensor_id  humidity  rainfall  temperature
+0    2026-01-01 00:01:00+08:00       S06      82.0       0.0         26.1
+13   2026-01-01 00:02:00+08:00       S06      82.0       0.0         26.1
+26   2026-01-01 00:03:00+08:00       S06      82.0       0.0         26.1
+39   2026-01-01 00:04:00+08:00       S06      82.0       0.0         26.1
+52   2026-01-01 00:05:00+08:00       S06      82.0       0.0         26.1
+
+2026-01-25 21:10:44,952 - __main__ - INFO - 
+🖼️ 步骤 3/5: 预处理卫星图像
+2026-01-25 21:10:44,952 - __main__ - INFO - ============================================================
+2026-01-25 21:10:44,952 - __main__ - INFO - 开始执行: 预处理卫星图像
+2026-01-25 21:10:44,952 - __main__ - INFO - 命令: python3 preprocess_images.py
+2026-01-25 21:10:44,952 - __main__ - INFO - ============================================================
+2026-01-25 21:10:45,796 - __main__ - INFO - ✅ 预处理卫星图像 完成
+2026-01-25 21:10:45,796 - __main__ - INFO - 输出:
+Scanning directories: ['satellite_data']
+Found 140 satellite files in 'satellite_data'.
+Total files to process: 140
+Processing 1/140: NC_H09_20260121_1320_R21_FLDK.07001_06001.nc
+Processing 2/140: NC_H09_20260121_1050_R21_FLDK.07001_06001.nc
+Processing 3/140: NC_H09_20260121_0840_R21_FLDK.07001_06001.nc
+Processing 4/140: NC_H09_20260121_1810_R21_FLDK.07001_06001.nc
+Processing 5/140: NC_H09_20260121_0000_R21_FLDK.07001_06001.nc
+Processing 6/140: NC_H09_20260121_0800_R21_FLDK.07001_06001.nc
+Processing 7/140: NC_H09_20260121_1010_R21_FLDK.07001_06001.nc
+Processing 8/140: NC_H09_20260121_0330_R21_FLDK.07001_06001.nc
+Processing 9/140: NC_H09_20260121_0040_R21_FLDK.07001_06001.nc
+Processing 10/140: NC_H09_20260121_1850_R21_FLDK.07001_06001.nc
+Processing 11/140: NC_H09_20260121_2350_R21_FLDK.07001_06001.nc
+Processing 12/140: NC_H09_20260121_2020_R21_FLDK.07001_06001.nc
+Processing 13/140: NC_H09_20260121_0510_R21_FLDK.07001_06001.nc
+Processing 14/140: NC_H09_20260121_1630_R21_FLDK.07001_06001.nc
+Processing 15/140: NC_H09_20260121_1540_R21_FLDK.07001_06001.nc
+Processing 16/140: NC_H09_20260121_2310_R21_FLDK.07001_06001.nc
+Processing 17/140: NC_H09_20260121_0620_R21_FLDK.07001_06001.nc
+Processing 18/140: NC_H09_20260121_0550_R21_FLDK.07001_06001.nc
+Processing 19/140: NC_H09_20260121_1500_R21_FLDK.07001_06001.nc
+Processing 20/140: NC_H09_20260121_1200_R21_FLDK.07001_06001.nc
+Processing 21/140: NC_H09_20260121_0250_R21_FLDK.07001_06001.nc
+Processing 22/140: NC_H09_20260121_0120_R21_FLDK.07001_06001.nc
+Processing 23/140: NC_H09_20260121_1930_R21_FLDK.07001_06001.nc
+Processing 24/140: NC_H09_20260121_1240_R21_FLDK.07001_06001.nc
+Processing 25/140: NC_H09_20260121_1130_R21_FLDK.07001_06001.nc
+Processing 26/140: NC_H09_20260121_0920_R21_FLDK.07001_06001.nc
+Processing 27/140: NC_H09_20260121_0210_R21_FLDK.07001_06001.nc
+Processing 28/140: NC_H09_20260121_0740_R21_FLDK.07001_06001.nc
+Processing 29/140: NC_H09_20260121_0430_R21_FLDK.07001_06001.nc
+Processing 30/140: NC_H09_20260121_1710_R21_FLDK.07001_06001.nc
+Processing 31/140: NC_H09_20260121_2100_R21_FLDK.07001_06001.nc
+Processing 32/140: NC_H09_20260121_0700_R21_FLDK.07001_06001.nc
+Processing 33/140: NC_H09_20260121_1750_R21_FLDK.07001_06001.nc
+Processing 34/140: NC_H09_20260121_1420_R21_FLDK.07001_06001.nc
+Processing 35/140: NC_H09_20260121_2230_R21_FLDK.07001_06001.nc
+Processing 36/140: NC_H09_20260121_2140_R21_FLDK.07001_06001.nc
+Processing 37/140: NC_H09_20260121_0200_R21_FLDK.07001_06001.nc
+Processing 38/140: NC_H09_20260121_1250_R21_FLDK.07001_06001.nc
+Processing 39/140: NC_H09_20260121_1120_R21_FLDK.07001_06001.nc
+Processing 40/140: NC_H09_20260121_0930_R21_FLDK.07001_06001.nc
+Processing 41/140: NC_H09_20260121_0130_R21_FLDK.07001_06001.nc
+Processing 42/140: NC_H09_20260121_1920_R21_FLDK.07001_06001.nc
+Processing 43/140: NC_H09_20260121_1210_R21_FLDK.07001_06001.nc
+Processing 44/140: NC_H09_20260121_2220_R21_FLDK.07001_06001.nc
+Processing 45/140: NC_H09_20260121_2150_R21_FLDK.07001_06001.nc
+Processing 46/140: NC_H09_20260121_1740_R21_FLDK.07001_06001.nc
+Processing 47/140: NC_H09_20260121_1430_R21_FLDK.07001_06001.nc
+Processing 48/140: NC_H09_20260121_0710_R21_FLDK.07001_06001.nc
+Processing 49/140: NC_H09_20260121_2110_R21_FLDK.07001_06001.nc
+Processing 50/140: NC_H09_20260121_1700_R21_FLDK.07001_06001.nc
+Processing 51/140: NC_H09_20260121_0750_R21_FLDK.07001_06001.nc
+Processing 52/140: NC_H09_20260121_0420_R21_FLDK.07001_06001.nc
+Processing 53/140: NC_H09_20260121_0320_R21_FLDK.07001_06001.nc
+Processing 54/140: NC_H09_20260121_0050_R21_FLDK.07001_06001.nc
+Processing 55/140: NC_H09_20260121_1840_R21_FLDK.07001_06001.nc
+Processing 56/140: NC_H09_20260121_0810_R21_FLDK.07001_06001.nc
+Processing 57/140: NC_H09_20260121_1000_R21_FLDK.07001_06001.nc
+Processing 58/140: NC_H09_20260121_1800_R21_FLDK.07001_06001.nc
+Processing 59/140: NC_H09_20260121_0010_R21_FLDK.07001_06001.nc
+Processing 60/140: NC_H09_20260121_1330_R21_FLDK.07001_06001.nc
+Processing 61/140: NC_H09_20260121_0850_R21_FLDK.07001_06001.nc
+Processing 62/140: NC_H09_20260121_1510_R21_FLDK.07001_06001.nc
+Processing 63/140: NC_H09_20260121_0630_R21_FLDK.07001_06001.nc
+Processing 64/140: NC_H09_20260121_0540_R21_FLDK.07001_06001.nc
+Processing 65/140: NC_H09_20260121_2300_R21_FLDK.07001_06001.nc
+Processing 66/140: NC_H09_20260121_1620_R21_FLDK.07001_06001.nc
+Processing 67/140: NC_H09_20260121_1550_R21_FLDK.07001_06001.nc
+Processing 68/140: NC_H09_20260121_0500_R21_FLDK.07001_06001.nc
+Processing 69/140: NC_H09_20260121_2340_R21_FLDK.07001_06001.nc
+Processing 70/140: NC_H09_20260121_2030_R21_FLDK.07001_06001.nc
+Processing 71/140: NC_H09_20260121_1450_R21_FLDK.07001_06001.nc
+Processing 72/140: NC_H09_20260121_1720_R21_FLDK.07001_06001.nc
+Processing 73/140: NC_H09_20260121_0400_R21_FLDK.07001_06001.nc
+Processing 74/140: NC_H09_20260121_2130_R21_FLDK.07001_06001.nc
+Processing 75/140: NC_H09_20260121_2240_R21_FLDK.07001_06001.nc
+Processing 76/140: NC_H09_20260121_1410_R21_FLDK.07001_06001.nc
+Processing 77/140: NC_H09_20260121_0440_R21_FLDK.07001_06001.nc
+Processing 78/140: NC_H09_20260121_0730_R21_FLDK.07001_06001.nc
+Processing 79/140: NC_H09_20260121_2200_R21_FLDK.07001_06001.nc
+Processing 80/140: NC_H09_20260121_0110_R21_FLDK.07001_06001.nc
+Processing 81/140: NC_H09_20260121_1900_R21_FLDK.07001_06001.nc
+Processing 82/140: NC_H09_20260121_0950_R21_FLDK.07001_06001.nc
+Processing 83/140: NC_H09_20260121_1140_R21_FLDK.07001_06001.nc
+Processing 84/140: NC_H09_20260121_1230_R21_FLDK.07001_06001.nc
+Processing 85/140: NC_H09_20260121_1940_R21_FLDK.07001_06001.nc
+Processing 86/140: NC_H09_20260121_0150_R21_FLDK.07001_06001.nc
+Processing 87/140: NC_H09_20260121_0220_R21_FLDK.07001_06001.nc
+Processing 88/140: NC_H09_20260121_1100_R21_FLDK.07001_06001.nc
+Processing 89/140: NC_H09_20260121_0910_R21_FLDK.07001_06001.nc
+Processing 90/140: NC_H09_20260121_2010_R21_FLDK.07001_06001.nc
+Processing 91/140: NC_H09_20260121_1600_R21_FLDK.07001_06001.nc
+Processing 92/140: NC_H09_20260121_0520_R21_FLDK.07001_06001.nc
+Processing 93/140: NC_H09_20260121_0650_R21_FLDK.07001_06001.nc
+Processing 94/140: NC_H09_20260121_2050_R21_FLDK.07001_06001.nc
+Processing 95/140: NC_H09_20260121_2320_R21_FLDK.07001_06001.nc
+Processing 96/140: NC_H09_20260121_1530_R21_FLDK.07001_06001.nc
+Processing 97/140: NC_H09_20260121_1640_R21_FLDK.07001_06001.nc
+Processing 98/140: NC_H09_20260121_0610_R21_FLDK.07001_06001.nc
+Processing 99/140: NC_H09_20260121_1820_R21_FLDK.07001_06001.nc
+Processing 100/140: NC_H09_20260121_0030_R21_FLDK.07001_06001.nc
+Processing 101/140: NC_H09_20260121_0340_R21_FLDK.07001_06001.nc
+Processing 102/140: NC_H09_20260121_1310_R21_FLDK.07001_06001.nc
+Processing 103/140: NC_H09_20260121_0300_R21_FLDK.07001_06001.nc
+Processing 104/140: NC_H09_20260121_0830_R21_FLDK.07001_06001.nc
+Processing 105/140: NC_H09_20260121_1020_R21_FLDK.07001_06001.nc
+Processing 106/140: NC_H09_20260121_1350_R21_FLDK.07001_06001.nc
+Processing 107/140: NC_H09_20260121_0600_R21_FLDK.07001_06001.nc
+Processing 108/140: NC_H09_20260121_1520_R21_FLDK.07001_06001.nc
+Processing 109/140: NC_H09_20260121_1650_R21_FLDK.07001_06001.nc
+Processing 110/140: NC_H09_20260121_2040_R21_FLDK.07001_06001.nc
+Processing 111/140: NC_H09_20260121_2330_R21_FLDK.07001_06001.nc
+Processing 112/140: NC_H09_20260121_0530_R21_FLDK.07001_06001.nc
+Processing 113/140: NC_H09_20260121_0640_R21_FLDK.07001_06001.nc
+Processing 114/140: NC_H09_20260121_1610_R21_FLDK.07001_06001.nc
+Processing 115/140: NC_H09_20260121_0820_R21_FLDK.07001_06001.nc
+Processing 116/140: NC_H09_20260121_1030_R21_FLDK.07001_06001.nc
+Processing 117/140: NC_H09_20260121_1340_R21_FLDK.07001_06001.nc
+Processing 118/140: NC_H09_20260121_0310_R21_FLDK.07001_06001.nc
+Processing 119/140: NC_H09_20260121_1300_R21_FLDK.07001_06001.nc
+Processing 120/140: NC_H09_20260121_1830_R21_FLDK.07001_06001.nc
+Processing 121/140: NC_H09_20260121_0020_R21_FLDK.07001_06001.nc
+Processing 122/140: NC_H09_20260121_0350_R21_FLDK.07001_06001.nc
+Processing 123/140: NC_H09_20260121_2210_R21_FLDK.07001_06001.nc
+Processing 124/140: NC_H09_20260121_0450_R21_FLDK.07001_06001.nc
+Processing 125/140: NC_H09_20260121_0720_R21_FLDK.07001_06001.nc
+Processing 126/140: NC_H09_20260121_1400_R21_FLDK.07001_06001.nc
+Processing 127/140: NC_H09_20260121_2120_R21_FLDK.07001_06001.nc
+Processing 128/140: NC_H09_20260121_2250_R21_FLDK.07001_06001.nc
+Processing 129/140: NC_H09_20260121_0410_R21_FLDK.07001_06001.nc
+Processing 130/140: NC_H09_20260121_1730_R21_FLDK.07001_06001.nc
+Processing 131/140: NC_H09_20260121_1110_R21_FLDK.07001_06001.nc
+Processing 132/140: NC_H09_20260121_0900_R21_FLDK.07001_06001.nc
+Processing 133/140: NC_H09_20260121_1950_R21_FLDK.07001_06001.nc
+Processing 134/140: NC_H09_20260121_0140_R21_FLDK.07001_06001.nc
+Processing 135/140: NC_H09_20260121_0230_R21_FLDK.07001_06001.nc
+Processing 136/140: NC_H09_20260121_0940_R21_FLDK.07001_06001.nc
+Processing 137/140: NC_H09_20260121_1150_R21_FLDK.07001_06001.nc
+Processing 138/140: NC_H09_20260121_1220_R21_FLDK.07001_06001.nc
+Processing 139/140: NC_H09_20260121_0100_R21_FLDK.07001_06001.nc
+Processing 140/140: NC_H09_20260121_1910_R21_FLDK.07001_06001.nc
+Preprocessing Complete!
+
+2026-01-25 21:10:45,797 - __main__ - INFO - 
+🧠 步骤 4/5: 训练模型
+2026-01-25 21:10:45,797 - __main__ - INFO - ============================================================
+2026-01-25 21:10:45,797 - __main__ - INFO - 开始执行: 训练模型
+2026-01-25 21:10:45,797 - __main__ - INFO - 命令: python3 train.py
+2026-01-25 21:10:45,797 - __main__ - INFO - ============================================================
+2026-01-25 22:02:30,494 - __main__ - INFO - ✅ 训练模型 完成
+2026-01-25 22:02:30,494 - __main__ - INFO - 输出:
+Using Apple Metal Performance Shaders (MPS)
+Using device: mps
+Loading Data...
+Dataset Init: Found 1109 available satellite timestamps.
+Resampling and Aligning data...
+Starting Training...
+Epoch [1/30] Loss: 0.7184 | Val Loss: 0.5436 || MAE: 0.0846 | Val MAE: 0.0868
+Epoch [2/30] Loss: 0.6302 | Val Loss: 0.6645 || MAE: 0.0840 | Val MAE: 0.1075
+Epoch [3/30] Loss: 0.6999 | Val Loss: 0.5456 || MAE: 0.0833 | Val MAE: 0.0681
+Epoch [4/30] Loss: 0.6560 | Val Loss: 0.5184 || MAE: 0.0747 | Val MAE: 0.1897
+Epoch [5/30] Loss: 0.6287 | Val Loss: 0.5338 || MAE: 0.0764 | Val MAE: 0.0518
+Epoch [6/30] Loss: 0.6953 | Val Loss: 0.6327 || MAE: 0.0737 | Val MAE: 0.1008
+Epoch [7/30] Loss: 0.5953 | Val Loss: 0.7920 || MAE: 0.0722 | Val MAE: 0.0880
+Epoch [8/30] Loss: 0.6636 | Val Loss: 0.4735 || MAE: 0.0745 | Val MAE: 0.0778
+Epoch [9/30] Loss: 0.6133 | Val Loss: 0.4746 || MAE: 0.0699 | Val MAE: 0.0638
+Epoch [10/30] Loss: 0.5837 | Val Loss: 0.4571 || MAE: 0.0703 | Val MAE: 0.0654
+Epoch [11/30] Loss: 0.5929 | Val Loss: 0.5202 || MAE: 0.0665 | Val MAE: 0.0694
+Epoch [12/30] Loss: 0.5554 | Val Loss: 0.4656 || MAE: 0.0695 | Val MAE: 0.0561
+Epoch [13/30] Loss: 0.5801 | Val Loss: 0.4471 || MAE: 0.0703 | Val MAE: 0.0796
+Epoch [14/30] Loss: 0.5305 | Val Loss: 0.4471 || MAE: 0.0630 | Val MAE: 0.0505
+Epoch [15/30] Loss: 0.5307 | Val Loss: 0.4539 || MAE: 0.0627 | Val MAE: 0.0541
+Epoch [16/30] Loss: 0.5983 | Val Loss: 0.4348 || MAE: 0.0682 | Val MAE: 0.0584
+Epoch [17/30] Loss: 0.4586 | Val Loss: 0.4760 || MAE: 0.0607 | Val MAE: 0.0572
+Epoch [18/30] Loss: 0.4926 | Val Loss: 0.5696 || MAE: 0.0649 | Val MAE: 0.0638
+Epoch [19/30] Loss: 0.4961 | Val Loss: 0.4512 || MAE: 0.0642 | Val MAE: 0.0455
+Epoch [20/30] Loss: 0.5739 | Val Loss: 0.6154 || MAE: 0.0649 | Val MAE: 0.0730
+Epoch [21/30] Loss: 0.6715 | Val Loss: 0.4901 || MAE: 0.0704 | Val MAE: 0.0641
+Epoch [22/30] Loss: 0.5340 | Val Loss: 0.4508 || MAE: 0.0646 | Val MAE: 0.0470
+Epoch [23/30] Loss: 0.4617 | Val Loss: 0.4708 || MAE: 0.0598 | Val MAE: 0.0535
+Epoch [24/30] Loss: 0.4267 | Val Loss: 0.5173 || MAE: 0.0602 | Val MAE: 0.0554
+Epoch [25/30] Loss: 0.4298 | Val Loss: 0.6286 || MAE: 0.0602 | Val MAE: 0.0785
+Epoch [26/30] Loss: 0.4703 | Val Loss: 0.4987 || MAE: 0.0608 | Val MAE: 0.0465
+Epoch [27/30] Loss: 0.4388 | Val Loss: 0.5037 || MAE: 0.0617 | Val MAE: 0.0559
+Epoch [28/30] Loss: 0.5339 | Val Loss: 0.4947 || MAE: 0.0595 | Val MAE: 0.0570
+Epoch [29/30] Loss: 0.4326 | Val Loss: 0.4637 || MAE: 0.0609 | Val MAE: 0.0611
+Epoch [30/30] Loss: 0.3751 | Val Loss: 0.4683 || MAE: 0.0573 | Val MAE: 0.0564
+
+Training Complete. Best Val Loss: 0.4348
+Model saved to: weather_fusion_model.pth
+
+2026-01-25 22:02:30,495 - __main__ - INFO - 
+📊 步骤 5/5: 评估模型
+2026-01-25 22:02:30,495 - __main__ - INFO - ============================================================
+2026-01-25 22:02:30,495 - __main__ - INFO - 开始执行: 评估模型
+2026-01-25 22:02:30,495 - __main__ - INFO - 命令: python3 evaluate.py
+2026-01-25 22:02:30,495 - __main__ - INFO - ============================================================
+2026-01-25 22:02:48,063 - __main__ - INFO - ✅ 评估模型 完成
+2026-01-25 22:02:48,063 - __main__ - INFO - 输出:
+Dataset Init: Found 1109 available satellite timestamps.
+Resampling and Aligning data...
+Loaded model from weather_fusion_model.pth
+Running evaluation...
+
+--- Evaluation Results ---
+MAE  (Mean Abs Error):   0.0704 mm
+RMSE (Root Mean Sq Err): 0.8568 mm
+Rain Detection Acc:      97.65% (Threshold 0.1mm)
+--------------------------
+
+Evaluation Plot saved to: evaluation_plot.png
+Open this image to visually assess if points align with the diagonal red line.
+Evaluation results saved to: evaluation_results.json
+
+2026-01-25 22:02:48,063 - __main__ - INFO - 
+================================================================================
+2026-01-25 22:02:48,063 - __main__ - INFO - ✅ 训练流程完成！
+2026-01-25 22:02:48,063 - __main__ - INFO - 总耗时: 0:54:07.148050
+2026-01-25 22:02:48,063 - __main__ - INFO - ================================================================================
+2026-01-25 22:02:48,063 - __main__ - INFO - 
+📧 生成并发送报告...
+2026-01-25 22:02:48,063 - __main__ - INFO - 
+📈 收集评估指标...
+2026-01-25 22:02:48,063 - __main__ - INFO - 已从 evaluation_results.json 加载评估指标
+2026-01-25 22:02:48,063 - __main__ - INFO - 
+📁 收集数据信息...
+2026-01-25 22:02:48,304 - generate_report - INFO - ✅ 报告已生成: training_reports/report_20260125_220248.html
+2026-01-25 22:02:48,304 - notification - INFO - 已添加附件: report_20260125_220248.html
+2026-01-25 22:02:48,305 - notification - INFO - 已添加附件: evaluation_plot.png
+2026-01-25 22:02:48,305 - notification - INFO - 正在连接到 smtp.gmail.com:587...
+2026-01-25 22:02:55,190 - notification - INFO - ✅ 邮件发送成功: ✅ 模型训练成功 - 2026-01-25 22:02:48

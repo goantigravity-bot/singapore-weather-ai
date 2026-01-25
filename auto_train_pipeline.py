@@ -16,6 +16,7 @@ import traceback
 # 导入自定义模块
 from notification import send_training_success_email, send_training_failure_email
 from generate_report import generate_html_report
+from training_history import add_training_record, get_training_stats
 
 # 日志配置
 LOG_DIR = "training_logs"
@@ -324,11 +325,36 @@ class TrainingPipeline:
                 return False
         
         # 所有步骤成功
-        duration = datetime.now() - self.start_time
+        end_time = datetime.now()
+        duration = end_time - self.start_time
         logger.info("\n" + "="*80)
         logger.info("✅ 训练流程完成！")
         logger.info(f"总耗时: {duration}")
         logger.info("="*80)
+        
+        # 收集信息用于历史记录
+        metrics = self.collect_metrics()
+        data_info = self.collect_data_info()
+        training_info = self.collect_training_info()
+        
+        # 记录训练历史
+        training_config = {
+            'epochs': 30,
+            'batch_size': 4,
+            'learning_rate': 0.001
+        }
+        
+        add_training_record(
+            start_time=self.start_time,
+            end_time=end_time,
+            duration_seconds=duration.total_seconds(),
+            metrics=metrics,
+            data_info=data_info,
+            training_config=training_config,
+            success=True
+        )
+        
+        logger.info("✅ 训练历史已记录")
         
         # 生成并发送成功报告
         self.generate_and_send_report(success=True)

@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "timestamp": "2026-01-25T21:08:40",
+    "start_time": "2026-01-25 21:08:40",
+    "end_time": "2026-01-25 22:02:48",
+    "duration_seconds": 3248.0,
+    "duration_formatted": "54\u52068\u79d2",
+    "success": true,
+    "metrics": {
+      "mae": 0.0704,
+      "rmse": 0.8568,
+      "accuracy": 0.9765,
+      "threshold": 0.1,
+      "num_samples": 222
+    },
+    "data_info": {
+      "satellite_files": 140,
+      "sensor_records": 230713,
+      "num_sensors": 61,
+      "date_range": "2026-01-01 \u81f3 2026-01-21"
+    },
+    "training_config": {
+      "epochs": 30,
+      "batch_size": 4,
+      "learning_rate": 0.001,
+      "device": "MPS (Apple Silicon)"
+    }
+  }
+]
