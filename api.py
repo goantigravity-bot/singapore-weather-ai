@@ -24,6 +24,14 @@ import numpy as np
 
 import sqlite3
 from collections import Counter
+import logging
+
+# Logger Setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Singapore Weather AI API")
 
@@ -60,18 +68,19 @@ class SearchLog(BaseModel):
 model = None
 df = None
 stations_meta = []
+MAX_RADIUS_KM = 10.0  # limit for spatial correlation
 
 @app.on_event("startup")
 def startup_event():
     global model, df, stations_meta
-    print("API Startup: Loading Model and Data...")
+    logger.info("API Startup: Loading Model and Data...")
     try:
         model, df = load_system()
         model.eval()
         stations_meta = get_station_mapping()
-        print("API Startup: Success.")
+        logger.info("API Startup: Success.")
     except Exception as e:
-        print(f"API Startup Failed: {e}")
+        logger.error(f"API Startup Failed: {e}")
 
 @app.get("/health")
 def health_check():
@@ -94,7 +103,7 @@ def log_search(log: SearchLog):
         conn.close()
         return {"status": "success"}
     except Exception as e:
-        print(f"Error logging search: {e}")
+        logger.error(f"Error logging search: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.get("/popular-searches")
@@ -120,7 +129,7 @@ def get_popular_searches():
             
         return popular
     except Exception as e:
-        print(f"Error fetching popular searches: {e}")
+        logger.error(f"Error fetching popular searches: {e}")
         return []
 
 @app.get("/predict/path")
@@ -132,7 +141,7 @@ def predict_weather_path(
     if model is None:
         raise HTTPException(status_code=503, detail="System not ready")
 
-    print(f"Path Prediction Request for: {query}")
+    logger.info(f"Path Prediction Request for: {query}")
     
     # 1. Fetch Path Logic
     path_data = fetch_osm_path(query)
@@ -141,7 +150,7 @@ def predict_weather_path(
         
     # 2. Sample Points
     samples = process_and_sample_path(path_data, sample_dist_km=2.0)
-    print(f"Sampled {len(samples)} points along path.")
+    logger.info(f"Sampled {len(samples)} points along path.")
     
     if not samples:
         raise HTTPException(status_code=404, detail=f"Path found but geometry extraction failed or path is too short.")
@@ -179,6 +188,9 @@ def predict_weather_path(
         
         # Determine Target Sensors (3 nearest)
         target_sensors = find_nearest_n_sensors(lat, lon, stations_meta, n=3)
+        # Filter out sensors that are too far to be reliable
+        target_sensors = [s for s in target_sensors if s[1] <= MAX_RADIUS_KM]
+        
         if not target_sensors: continue
         
         # Predict Rain
@@ -285,7 +297,7 @@ def predict_weather(
     if df['timestamp'].dt.tz is not None:
         target_query_time = pd.Timestamp(target_query_time).tz_localize(df['timestamp'].dt.tz)
     
-    print(f"Simulating Live Data: Real Time {now} -> Mapped to History {target_query_time}")
+    logger.info(f"Simulating Live Data: Real Time {now} -> Mapped to History {target_query_time}")
 
     last_ts = target_query_time
     
@@ -306,9 +318,6 @@ def predict_weather(
         if real_name:
             station_name = real_name # Overwrite "Unknown"
             
-        if not target_sensors:
-            raise HTTPException(status_code=404, detail="No suitable sensors found near coordinates")
-            
     elif location:
         # Location Name provided -> Resolve to 1 sensor (old logic) or geocode then find 3
         # For simplicity, if location is a name, we map to single nearest for now, OR geocode.
@@ -325,6 +334,21 @@ def predict_weather(
                  raise HTTPException(status_code=404, detail=f"Location '{location}' not found")
     else:
         raise HTTPException(status_code=400, detail="Must provide 'location' OR 'lat' and 'lon'")
+    
+    # Detailed Log for Sensor Selection
+    logger.info(f"Initial Nearest Sensors for query: {[f'{s[0]} ({s[1]:.2f}km)' for s in target_sensors]}")
+
+    # Filter out sensors that are too far
+    filtered_sensors = [s for s in target_sensors if s[1] <= MAX_RADIUS_KM]
+    
+    if len(filtered_sensors) < len(target_sensors):
+        logger.warning(f"Filtered out {len(target_sensors) - len(filtered_sensors)} sensors > {MAX_RADIUS_KM}km")
+        
+    target_sensors = filtered_sensors
+    
+    if not target_sensors:
+        logger.warning(f"No sensors found within {MAX_RADIUS_KM}km range.")
+        raise HTTPException(status_code=404, detail=f"No sensors found within {MAX_RADIUS_KM}km. Data may be unreliable.")
 
     # --- IDW CALCULATION HELPER ---
     def calculate_idw(values, distances, power=2):
@@ -355,7 +379,7 @@ def predict_weather(
     
     primary_station_name = ""
     
-    print(f"Interpolating using {len(target_sensors)} stations.")
+    logger.info(f"Interpolating using {len(target_sensors)} stations.")
     
     for i, (sid, dist) in enumerate(target_sensors):
         # Get metadata name for the closest one
@@ -437,6 +461,8 @@ def predict_weather(
         
         final_temp = round(final_temp, 1)
         final_hum = round(final_hum, 1)
+        
+        logger.info(f"Prediction Result -- Rain: {final_rain:.4f} | Temp: {final_temp} | Hum: {final_hum}")
     else:
         # Fallback to single closest if everything failed (shouldn't happen with valid fallback logic)
         raise HTTPException(status_code=500, detail="Failed to aggregate data from any station")
