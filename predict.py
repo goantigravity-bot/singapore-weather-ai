@@ -320,23 +320,69 @@ def fetch_osm_path(query):
     print(f"Querying Overpass API for: {query}")
     overpass_url = "http://overpass-api.de/api/interpreter"
     
-    # Singapore Bounding Box (approx) instead of Area search for speed/reliability
-    # South, West, North, East
+    # Singapore Bounding Box
     bbox = "1.15,103.55,1.48,104.1"
     
+    # Ask for tags so we can filter
     overpass_query = f"""
     [out:json][timeout:45];
     (
       way["name"~"{query}",i]({bbox});
       relation["name"~"{query}",i]({bbox});
     );
-    out geom;
+    out geom tags;
     """
     
     try:
         response = requests.get(overpass_url, params={'data': overpass_query}, timeout=50)
         data = response.json()
-        return data
+        
+        if not data or 'elements' not in data:
+            return None
+
+        # --- INTELLIGENT FILTERING ---
+        # Only accept if it looks like a hiking/cycling path
+        valid_path_elements = []
+        
+        # Keywords that FORCE path mode (override tag checks)
+        path_keywords = ["corridor", "trail", "connector", "pcn", "track", "walk", "greenway"]
+        force_path = any(k in query.lower() for k in path_keywords)
+        
+        print(f"Path Logic: Force={force_path}")
+
+        for el in data['elements']:
+            tags = el.get('tags', {})
+            highway = tags.get('highway', '')
+            leisure = tags.get('leisure', '')
+            route = tags.get('route', '')
+            
+            # Acceptance Criteria
+            is_cycleway = highway in ['cycleway', 'path', 'footway', 'pedestrian', 'track', 'steps']
+            is_route = route in ['hiking', 'foot', 'bicycle']
+            is_leisure_track = leisure == 'track'
+            
+            # Rejection Criteria (Vehicle Roads)
+            # e.g. Commonwealth Ave is primary/residential
+            is_vehicle = highway in ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential', 'service', 'unclassified']
+            
+            if force_path:
+                # If user typed "Rail Corridor", accept it even if some segments are weird, 
+                # but assume Overpass returned mostly correct things.
+                # Just avoid obvious huge roads if possible, or accept if it's the only match.
+                 valid_path_elements.append(el)
+            else:
+                # Strict Mode for generic queries like "Sentosa"
+                if (is_cycleway or is_route or is_leisure_track) and not is_vehicle:
+                    valid_path_elements.append(el)
+                    
+        if not valid_path_elements:
+            print("Path Filtering: No elements matched 'Recreational Path' criteria.")
+            return None
+            
+        print(f"Path Filtering: Found {len(valid_path_elements)} valid path segments.")
+        # Return filtered data structure
+        return {'elements': valid_path_elements}
+        
     except Exception as e:
         print(f"Overpass Error: {e}")
         return None

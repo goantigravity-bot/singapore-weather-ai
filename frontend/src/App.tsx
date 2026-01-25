@@ -79,6 +79,7 @@ function App() {
     setPathForecast(null); // Reset path
 
     try {
+
       // 1. If searching by string, try Path Prediction FIRST
       if (params.location && !params.lat) {
         try {
