@@ -1,0 +1,340 @@
+
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>模型训练报告 - 2026-01-25 20:03:21</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 20px;
+                line-height: 1.6;
+            }
+            
+            .container {
+                max-width: 1000px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                overflow: hidden;
+            }
+            
+            .header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 40px;
+                text-align: center;
+            }
+            
+            .header h1 {
+                font-size: 2.5em;
+                margin-bottom: 10px;
+            }
+            
+            .header .timestamp {
+                font-size: 1.1em;
+                opacity: 0.9;
+            }
+            
+            .content {
+                padding: 40px;
+            }
+            
+            .section {
+                margin-bottom: 40px;
+            }
+            
+            .section h2 {
+                color: #667eea;
+                font-size: 1.8em;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 3px solid #667eea;
+            }
+            
+            .metrics-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            
+            .metric-card {
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                padding: 25px;
+                border-radius: 10px;
+                text-align: center;
+                transition: transform 0.3s;
+            }
+            
+            .metric-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            }
+            
+            .metric-card .label {
+                font-size: 0.9em;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 10px;
+            }
+            
+            .metric-card .value {
+                font-size: 2.5em;
+                font-weight: bold;
+                color: #667eea;
+            }
+            
+            .metric-card .unit {
+                font-size: 0.8em;
+                color: #888;
+            }
+            
+            .info-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+            }
+            
+            .info-table tr {
+                border-bottom: 1px solid #eee;
+            }
+            
+            .info-table td {
+                padding: 12px;
+            }
+            
+            .info-table td:first-child {
+                font-weight: bold;
+                color: #667eea;
+                width: 200px;
+            }
+            
+            .status-badge {
+                display: inline-block;
+                padding: 5px 15px;
+                border-radius: 20px;
+                font-size: 0.9em;
+                font-weight: bold;
+            }
+            
+            .status-success {
+                background: #4caf50;
+                color: white;
+            }
+            
+            .status-warning {
+                background: #ff9800;
+                color: white;
+            }
+            
+            .comparison {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            .trend-up {
+                color: #4caf50;
+                font-size: 1.2em;
+            }
+            
+            .trend-down {
+                color: #f44336;
+                font-size: 1.2em;
+            }
+            
+            .trend-neutral {
+                color: #999;
+                font-size: 1.2em;
+            }
+            
+            .footer {
+                background: #f5f7fa;
+                padding: 20px;
+                text-align: center;
+                color: #666;
+                font-size: 0.9em;
+            }
+            
+            .recommendation {
+                background: #e3f2fd;
+                border-left: 4px solid #2196f3;
+                padding: 15px;
+                margin-top: 20px;
+                border-radius: 5px;
+            }
+            
+            .recommendation h3 {
+                color: #1976d2;
+                margin-bottom: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🌤️ 新加坡天气预测模型</h1>
+                <h2>训练报告</h2>
+                <div class="timestamp">生成时间: 2026-01-25 20:03:21</div>
+            </div>
+            
+            <div class="content">
+                <!-- 执行摘要 -->
+                <div class="section">
+                    <h2>📊 执行摘要</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="label">平均绝对误差</div>
+                            <div class="value">0.1234</div>
+                            <div class="unit">mm</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="label">均方根误差</div>
+                            <div class="value">0.2345</div>
+                            <div class="unit">mm</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="label">降雨检测准确率</div>
+                            <div class="value">87.65</div>
+                            <div class="unit">%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 性能对比 -->
+                
+    <div class="section">
+        <h2>📊 性能对比</h2>
+        <table class="info-table">
+            <tr>
+                <td><strong>指标</strong></td>
+                <td><strong>本次训练</strong></td>
+                <td><strong>上次训练</strong></td>
+                <td><strong>变化</strong></td>
+            </tr>
+            <tr>
+                <td>MAE</td>
+                <td>0.1234 mm</td>
+                <td>0.1234 mm</td>
+                <td class="comparison">
+                    <span class="trend-neutral">→ 0.0%</span>
+                </td>
+            </tr>
+            <tr>
+                <td>RMSE</td>
+                <td>0.2345 mm</td>
+                <td>0.2345 mm</td>
+                <td class="comparison">
+                    <span class="trend-neutral">→ 0.0%</span>
+                </td>
+            </tr>
+            <tr>
+                <td>准确率</td>
+                <td>87.65%</td>
+                <td>87.65%</td>
+                <td class="comparison">
+                    <span class="trend-neutral">→ 0.0%</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+                
+                <!-- 数据概览 -->
+                <div class="section">
+                    <h2>📁 数据概览</h2>
+                    <table class="info-table">
+                        <tr>
+                            <td>卫星数据文件</td>
+                            <td>0 个</td>
+                        </tr>
+                        <tr>
+                            <td>传感器记录数</td>
+                            <td>0 条</td>
+                        </tr>
+                        <tr>
+                            <td>数据时间范围</td>
+                            <td>测试</td>
+                        </tr>
+                        <tr>
+                            <td>传感器数量</td>
+                            <td>0 个</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- 训练详情 -->
+                <div class="section">
+                    <h2>🔧 训练详情</h2>
+                    <table class="info-table">
+                        <tr>
+                            <td>训练轮数</td>
+                            <td>30</td>
+                        </tr>
+                        <tr>
+                            <td>批次大小</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <td>学习率</td>
+                            <td>0.001</td>
+                        </tr>
+                        <tr>
+                            <td>训练时长</td>
+                            <td>测试</td>
+                        </tr>
+                        <tr>
+                            <td>最佳验证损失</td>
+                            <td>0.0456</td>
+                        </tr>
+                        <tr>
+                            <td>计算设备</td>
+                            <td>CPU</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- 评估结果 -->
+                <div class="section">
+                    <h2>📈 评估结果</h2>
+                    <table class="info-table">
+                        <tr>
+                            <td>降雨阈值</td>
+                            <td>0.1 mm</td>
+                        </tr>
+                        <tr>
+                            <td>评估样本数</td>
+                            <td>1000</td>
+                        </tr>
+                        <tr>
+                            <td>模型状态</td>
+                            <td><span class="status-badge status-success">已部署</span></td>
+                        </tr>
+                    </table>
+                    
+                    <div class="recommendation">
+                        <h3>💡 建议</h3>
+                        • 模型性能稳定，继续保持当前训练策略
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>Singapore Weather AI - Automated Training System</p>
+                <p>© 2026 All Rights Reserved</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    

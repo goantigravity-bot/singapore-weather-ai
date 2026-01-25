@@ -1,0 +1,7 @@
+{
+  "mae": 0.1234,
+  "rmse": 0.2345,
+  "accuracy": 0.8765,
+  "threshold": 0.1,
+  "num_samples": 1000
+}

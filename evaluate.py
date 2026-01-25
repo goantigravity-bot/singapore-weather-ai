@@ -100,6 +100,23 @@ def evaluate_model():
     plt.savefig(save_path)
     print(f"\nEvaluation Plot saved to: {save_path}")
     print("Open this image to visually assess if points align with the diagonal red line.")
+    
+    # 5. 保存评估结果为JSON（供自动化流程使用）
+    import json
+    results = {
+        'mae': float(mae),
+        'rmse': float(rmse),
+        'accuracy': float(accuracy),
+        'threshold': float(threshold),
+        'num_samples': len(predictions)
+    }
+    
+    results_file = "evaluation_results.json"
+    with open(results_file, 'w') as f:
+        json.dump(results, f, indent=2)
+    print(f"Evaluation results saved to: {results_file}")
+    
+    return results
 
 if __name__ == "__main__":
     evaluate_model()
