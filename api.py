@@ -18,6 +18,9 @@ from predict import (
     DEVICE
 )
 
+import sqlite3
+from collections import Counter
+
 app = FastAPI(title="Singapore Weather AI API")
 
 # Enable CORS
@@ -28,6 +31,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Database Setup
+def init_db():
+    conn = sqlite3.connect('weather.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS search_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            query TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+class SearchLog(BaseModel):
+    query: str
+
 
 # Global variables to hold model and data
 model = None
@@ -56,6 +79,45 @@ def health_check():
 def get_stations():
     global stations_meta
     return stations_meta
+
+@app.post("/log-search")
+def log_search(log: SearchLog):
+    try:
+        conn = sqlite3.connect('weather.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO search_history (query) VALUES (?)", (log.query,))
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Error logging search: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.get("/popular-searches")
+def get_popular_searches():
+    try:
+        conn = sqlite3.connect('weather.db')
+        c = conn.cursor()
+        # Get all queries
+        c.execute("SELECT query FROM search_history")
+        rows = c.fetchall()
+        conn.close()
+        
+        # Count frequencies
+        queries = [r[0] for r in rows if r[0].strip()]
+        counts = Counter(queries)
+        
+        # Return top 6 most common
+        popular = [{"name": q, "count": c} for q, c in counts.most_common(6)]
+        
+        # If DB is empty, return defaults
+        if not popular:
+            return []
+            
+        return popular
+    except Exception as e:
+        print(f"Error fetching popular searches: {e}")
+        return []
 
 @app.get("/predict")
 def predict_weather(

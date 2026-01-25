@@ -26,3 +26,4 @@ real_sensor_data.csv
 .vscode/
 .idea/
 api.log
+weather.db

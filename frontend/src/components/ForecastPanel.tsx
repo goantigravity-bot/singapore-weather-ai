@@ -81,9 +81,9 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
     return (
         <div className="dashboard-overlay">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <div className="status-badge">
-                    <div className="status-dot"></div>
-                    Live
+                <div className="status-badge" style={{ background: 'rgba(255, 165, 0, 0.2)', border: '1px solid orange', color: 'orange' }}>
+                    <div className="status-dot" style={{ background: 'orange' }}></div>
+                    Prototype
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button
@@ -94,9 +94,6 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
                     >
                         ➖
                     </button>
-                    <Link to="/settings" className="quick-link-chip" style={{ padding: '4px 10px' }}>
-                        ⚙️
-                    </Link>
                 </div>
             </div>
 

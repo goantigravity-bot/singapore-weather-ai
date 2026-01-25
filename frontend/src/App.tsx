@@ -3,7 +3,11 @@ import axios from 'axios';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MapComponent from './components/MapComponent';
 import ForecastPanel from './components/ForecastPanel';
+import QuickLinks from './components/QuickLinks';
 import SettingsPage from './pages/SettingsPage';
+import StatsPage from './pages/StatsPage';
+import AboutPage from './pages/AboutPage';
+import SideMenu from './components/SideMenu';
 import { ConfigProvider } from './context/ConfigContext';
 import './App.css';
 import { API_BASE_URL } from './config';
@@ -31,6 +35,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<{ lat: number, lon: number } | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     // Default location (Singapore Center - MacRitchie)
@@ -87,10 +92,25 @@ function App() {
     }
   };
 
+  const logSearch = async (query: string) => {
+    try {
+      await axios.post(`${API_BASE_URL}/log-search`, { query });
+    } catch (err) {
+      console.error("Failed to log search", err);
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     fetchForecast({ location: searchQuery });
+    logSearch(searchQuery);
+  };
+
+  const handleQuickLink = (location: string) => {
+    setSearchQuery(location);
+    fetchForecast({ location });
+    logSearch(location);
   };
 
   const handleMapClick = (lat: number, lon: number) => {
@@ -102,15 +122,26 @@ function App() {
       <BrowserRouter>
         <div id="app-root">
           {/* Always Visible Components */}
-          <form className="search-bar" onSubmit={handleSearch}>
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Enter location (e.g. Sentosa)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </form>
+          <div className="search-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 10px', background: 'transparent' }}>
+            <button onClick={() => setIsMenuOpen(true)} className="burger-btn">
+              ☰
+            </button>
+            <form onSubmit={handleSearch} style={{ flex: 1, position: 'relative' }}>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Enter location (e.g. Sentosa)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ width: '100%' }}
+              />
+            </form>
+          </div>
+
+          <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+
+
+          <QuickLinks onSelectLocation={handleQuickLink} />
 
           <MapComponent
             onStationClick={handleMapClick}
@@ -124,6 +155,8 @@ function App() {
               <ForecastPanel data={forecast} loading={loading} error={error} />
             } />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/stats" element={<StatsPage />} />
+            <Route path="/about" element={<AboutPage />} />
           </Routes>
         </div>
       </BrowserRouter>
