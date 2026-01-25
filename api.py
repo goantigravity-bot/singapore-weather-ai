@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import torch
@@ -52,6 +52,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS search_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             query TEXT NOT NULL,
+            ip_address TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -94,13 +95,27 @@ def get_stations():
     return stations_meta
 
 @app.post("/log-search")
-def log_search(log: SearchLog):
+def log_search(log: SearchLog, request: Request):
     try:
+        # 获取客户端IP地址
+        # 优先使用X-Forwarded-For（如果经过代理）
+        client_ip = request.headers.get("X-Forwarded-For")
+        if client_ip:
+            # X-Forwarded-For可能包含多个IP，取第一个
+            client_ip = client_ip.split(",")[0].strip()
+        else:
+            # 否则使用直接连接的IP
+            client_ip = request.client.host if request.client else None
+        
         conn = sqlite3.connect('weather.db')
         c = conn.cursor()
-        c.execute("INSERT INTO search_history (query) VALUES (?)", (log.query,))
+        c.execute(
+            "INSERT INTO search_history (query, ip_address) VALUES (?, ?)",
+            (log.query, client_ip)
+        )
         conn.commit()
         conn.close()
+        logger.info(f"Search logged: '{log.query}' from IP: {client_ip}")
         return {"status": "success"}
     except Exception as e:
         logger.error(f"Error logging search: {e}")
