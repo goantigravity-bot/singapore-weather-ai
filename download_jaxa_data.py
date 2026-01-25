@@ -6,8 +6,9 @@ import time
 
 # --- USER CONFIGURATION ---
 # Please register at https://www.eorc.jaxa.jp/ptree/registration_top.html
-JAXA_USER = "jinhui.sg_gmail.com"
-JAXA_PASS = "SP+wari8"
+# Set credentials via environment variables or replace these placeholders
+JAXA_USER = os.environ.get("JAXA_USER", "your-jaxa-username")
+JAXA_PASS = os.environ.get("JAXA_PASS", "your-jaxa-password")
 
 # Target Directory
 DOWNLOAD_DIR = "satellite_data"

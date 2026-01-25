@@ -9,6 +9,11 @@ env/
 venv/
 ENV/
 
+# Sensitive files
+env.sh
+*.pem
+*.key
+
 # Data Folders (Too large for GitHub)
 satellite_data/
 processed_data/
@@ -21,6 +26,14 @@ real_sensor_data.csv
 *.npy
 *.pth
 *.DS_Store
+
+# Training outputs
+training_logs/
+training_reports/
+training_history.json
+training_state.json
+evaluation_results.json
+evaluation_plot.png
 
 # IDEs
 .vscode/
