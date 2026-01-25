@@ -4,6 +4,7 @@ import xarray as xr
 import os
 import glob
 import numpy as np
+from scipy.spatial import Delaunay
 from datetime import datetime, timedelta
 from weather_fusion_model import WeatherFusionNet
 from weather_dataset import latlon2xy # We reuse the projection tool
@@ -224,7 +225,7 @@ def geocode_location(address):
     Convert address string to (lat, lon) using OpenStreetMap Nominatim API.
     """
     # Nominatim requires a User-Agent
-    headers = {'User-Agent': 'SingaporeWeatherAI/1.0'}
+    headers = {'User-Agent': 'SingaporeWeatherAI/0.2'}
     url = "https://nominatim.openstreetmap.org/search"
     
     # Append ", Singapore" to ensure we search locally
@@ -253,6 +254,56 @@ def geocode_location(address):
     except Exception as e:
         print(f"Geocoding error: {e}")
         return None, None
+
+def reverse_geocode(lat, lon):
+    """
+    Convert (lat, lon) to address string using OpenStreetMap Nominatim API.
+    """
+    headers = {'User-Agent': 'SingaporeWeatherAI/0.2'}
+    url = "https://nominatim.openstreetmap.org/reverse"
+    
+    params = {
+        'lat': lat,
+        'lon': lon,
+        'format': 'json',
+        'zoom': 18,
+        'addressdetails': 1
+    }
+    
+    try:
+        # verify=False to prevent SSL errors in some envs
+        resp = requests.get(url, params=params, headers=headers, timeout=5, verify=False) 
+        data = resp.json()
+        
+        # DEBUG PRINT
+        # print(f"DEBUG: Nominatim Resp: {data}")
+        
+        if 'display_name' in data:
+            # Simplify the name: Pick formatted address or specific parts
+            addr = data.get('address', {})
+            # Priorities: Road, Landmark, Suburb, etc.
+            parts = []
+            
+            # Expanded list of useful address parts
+            for key in ['tourism', 'historic', 'amenity', 'building', 'leisure', 'road', 'residential', 'village', 'suburb', 'town', 'city_district', 'district']:
+                if key in addr:
+                    val = addr[key]
+                    # Filter out generic terms if possible
+                    parts.append(val)
+                    break 
+            
+            if not parts:
+                return data['display_name'].split(',')[0]
+            
+            return parts[0]
+            
+        else:
+            print(f"DEBUG: No display_name in reverse geocode resp for {lat},{lon}")
+            return f"{lat:.3f}, {lon:.3f}"
+            
+    except Exception as e:
+        print(f"Reverse Geocoding error: {e}")
+        return None
 
 # --- Helper: Get Station Metadata ---
 def get_station_mapping():
@@ -311,6 +362,142 @@ def find_nearest_sensor(target_lat, target_lon, stations):
         print(f"Nearest Station: {best_name} (ID: {best_id}) - Distance: {dist_km:.2f} km")
         return best_id
     return None
+
+# Global cache for Delaunay mesh to avoid rebuilding on every click
+_delaunay_mesh = None
+_delaunay_stations = []
+
+def get_delaunay_mesh(stations):
+    global _delaunay_mesh, _delaunay_stations
+    
+    # Check if we need to rebuild (if stations changed or first run)
+    # Simple check: count
+    if _delaunay_mesh is not None and len(stations) == len(_delaunay_stations):
+        return _delaunay_mesh, _delaunay_stations
+        
+    coords = []
+    valid_stations = []
+    for s in stations:
+        try:
+            lat = s['location']['latitude']
+            lon = s['location']['longitude']
+            coords.append([lat, lon])
+            valid_stations.append(s)
+        except KeyError:
+            continue
+            
+    if len(coords) < 3:
+        return None, []
+        
+    _delaunay_mesh = Delaunay(np.array(coords))
+    _delaunay_stations = valid_stations
+    print(f"Built Delaunay Mesh with {len(coords)} points.")
+    return _delaunay_mesh, _delaunay_stations
+
+def find_nearest_n_sensors(target_lat, target_lon, stations, n=3):
+    """
+    Find sensors using Delaunay Triangulation (Geometric Enclosure).
+    1. If point is inside a triangle, return its 3 vertices.
+    2. If outside (simplex=-1), fallback to 3 nearest by distance.
+    """
+    if not stations:
+        return []
+
+    # 1. Try Delaunay
+    mesh, valid_stations = get_delaunay_mesh(stations)
+    
+    simplex_idx = -1
+    triangle_sensors = []
+    
+    if mesh:
+        # find_simplex returns the index of the triangle containing the point
+        # It handles arrays, so we pass [[lat, lon]]
+        simplex_idx = mesh.find_simplex([[target_lat, target_lon]])[0]
+        
+        if simplex_idx != -1:
+            # Found a containing triangle!
+            # Get indices of the 3 vertices
+            vertex_indices = mesh.simplices[simplex_idx]
+            
+            triangle_sensors = []
+            for idx in vertex_indices:
+                s = valid_stations[idx]
+                sid = s['id']
+                slat = s['location']['latitude']
+                slon = s['location']['longitude']
+                dist_deg = calculate_distance(target_lat, target_lon, slat, slon)
+                dist_km = dist_deg * 111.0
+                triangle_sensors.append((sid, dist_km))
+            
+            # Sort by distance just for consistency
+            triangle_sensors.sort(key=lambda x: x[1])
+            print(f"Geometric Selection: Inside Triangle {[s[0] for s in triangle_sensors]}")
+            # Do NOT return here. Fall through to filter logic.
+            # return triangle_sensors
+
+    # --- 2. Fallback to Distance-based K-Nearest (If Delaunay Failed) ---
+    candidates = []
+    
+    # If we are here, we are OUTSIDE triangle (since we return inside the if block above).
+    
+    print("Geometric Selection: Fallback to K-Nearest Candidates.")
+    for s in stations:
+        try:
+            slat = s['location']['latitude']
+            slon = s['location']['longitude']
+            sid = s['id']
+            dist_deg = calculate_distance(target_lat, target_lon, slat, slon)
+            dist_km = dist_deg * 111.0
+            candidates.append((sid, dist_km))
+        except KeyError:
+            continue
+            
+    candidates.sort(key=lambda x: x[1])
+    candidates = candidates[:n] # Pre-slice to N, but filter might reduce further
+    
+    # --- 3. Filter / Prune ---
+    # We now have a list of 'candidates' (either from Triangle or K-Nearest).
+    # Logic:
+    #   - Sort by distance
+    #   - Always keep the closest one.
+    #   - For the others, check:
+    #       1. Absolute max distance (e.g. 15km)
+    #       2. Relative max distance (e.g. > 3x the closest distance)
+    
+    if not candidates and not triangle_sensors:
+         return []
+         
+    # Unite potential lists (simplifies flow if we had mixed logic, but here it's one or other)
+    # Just use 'final_list'
+    final_list = triangle_sensors if triangle_sensors else candidates
+    
+    # Sort just in case
+    final_list.sort(key=lambda x: x[1])
+    
+    if not final_list:
+        return []
+        
+    closest_dist = final_list[0][1]
+    filtered_list = [final_list[0]] # Always keep best
+    
+    for i in range(1, len(final_list)):
+        sid, dist = final_list[i]
+        
+        # 1. Absolute Cutoff (Singapore is small, >15km is irrelevant)
+        if dist > 15.0:
+            continue
+            
+        # 2. Relative Cutoff
+        # If it's 3x further than the nearest, AND strictly > 3km away.
+        # (The >3km check prevents pruning when everything is super close like 0.5km vs 1.6km)
+        if dist > (closest_dist * 3.0) and dist > 3.0:
+            continue
+            
+        filtered_list.append((sid, dist))
+        
+    print(f"Sensor Pruning: {len(final_list)} -> {len(filtered_list)} (Nearest: {closest_dist:.2f}km)")
+    
+    return filtered_list[:n]
 
 def find_sensor_id(query, df, stations_metadata):
     """

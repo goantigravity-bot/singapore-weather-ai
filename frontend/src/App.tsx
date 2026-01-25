@@ -19,6 +19,7 @@ interface ForecastResult {
     id: string;
     name: string;
   };
+  contributing_stations?: string[];
   forecast: {
     rainfall_mm_next_10min: number;
     description: string;
@@ -79,9 +80,19 @@ function App() {
       setForecast(res.data);
 
       const stationsRes = await axios.get(`${API_BASE_URL}/stations`);
-      const station = stationsRes.data.find((s: any) => s.id === res.data.nearest_station.id);
-      if (station) {
-        setFlyTo({ lat: station.location.latitude, lon: station.location.longitude });
+      // Update flyTo if it was a search query, but if it was a map click (lat/lon in params), 
+      // we usually want flyTo to match that.
+      // If params has lat/lon, update flyTo to that (Red Marker position).
+      if (params.lat && params.lon) {
+        setFlyTo({ lat: params.lat, lon: params.lon });
+      } else {
+        // Search query -> Set flyTo to the primary station or geocoded center
+        // We can assume the API returns coordinates implicitly via the station or we fetch them.
+        // For now, if searching by name, let's fly to the nearest station location found.
+        const station = stationsRes.data.find((s: any) => s.id === res.data.nearest_station.id);
+        if (station) {
+          setFlyTo({ lat: station.location.latitude, lon: station.location.longitude });
+        }
       }
 
     } catch (err: any) {
@@ -146,7 +157,7 @@ function App() {
           <MapComponent
             onStationClick={handleMapClick}
             flyToCoords={flyTo}
-            highlightedStationId={forecast?.nearest_station.id}
+            contributingStationIds={forecast?.contributing_stations}
           />
 
           {/* Overlay Router */}

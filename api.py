@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import torch
 import pandas as pd
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Import from predict.py
 from predict import (
@@ -14,9 +14,12 @@ from predict import (
     find_sensor_id, 
     get_input_data, 
     find_nearest_sensor,
+    find_nearest_n_sensors,
+    reverse_geocode,
     geocode_location,
     DEVICE
 )
+import numpy as np
 
 import sqlite3
 from collections import Counter
@@ -130,84 +133,217 @@ def predict_weather(
     if model is None:
         raise HTTPException(status_code=503, detail="System not ready")
 
-    # Determine Target time (Latest in DB for demo, Real-time in prod)
-    last_ts = df['timestamp'].max()
+    # Determine Target time (Simulate Real-Time)
+    # 1. Get current real time
+    now = datetime.now()
+    
+    # 1.5 Floor to nearest 10 minutes (Logic requested by user)
+    # e.g. 15:37 -> 15:30
+    minute_floored = (now.minute // 10) * 10
+    now = now.replace(minute=minute_floored, second=0, microsecond=0)
+    
+    # 2. Find a reference day in DB (e.g. the last available day)
+    # We want to map "Now" -> "Reference Day @ Same Time"
+    max_ts = df['timestamp'].max()
+    ref_date = max_ts.date()
+    
+    # If the dataset ends at midnight, using that exact date might result in future times missing.
+    # Safe bet: Go back 1 day from the absolute max to ensure full 24h coverage.
+    ref_date = ref_date - timedelta(days=1)
+    
+    # 3. Construct Query Time
+    target_query_time = datetime.combine(ref_date, now.time())
+    
+    # 4. Ensure timezone awareness if DF is aware (it usually is UTC+8 from predict.py loading)
+    if df['timestamp'].dt.tz is not None:
+        target_query_time = pd.Timestamp(target_query_time).tz_localize(df['timestamp'].dt.tz)
+    
+    print(f"Simulating Live Data: Real Time {now} -> Mapped to History {target_query_time}")
+
+    last_ts = target_query_time
     
     target_sensor_id = None
     dist_km = None
     station_name = "Unknown"
+    
+    # NEW: List to hold multiple sensors for interpolation
+    target_sensors = [] # List of (id, distance_km)
 
-    # Logic to find sensor
+    # Logic to find sensor(s)
     if lat is not None and lon is not None:
-        # Coords provided
-        target_sensor_id = find_nearest_sensor(lat, lon, stations_meta)
-        if not target_sensor_id:
-            raise HTTPException(status_code=404, detail="No suitable sensor found near coordinates")
+        # Coords provided -> Find 3 nearest
+        target_sensors = find_nearest_n_sensors(lat, lon, stations_meta, n=3)
+        
+        # REVERSE GEOCODE: Get the actual name of the clicked point
+        real_name = reverse_geocode(lat, lon)
+        if real_name:
+            station_name = real_name # Overwrite "Unknown"
+            
+        if not target_sensors:
+            raise HTTPException(status_code=404, detail="No suitable sensors found near coordinates")
             
     elif location:
-        # Location Name provided
-        # We need to replicate find_sensor_id logic but extract more info
-        # Reuse find_sensor_id for simplicity, but it prints logs.
-        target_sensor_id = find_sensor_id(location, df, stations_meta)
-        
-        if not target_sensor_id:
-             raise HTTPException(status_code=404, detail=f"Location '{location}' not found")
+        # Location Name provided -> Resolve to 1 sensor (old logic) or geocode then find 3
+        # For simplicity, if location is a name, we map to single nearest for now, OR geocode.
+        # Let's try to Geocode first to get coords for IDW
+        glat, glon = geocode_location(location)
+        if glat and glon:
+             target_sensors = find_nearest_n_sensors(glat, glon, stations_meta, n=3)
+        else:
+             # Fallback to single sensor lookup
+             sid = find_sensor_id(location, df, stations_meta)
+             if sid:
+                 target_sensors = [(sid, 0.0)] # 0 distance implies exact match
+             else:
+                 raise HTTPException(status_code=404, detail=f"Location '{location}' not found")
     else:
         raise HTTPException(status_code=400, detail="Must provide 'location' OR 'lat' and 'lon'")
 
-    # Get Station Metadata for response
-    # Recalculate distance if possible or lookup
-    for s in stations_meta:
-        if s['id'] == target_sensor_id:
-            station_name = s.get('name', target_sensor_id)
-            # If lat/lon provided, we could calc actual distance, but reusing logic ok.
-            break
+    # --- IDW CALCULATION HELPER ---
+    def calculate_idw(values, distances, power=2):
+        """
+        values: list of float values
+        distances: list of float distances
+        """
+        if not values or not distances: return None
+        if len(values) == 1: return values[0]
+        
+        # Check for exact match (dist ~= 0)
+        for v, d in zip(values, distances):
+            if d < 0.1: # Within 100m
+                return v
+        
+        # Calculate weights
+        weights = [1.0 / (d**power) for d in distances]
+        sum_weights = sum(weights)
+        
+        weighted_sum = sum(v * w for v, w in zip(values, weights))
+        return weighted_sum / sum_weights
 
-    # Run Prediction
-    sat_in, sensor_in = get_input_data(df, target_sensor_id, last_ts)
+    # --- COLLECT DATA FROM SENTORS ---
+    temp_values = []
+    hum_values = []
+    rain_preds = []
+    valid_distances = []
     
-    if sat_in is None or sensor_in is None:
-         raise HTTPException(status_code=500, detail="Data missing for prediction (history or satellite)")
-         
-    with torch.no_grad():
-        pred_val = model(sat_in.to(DEVICE), sensor_in.to(DEVICE)).item()
+    primary_station_name = ""
+    
+    print(f"Interpolating using {len(target_sensors)} stations.")
+    
+    for i, (sid, dist) in enumerate(target_sensors):
+        # Get metadata name for the closest one
+        if i == 0:
+            for s in stations_meta:
+                 if s['id'] == sid:
+                     primary_station_name = s.get('name', sid)
+                     break
+        
+        # 1. Fetch History & Prediction Inputs
+        sat_in, sensor_in = get_input_data(df, sid, last_ts)
+        
+        # Fallback logic if exact time missing
+        if sat_in is None or sensor_in is None:
+             try:
+                 nearest_valid = df[df['sensor_id'] == sid]['timestamp']
+                 deltas = abs(nearest_valid - last_ts)
+                 closest_ts = nearest_valid.iloc[deltas.argmin()]
+                 sat_in, sensor_in = get_input_data(df, sid, closest_ts)
+             except:
+                 pass
+        
+        if sat_in is not None and sensor_in is not None:
+            # Predict Rain
+            with torch.no_grad():
+                pred = model(sat_in.to(DEVICE), sensor_in.to(DEVICE)).item()
+                rain_preds.append(pred)
+        
+        # 2. Fetch Current Readings (Temp/Hum)
+        try:
+            sensor_data = df[df['sensor_id'] == sid]
+            if not sensor_data.empty:
+                relevant = sensor_data[sensor_data['timestamp'] <= last_ts].sort_values('timestamp')
+                if not relevant.empty:
+                    rec = relevant.iloc[-1]
+                    t = float(rec['temperature'])
+                    h = float(rec['humidity'])
+                    temp_values.append(t)
+                    hum_values.append(h)
+                    
+                    # Only add distance if we successfully got data
+                    # (Assuming rain pred success usually implies data exists, but need to align lists)
+                    # Ideally we align lists perfectly. For prototype, we sync 'valid_distances' to 'temp_values'
+                    # But rain_preds might differ.
+                    # Let's clean this up: Only add to lists if ALL data available
+                    if sat_in is not None and sensor_in is not None:
+                        valid_distances.append(dist)
+                    else:
+                        # Convert partial failures? 
+                        # If rain failed, we skip this station entirely for simplicity
+                        if len(rain_preds) > len(valid_distances): 
+                             rain_preds.pop()
+                        if len(temp_values) > len(valid_distances):
+                             temp_values.pop()
+                             hum_values.pop()
+        except Exception:
+            pass
 
-    # Retrieve current readings (Temperature/Humidity) from the input data or DF
-    # We want the latest reading available for this sensor AT or BEFORE last_ts
-    cur_temp = None
-    cur_hum = None
-
-    try:
-        sensor_data = df[df['sensor_id'] == target_sensor_id]
-        if not sensor_data.empty:
-            # Sort by time
-            relevant = sensor_data[sensor_data['timestamp'] <= last_ts].sort_values('timestamp')
-            if not relevant.empty:
-                latest_record = relevant.iloc[-1]
-                cur_temp = float(latest_record['temperature'])
-                cur_hum = float(latest_record['humidity'])
-    except Exception as e:
-        print(f"Error fetching current readings: {e}")
-
+    # --- AGGREGATE RESULTS ---
+    
+    # Use valid_distances for weighting
+    # If list lengths mismatch (rare), truncate to min length
+    min_len = min(len(rain_preds), len(temp_values), len(hum_values), len(valid_distances))
+    
+    final_rain = 0.0
+    final_temp = None
+    final_hum = None
+    
+    if min_len > 0:
+        # Slice to sync
+        v_dists = valid_distances[:min_len]
+        v_rain = rain_preds[:min_len]
+        v_temp = temp_values[:min_len]
+        v_hum = hum_values[:min_len]
+        
+        final_rain = calculate_idw(v_rain, v_dists)
+        final_temp = calculate_idw(v_temp, v_dists)
+        final_hum = calculate_idw(v_hum, v_dists)
+        
+        final_temp = round(final_temp, 1)
+        final_hum = round(final_hum, 1)
+    else:
+        # Fallback to single closest if everything failed (shouldn't happen with valid fallback logic)
+        raise HTTPException(status_code=500, detail="Failed to aggregate data from any station")
+        
     # Interpretation
     desc = "Clear / No Rain"
-    if pred_val >= 2.0: desc = "Heavy Rain / Storm"
-    elif pred_val >= 0.1: desc = "Light Rain"
+    if final_rain >= 2.0: desc = "Heavy Rain / Storm"
+    elif final_rain >= 0.1: desc = "Light Rain"
+
+    # Display Name
+    display_name = primary_station_name
+    
+    # If we have a specific geocoded name (from lat/lon logic), use it
+    if station_name != "Unknown":
+        display_name = station_name
+    elif len(target_sensors) > 1 and valid_distances[0] > 0.5:
+        # If we interpolated and aren't super close to the primary, and didn't have a specific name
+        display_name = f"{primary_station_name} (Area)"
 
     return {
-        "timestamp": last_ts,
+        "timestamp": now, # Return CURRENT REAL TIME to User
         "location_query": location if location else f"{lat},{lon}",
         "nearest_station": {
-            "id": target_sensor_id,
-            "name": station_name
+            "id": target_sensors[0][0], # Closest ID
+            "name": display_name
         },
+        "contributing_stations": [s[0] for s in target_sensors], # List of IDs used for IDW
         "forecast": {
-            "rainfall_mm_next_10min": round(pred_val, 4),
+            "rainfall_mm_next_10min": round(final_rain, 4),
             "description": desc
         },
         "current_weather": {
-            "temperature": cur_temp,
-            "humidity": cur_hum
+            "temperature": final_temp,
+            "humidity": final_hum
         }
     }
 

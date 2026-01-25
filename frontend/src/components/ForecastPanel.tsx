@@ -1,6 +1,5 @@
 import React from 'react';
 import { useConfig } from '../context/ConfigContext';
-import { Link } from 'react-router-dom';
 
 interface ForecastData {
     timestamp: string;
@@ -29,134 +28,157 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
     const { metrics } = useConfig();
     const [isMinimized, setIsMinimized] = React.useState(true);
 
-    if (loading) return <div className="dashboard-overlay"><h3>Loading...</h3></div>;
-    if (error) return <div className="dashboard-overlay"><h3 style={{ color: 'var(--accent-red)' }}>Error: {error}</h3></div>;
-    if (!data) return <div className="dashboard-overlay"><h3>Select a location directly on the map or search to see the forecast.</h3></div>;
+    if (loading) return <div className="dashboard-overlay" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', width: 'auto', textAlign: 'center' }}>Loading...</div>;
+    if (error) return <div className="dashboard-overlay" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', width: 'auto' }}><span style={{ color: 'var(--accent-red)' }}>Error: {error}</span></div>;
 
-    const isRain = data.forecast.description.includes("Rain") || data.forecast.description.includes("Storm");
-    const statusColor = isRain ? "var(--accent-red)" : "var(--accent-green)";
-
-    // Minimized State: Just a small floating button
-    if (isMinimized) {
+    // Initial State (No Data)
+    if (!data) {
         return (
-            <div
-                className="dashboard-overlay"
-                style={{
-                    height: 'auto',
-                    padding: '0',
-                    width: 'auto',
-                    minWidth: 'auto',
-                    background: 'transparent',
-                    border: 'none',
-                    boxShadow: 'none',
-                    backdropFilter: 'none',
-                    pointerEvents: 'none', // Let clicks pass through transparent area
-                    bottom: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)'
-                }}
-            >
-                <div style={{ pointerEvents: 'auto' }}>
-                    <button
-                        onClick={() => setIsMinimized(false)}
-                        className="quick-link-chip"
-                        style={{
-                            background: 'var(--panel-bg)',
-                            border: '1px solid var(--accent-cyan)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                            padding: '10px 20px',
-                            fontWeight: 'bold',
-                            display: 'flex',
-                            gap: '8px',
-                            alignItems: 'center'
-                        }}
-                    >
-                        <span>👀</span> Show Forecast
-                    </button>
-                </div>
+            <div className="dashboard-overlay" style={{
+                background: 'rgba(0,0,0,0.3)',
+                backdropFilter: 'blur(4px)',
+                width: 'auto',
+                padding: '10px 20px',
+                borderRadius: '30px',
+                border: '1px solid rgba(255,255,255,0.1)'
+            }}>
+                <span style={{ fontSize: '0.9rem', color: '#ddd' }}>Select a location on the map</span>
             </div>
         );
     }
 
+    const isRain = data.forecast.description.includes("Rain") || data.forecast.description.includes("Storm");
+    const statusColor = isRain ? "var(--accent-red)" : "var(--accent-green)";
+
+    // Minimized State: Just a small floating button (Optional, but user might still want to hide it completely)
+    if (isMinimized) {
+        return (
+            <div style={{
+                position: 'absolute',
+                bottom: '20px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 1000,
+                pointerEvents: 'auto'
+            }}>
+                <button
+                    onClick={() => setIsMinimized(false)}
+                    className="quick-link-chip"
+                    style={{
+                        background: 'rgba(0, 0, 0, 0.6)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        padding: '8px 20px',
+                        borderRadius: '30px',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+                    }}
+                >
+                    <span>👀</span> Show Forecast
+                </button>
+            </div>
+        );
+    }
+
+    // EXPANDED: Compact "Heads-Up" Display
     return (
-        <div className="dashboard-overlay">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <div className="status-badge" style={{ background: 'rgba(255, 165, 0, 0.2)', border: '1px solid orange', color: 'orange' }}>
-                    <div className="status-dot" style={{ background: 'orange' }}></div>
-                    Prototype
+        <div style={{
+            position: 'absolute',
+            bottom: '30px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            width: '90%',
+            maxWidth: '600px', // Prevent being too wide on desktop
+            display: 'flex',
+            flexDirection: 'column', // Allow updated time to sit below or nice layout
+            alignItems: 'center',
+            pointerEvents: 'none' // Wrapper checks events, internal needs auto
+        }}>
+            <div style={{
+                pointerEvents: 'auto',
+                background: 'rgba(20, 20, 20, 0.65)', // Semi-transparent dark
+                backdropFilter: 'blur(12px)',
+                borderRadius: '50px', // Pill shape
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                padding: '12px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '20px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                color: 'white',
+                whiteSpace: 'nowrap'
+            }}>
+                {/* 1. Location Name */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>📍</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 700, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        {data.nearest_station.name}
+                    </span>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+
+                {/* Vertical Divider */}
+                <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)' }}></div>
+
+                {/* 2. Metrics Row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    {/* Rain */}
+                    {metrics.has('rain') && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} title={`Rainfall: ${data.forecast.rainfall_mm_next_10min}mm`}>
+                            <span style={{ fontSize: '1.2rem' }}>{isRain ? '🌧️' : '☁️'}</span>
+                            <span style={{ fontWeight: 600, color: statusColor }}>
+                                {isRain ? 'Rain' : 'Clear'}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Temp */}
+                    {metrics.has('temp') && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '1.2rem' }}>🌡️</span>
+                            <span style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>
+                                {data.current_weather?.temperature != null ? `${data.current_weather.temperature}°` : "--"}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Humidity */}
+                    {metrics.has('hum') && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '1.2rem' }}>💧</span>
+                            <span style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>
+                                {data.current_weather?.humidity != null ? `${data.current_weather.humidity}%` : "--"}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Close/Minimize Button (Small X at end) */}
+                <div style={{ marginLeft: 'auto', paddingLeft: '10px' }}>
                     <button
                         onClick={() => setIsMinimized(true)}
-                        className="quick-link-chip"
-                        style={{ padding: '4px 10px', fontSize: '1.2rem' }}
-                        title="Hide Completely"
+                        style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
                     >
-                        ➖
+                        ✕
                     </button>
                 </div>
             </div>
 
-            {/* 1. Location Name on Top */}
-            <div style={{ marginBottom: '20px' }}>
-                <div className="location-title" style={{ fontSize: '1.5rem', fontWeight: 600 }}>
-                    {data.nearest_station.name}
-                </div>
-            </div>
-
-            {/* 3. Horizontal Metric Layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '20px' }}>
-
-                {/* Metric 1: Rain */}
-                {metrics.has('rain') && (
-                    <div className="metric-card" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '12px 4px', borderColor: statusColor }}>
-                        <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>
-                            {isRain ? '🌧️' : '☁️'}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '2px' }}>Rain</div>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: statusColor }}>
-                            {isRain ? 'Yes' : 'No'}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: statusColor, marginTop: '2px' }}>
-                            {data.forecast.rainfall_mm_next_10min} mm
-                        </div>
-                    </div>
-                )}
-
-                {/* Metric 2: Temperature */}
-                {metrics.has('temp') && (
-                    <div className="metric-card" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '12px 4px' }}>
-                        <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🌡️</div>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '2px' }}>Temperature</div>
-                        <div style={{ fontSize: '1rem', color: "var(--accent-cyan)", fontWeight: 'bold' }}>
-                            {data.current_weather?.temperature != null ? `${data.current_weather.temperature}°` : "N/A"}
-                        </div>
-                    </div>
-                )}
-
-                {/* Metric 3: Humidity */}
-                {metrics.has('hum') && (
-                    <div className="metric-card" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '12px 4px' }}>
-                        <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>💧</div>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '2px' }}>Humidity</div>
-                        <div style={{ fontSize: '1rem', color: "var(--accent-cyan)", fontWeight: 'bold' }}>
-                            {data.current_weather?.humidity != null ? `${data.current_weather.humidity}%` : "N/A"}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* 4. Nearest Sensor at Bottom */}
-            <div className="metric-card" style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.03)' }}>
-                <div className="metric-icon" style={{ fontSize: '1.2rem' }}>📡</div>
-                <div className="metric-info">
-                    <div className="metric-label">Sensor Site</div>
-                    <div className="metric-value" style={{ fontSize: '0.9rem' }}>{data.nearest_station.id}</div>
-                </div>
-            </div>
-
-            <div style={{ fontSize: '10px', color: '#666', marginTop: '10px', textAlign: 'center' }}>
-                Updated: {new Date(data.timestamp).toLocaleTimeString()}
+            {/* Tiny Updated Timestamp Below */}
+            <div style={{
+                marginTop: '6px',
+                fontSize: '0.75rem',
+                color: 'rgba(255,255,255,0.8)',
+                textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                background: 'rgba(0,0,0,0.3)',
+                padding: '2px 8px',
+                borderRadius: '10px'
+            }}>
+                Updated: {new Date(data.timestamp).toLocaleString()}
             </div>
         </div>
     );

@@ -3,7 +3,7 @@ import { useConfig, type Metric } from '../context/ConfigContext';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsPage: React.FC = () => {
-    const { metrics, toggleMetric } = useConfig();
+    const { metrics, toggleMetric, showTriangle, toggleShowTriangle } = useConfig();
     const navigate = useNavigate();
 
     const renderToggle = (metric: Metric, label: string, icon: string) => {
@@ -45,6 +45,26 @@ const SettingsPage: React.FC = () => {
                 {renderToggle('rain', 'Rainfall Prediction', '🌧️')}
                 {renderToggle('temp', 'Temperature', '🌡️')}
                 {renderToggle('hum', 'Humidity', '💧')}
+
+                <hr style={{ width: '100%', borderColor: 'rgba(255,255,255,0.1)' }} />
+
+                {/* Manual Visual Toggle for Triangle (Using similar style but referencing boolean directly) */}
+                <div
+                    className="metric-card"
+                    style={{ cursor: 'pointer', borderColor: showTriangle ? 'var(--accent-orange)' : 'transparent', opacity: showTriangle ? 1 : 0.6 }}
+                    onClick={toggleShowTriangle}
+                >
+                    <div className="metric-icon">📐</div>
+                    <div className="metric-info">
+                        <div className="metric-label">Interpolation Triangle</div>
+                        <div className="metric-value" style={{ fontSize: '1rem', color: showTriangle ? 'var(--accent-orange)' : 'gray' }}>
+                            {showTriangle ? 'Visible' : 'Hidden'}
+                        </div>
+                    </div>
+                    <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: showTriangle ? 'var(--accent-green)' : 'gray' }}>
+                        {showTriangle ? '☑' : '☐'}
+                    </div>
+                </div>
             </div>
         </div>
     );

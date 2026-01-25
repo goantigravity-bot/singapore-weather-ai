@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polygon, Polyline } from 'react-leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { API_BASE_URL } from '../config';
+import { useConfig } from '../context/ConfigContext';
+
+// ... (icons code) ...
 
 // Fix leafet marker icons
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -60,8 +63,24 @@ const LocationMarker: React.FC<{ onClick: (lat: number, lon: number) => void }> 
     return null;
 }
 
-const MapComponent: React.FC<Props & { highlightedStationId?: string }> = ({ onStationClick, flyToCoords, highlightedStationId }) => {
+// Custom Icons
+const createIcon = (colorUrl: string) => L.icon({
+    iconUrl: colorUrl,
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+const BlueIcon = createIcon('https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png');
+const GreenIcon = createIcon('https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png');
+const RedIcon = createIcon('https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png');
+
+
+const MapComponent: React.FC<Props & { contributingStationIds?: string[] }> = ({ onStationClick, flyToCoords, contributingStationIds }) => {
     const [stations, setStations] = useState<Station[]>([]);
+    const { showTriangle } = useConfig();
 
     useEffect(() => {
         // Fetch stations on load
@@ -70,14 +89,17 @@ const MapComponent: React.FC<Props & { highlightedStationId?: string }> = ({ onS
             .catch(err => console.error("Failed to fetch stations", err));
     }, []);
 
-    const HighlightedIcon = L.icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
-    });
+    // Calculate Triangle Path
+    const trianglePath: [number, number][] = [];
+    if (showTriangle && contributingStationIds && stations.length > 0) {
+        // Find coords for each contributing ID
+        contributingStationIds.forEach(id => {
+            const s = stations.find(st => st.id === id);
+            if (s) {
+                trianglePath.push([s.location.latitude, s.location.longitude]);
+            }
+        });
+    }
 
     return (
         <MapContainer center={[1.3521, 103.8198]} zoom={11} scrollWheelZoom={true} zoomControl={false}>
@@ -89,23 +111,60 @@ const MapComponent: React.FC<Props & { highlightedStationId?: string }> = ({ onS
             <MapController coords={flyToCoords} />
             <LocationMarker onClick={onStationClick} />
 
-            {stations.map(station => (
+            {/* Draw Interpolation Triangle/Line */}
+            {trianglePath.length >= 2 && (
+                trianglePath.length === 2 ? (
+                    <Polyline
+                        positions={trianglePath}
+                        pathOptions={{ color: 'orange', dashArray: '10, 10', opacity: 0.8, weight: 2 }}
+                    />
+                ) : (
+                    <Polygon
+                        positions={trianglePath}
+                        pathOptions={{ color: 'orange', dashArray: '10, 10', fillColor: 'orange', fillOpacity: 0.1, weight: 2 }}
+                    />
+                )
+            )}
+
+            {/* 1. Render User Selected Location (Red) */}
+            {flyToCoords && (
                 <Marker
-                    key={station.id}
-                    position={[station.location.latitude, station.location.longitude]}
-                    icon={station.id === highlightedStationId ? HighlightedIcon : DefaultIcon}
-                    zIndexOffset={station.id === highlightedStationId ? 1000 : 0}
-                    eventHandlers={{
-                        click: () => {
-                            onStationClick(station.location.latitude, station.location.longitude);
-                        },
-                    }}
+                    position={[flyToCoords.lat, flyToCoords.lon]}
+                    icon={RedIcon}
+                    zIndexOffset={2000} // Highest priority
                 >
                     <Popup>
-                        <strong>{station.name}</strong><br />ID: {station.id}
+                        <strong>Selected Location</strong>
                     </Popup>
                 </Marker>
-            ))}
+            )}
+
+            {/* 2. Render Sensor Stations (Green or Blue) */}
+            {stations.map(station => {
+                const isContributing = contributingStationIds?.includes(station.id);
+                // If this station happens to be exactly the user location (unlikely with float precision but possible),
+                // we might want to hide it or let Red cover it.
+
+                return (
+                    <Marker
+                        key={station.id}
+                        position={[station.location.latitude, station.location.longitude]}
+                        icon={isContributing ? GreenIcon : BlueIcon}
+                        zIndexOffset={isContributing ? 1000 : 0} // Contributing on top of passive
+                        eventHandlers={{
+                            click: () => {
+                                onStationClick(station.location.latitude, station.location.longitude);
+                            },
+                        }}
+                    >
+                        <Popup>
+                            <strong>{station.name}</strong><br />
+                            ID: {station.id}<br />
+                            {isContributing && <span style={{ color: 'green', fontWeight: 'bold' }}>Running...</span>}
+                        </Popup>
+                    </Marker>
+                );
+            })}
         </MapContainer>
     );
 };

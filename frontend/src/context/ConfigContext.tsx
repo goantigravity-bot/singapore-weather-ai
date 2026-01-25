@@ -5,6 +5,8 @@ export type Metric = 'rain' | 'temp' | 'hum';
 interface ConfigState {
     metrics: Set<Metric>;
     toggleMetric: (m: Metric) => void;
+    showTriangle: boolean;
+    toggleShowTriangle: () => void;
 }
 
 const ConfigContext = createContext<ConfigState | undefined>(undefined);
@@ -24,9 +26,18 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return new Set<Metric>(['rain', 'temp', 'hum']); // Default all on
     });
 
+    const [showTriangle, setShowTriangle] = useState<boolean>(() => {
+        const saved = localStorage.getItem('show_triangle');
+        return saved ? JSON.parse(saved) : false;
+    });
+
     useEffect(() => {
         localStorage.setItem('forecast_metrics', JSON.stringify(Array.from(metrics)));
     }, [metrics]);
+
+    useEffect(() => {
+        localStorage.setItem('show_triangle', JSON.stringify(showTriangle));
+    }, [showTriangle]);
 
     const toggleMetric = (m: Metric) => {
         setMetrics(prev => {
@@ -40,8 +51,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         });
     };
 
+    const toggleShowTriangle = () => {
+        setShowTriangle(prev => !prev);
+    };
+
     return (
-        <ConfigContext.Provider value={{ metrics, toggleMetric }}>
+        <ConfigContext.Provider value={{ metrics, toggleMetric, showTriangle, toggleShowTriangle }}>
             {children}
         </ConfigContext.Provider>
     );
