@@ -1,0 +1,32 @@
+# 部署配置文件
+# 复制此文件为 deploy-config.sh 并填写您的配置
+
+# ========== EC2配置 ==========
+# EC2实例IP地址
+EC2_IP="YOUR_EC2_PUBLIC_IP"
+
+# EC2连接信息
+EC2_HOST="ubuntu@${EC2_IP}"
+EC2_KEY="~/Downloads/weather-ai-key.pem"
+REMOTE_DIR="/home/ubuntu/weather-ai"
+
+# ========== S3和CloudFront配置 ==========
+# S3 Bucket名称（如果使用S3部署前端）
+S3_BUCKET="your-weather-app-bucket"
+
+# CloudFront分发ID（可选，用于CDN加速）
+CLOUDFRONT_ID="YOUR_DISTRIBUTION_ID"
+
+# 前端访问URL
+FRONTEND_URL="https://your-domain.com"
+
+# ========== 域名配置（可选） ==========
+# API域名（如果配置了）
+API_DOMAIN="api.your-domain.com"
+
+# ========== AWS配置 ==========
+# AWS区域
+AWS_REGION="ap-southeast-1"
+
+# AWS Profile（如果使用多个AWS账号）
+# AWS_PROFILE="default"
