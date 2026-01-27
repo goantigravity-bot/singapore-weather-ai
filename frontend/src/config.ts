@@ -1,5 +1,4 @@
 
-// dynamic API host configuration
-// keeps API on the same host as the frontend, but on port 8000
-const API_HOST = window.location.hostname;
-export const API_BASE_URL = `http://${API_HOST}:8000`;
+// API 配置 - 从环境变量读取
+// 生产环境使用 .env.production 中配置的后端 URL
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';

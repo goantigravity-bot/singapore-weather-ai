@@ -7,32 +7,34 @@ echo "🛑 停止 AWS 服务"
 echo "=================================================="
 
 # 配置
-EC2_INSTANCE_ID="i-004dffd96ed716316"  # 你的实例 ID
-S3_BUCKET="weather-ai-frontend-jinhui-20260126"
+# 配置
+API_INSTANCE_ID="i-004dffd96ed716316"
+TRAINING_INSTANCE_ID="i-09f62a4b8f3a0a0b1"
+FRONTEND_BUCKET="weather-ai-frontend-jinhui-20260126"
+MODELS_BUCKET="weather-ai-models-de08370c"
 REGION="ap-southeast-1"
 
 echo ""
 echo "请选择要执行的操作："
-echo "1. 停止 EC2 实例（保留实例，停止计费）"
-echo "2. 终止 EC2 实例（永久删除，完全停止计费）"
-echo "3. 清空并删除 S3 Bucket"
-echo "4. 停止所有服务（EC2 停止 + S3 保留）"
-echo "5. 删除所有服务（EC2 终止 + S3 删除）"
+echo "1. 停止所有 EC2 实例 (API + Training)"
+echo "2. 终止所有 EC2 实例 (永久删除)"
+echo "3. 清空并删除所有 S3 Buckets"
+echo "4. 停止所有服务 (EC2 停止 + S3 保留)"
+echo "5. 删除所有服务 (EC2 终止 + S3 删除 - 危险!)"
 echo ""
 read -p "请输入选项 (1-5): " choice
 
 case $choice in
     1)
         echo ""
-        echo "📦 停止 EC2 实例..."
-        echo "实例 ID: $EC2_INSTANCE_ID"
-        echo ""
-        read -p "确认停止 EC2 实例？(y/n): " confirm
+        echo "📦 停止所有 EC2 实例..."
+        echo "API Server: $API_INSTANCE_ID"
+        echo "Training Server: $TRAINING_INSTANCE_ID"
+        
+        read -p "确认停止？(y/n): " confirm
         if [ "$confirm" = "y" ]; then
-            aws ec2 stop-instances --instance-ids $EC2_INSTANCE_ID --region $REGION
-            echo "✅ EC2 实例已停止"
-            echo "💡 提示：实例已停止但未删除，仍会产生少量 EBS 存储费用"
-            echo "💡 重新启动：aws ec2 start-instances --instance-ids $EC2_INSTANCE_ID --region $REGION"
+            aws ec2 stop-instances --instance-ids $API_INSTANCE_ID $TRAINING_INSTANCE_ID --region $REGION
+            echo "✅ 实例已停止"
         else
             echo "❌ 操作已取消"
         fi
@@ -40,14 +42,12 @@ case $choice in
     
     2)
         echo ""
-        echo "⚠️  警告：终止 EC2 实例将永久删除实例！"
-        echo "实例 ID: $EC2_INSTANCE_ID"
-        echo ""
-        read -p "确认终止 EC2 实例？(yes/no): " confirm
+        echo "⚠️  警告：终止所有 EC2 实例将永久删除数据！"
+        
+        read -p "确认终止？(yes/no): " confirm
         if [ "$confirm" = "yes" ]; then
-            aws ec2 terminate-instances --instance-ids $EC2_INSTANCE_ID --region $REGION
-            echo "✅ EC2 实例已终止"
-            echo "💡 提示：实例已永久删除，无法恢复"
+            aws ec2 terminate-instances --instance-ids $API_INSTANCE_ID $TRAINING_INSTANCE_ID --region $REGION
+            echo "✅ 实例已终止"
         else
             echo "❌ 操作已取消"
         fi
@@ -55,16 +55,21 @@ case $choice in
     
     3)
         echo ""
-        echo "🗑️  清空并删除 S3 Bucket..."
-        echo "Bucket: $S3_BUCKET"
-        echo ""
-        read -p "确认删除 S3 Bucket 及所有内容？(yes/no): " confirm
+        echo "🗑️  清空并删除所有 S3 Buckets..."
+        echo "Frontend: $FRONTEND_BUCKET"
+        echo "Models: $MODELS_BUCKET"
+        
+        read -p "确认删除？(yes/no): " confirm
         if [ "$confirm" = "yes" ]; then
-            echo "清空 Bucket..."
-            aws s3 rm s3://$S3_BUCKET --recursive --region $REGION
-            echo "删除 Bucket..."
-            aws s3api delete-bucket --bucket $S3_BUCKET --region $REGION
-            echo "✅ S3 Bucket 已删除"
+            echo "删除 Frontend Bucket..."
+            aws s3 rm s3://$FRONTEND_BUCKET --recursive --region $REGION
+            aws s3api delete-bucket --bucket $FRONTEND_BUCKET --region $REGION
+            
+            echo "删除 Models Bucket..."
+            aws s3 rm s3://$MODELS_BUCKET --recursive --region $REGION
+            aws s3api delete-bucket --bucket $MODELS_BUCKET --region $REGION
+            
+            echo "✅ Buckets 已删除"
         else
             echo "❌ 操作已取消"
         fi
@@ -73,16 +78,11 @@ case $choice in
     4)
         echo ""
         echo "🛑 停止所有服务（保留数据）..."
-        echo ""
-        read -p "确认停止 EC2 实例？(y/n): " confirm
+        read -p "确认停止 EC2？(y/n): " confirm
         if [ "$confirm" = "y" ]; then
-            aws ec2 stop-instances --instance-ids $EC2_INSTANCE_ID --region $REGION
-            echo "✅ EC2 实例已停止"
-            echo "✅ S3 Bucket 保留（静态文件托管无运行费用）"
-            echo ""
-            echo "💰 费用说明："
-            echo "   - EC2: 已停止，仅产生少量 EBS 存储费用"
-            echo "   - S3: 仅按存储和流量计费"
+            aws ec2 stop-instances --instance-ids $API_INSTANCE_ID $TRAINING_INSTANCE_ID --region $REGION
+            echo "✅ EC2 已停止"
+            echo "✅ S3 保留"
         else
             echo "❌ 操作已取消"
         fi
@@ -90,25 +90,19 @@ case $choice in
     
     5)
         echo ""
-        echo "⚠️  警告：这将删除所有 AWS 资源！"
-        echo "   - EC2 实例将被终止（永久删除）"
-        echo "   - S3 Bucket 将被删除（包括所有文件）"
-        echo ""
-        read -p "确认删除所有服务？(yes/no): " confirm
+        echo "⚠️  DANGER: 删除所有资源！"
+        read -p "确认全部删除？(yes/no): " confirm
         if [ "$confirm" = "yes" ]; then
-            echo ""
-            echo "终止 EC2 实例..."
-            aws ec2 terminate-instances --instance-ids $EC2_INSTANCE_ID --region $REGION
-            echo "✅ EC2 实例已终止"
+            echo "终止 EC2..."
+            aws ec2 terminate-instances --instance-ids $API_INSTANCE_ID $TRAINING_INSTANCE_ID --region $REGION
             
-            echo ""
-            echo "删除 S3 Bucket..."
-            aws s3 rm s3://$S3_BUCKET --recursive --region $REGION
-            aws s3api delete-bucket --bucket $S3_BUCKET --region $REGION
-            echo "✅ S3 Bucket 已删除"
+            echo "删除 S3..."
+            aws s3 rm s3://$FRONTEND_BUCKET --recursive --region $REGION
+            aws s3api delete-bucket --bucket $FRONTEND_BUCKET --region $REGION
+            aws s3 rm s3://$MODELS_BUCKET --recursive --region $REGION
+            aws s3api delete-bucket --bucket $MODELS_BUCKET --region $REGION
             
-            echo ""
-            echo "✅ 所有服务已删除"
+            echo "✅ 所有资源已清理"
         else
             echo "❌ 操作已取消"
         fi

@@ -117,3 +117,7 @@ output "training_server_ip" {
 output "models_bucket_name" {
   value = aws_s3_bucket.models.bucket
 }
+
+output "training_server_id" {
+  value = aws_instance.training_server.id
+}

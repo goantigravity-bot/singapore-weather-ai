@@ -66,6 +66,7 @@ deploy_backend() {
     echo "📦 上传代码到EC2..."
     rsync -avz --exclude 'node_modules' --exclude 'frontend/node_modules' --exclude 'frontend/dist' \
       --exclude '.git' --exclude 'satellite_data' --exclude '*.log' \
+      --exclude 'venv' --exclude '__pycache__' --exclude '.DS_Store' \
       -e "ssh -i $EC2_KEY" \
       ./ $EC2_HOST:$REMOTE_DIR/
     
@@ -77,8 +78,12 @@ deploy_backend() {
     echo "🔄 安装依赖并配置服务..."
     ssh -i $EC2_KEY $EC2_HOST << 'ENDSSH'
         cd /home/ubuntu/weather-ai
+        if [ ! -d "venv" ]; then
+            python3 -m venv venv
+        fi
         source venv/bin/activate
-        pip install -r requirements.txt
+        pip install torch --index-url https://download.pytorch.org/whl/cpu --no-cache-dir
+        pip install -r requirements.txt --no-cache-dir
         
         # 创建systemd服务文件
         sudo tee /etc/systemd/system/weather-api.service > /dev/null << 'EOF'

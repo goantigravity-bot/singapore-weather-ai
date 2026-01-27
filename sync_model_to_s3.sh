@@ -2,7 +2,7 @@
 # sync_model_to_s3.sh
 # Syncs trained models and history to S3
 
-S3_BUCKET="s3://weather-ai-models-jinhui"
+S3_BUCKET="s3://weather-ai-models-de08370c"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Ensure AWS CLI is configured

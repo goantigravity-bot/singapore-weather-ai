@@ -85,7 +85,7 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
         );
     }
 
-    // EXPANDED: Compact "Heads-Up" Display
+    // EXPANDED: Card-based Display
     return (
         <div style={{
             position: 'absolute',
@@ -94,64 +94,142 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
             transform: 'translateX(-50%)',
             zIndex: 1000,
             width: '90%',
-            maxWidth: '600px', // Prevent being too wide on desktop
+            maxWidth: '400px', // Slightly narrower for a card look
             display: 'flex',
-            flexDirection: 'column', // Allow updated time to sit below or nice layout
+            flexDirection: 'column',
             alignItems: 'center',
-            pointerEvents: 'none' // Wrapper checks events, internal needs auto
+            pointerEvents: 'none'
         }}>
             <div style={{
                 pointerEvents: 'auto',
-                background: 'rgba(20, 20, 20, 0.65)', // Semi-transparent dark
-                backdropFilter: 'blur(12px)',
-                borderRadius: '50px', // Pill shape
+                background: 'rgba(20, 20, 20, 0.85)', // Darker, less transparent background for readability
+                backdropFilter: 'blur(16px)',
+                borderRadius: '24px', // More standard card radius
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                padding: '12px 24px',
+                padding: '20px',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '20px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                flexDirection: 'column',
+                gap: '16px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
                 color: 'white',
-                whiteSpace: 'nowrap'
+                width: '100%',
+                boxSizing: 'border-box'
             }}>
-                {/* 1. Location Name */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1.2rem' }}>📍</span>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 700, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                        {data.nearest_station.name}
-                    </span>
+                {/* 1. Header Section: Location & Time */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <h2 style={{
+                            margin: 0,
+                            fontSize: '1.4rem',
+                            fontWeight: 700,
+                            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            lineHeight: 1.2
+                        }}>
+                            {data.nearest_station.name}
+                        </h2>
+                        <span style={{
+                            fontSize: '0.85rem',
+                            color: 'rgba(255,255,255,0.7)',
+                            fontWeight: 500
+                        }}>
+                            {new Date(data.timestamp).toLocaleString(undefined, {
+                                weekday: 'short',
+                                day: 'numeric',
+                                month: 'short',
+                                hour: 'numeric',
+                                minute: '2-digit'
+                            })}
+                        </span>
+                    </div>
+                    {/* Close Button */}
+                    <button
+                        onClick={() => setIsMinimized(true)}
+                        style={{
+                            background: 'rgba(255,255,255,0.1)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '28px',
+                            height: '28px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        ✕
+                    </button>
                 </div>
 
-                {/* Vertical Divider */}
-                <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)' }}></div>
+                {/* Divider */}
+                <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
 
-                {/* 2. Metrics Row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    {/* Rain */}
-                    {metrics.has('rain') && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} title={`Rainfall: ${data.forecast.rainfall_mm_next_10min}mm`}>
-                            <span style={{ fontSize: '1.2rem' }}>{isRain ? '🌧️' : '☁️'}</span>
-                            <span style={{ fontWeight: 600, color: statusColor }}>
-                                {isRain ? 'Rain' : 'Clear'}
+                {/* 2. Primary Status (Rain) */}
+                {metrics.has('rain') && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        borderRadius: '16px',
+                        background: isRain ? 'rgba(255, 87, 87, 0.15)' : 'rgba(75, 255, 120, 0.1)',
+                        border: `1px solid ${isRain ? 'rgba(255, 87, 87, 0.3)' : 'rgba(75, 255, 120, 0.3)'}`
+                    }}>
+                        <span style={{ fontSize: '1.8rem' }}>{isRain ? '🌧️' : '☁️'}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Condition</span>
+                            <span style={{ fontSize: '1.1rem', fontWeight: 600, color: statusColor }}>
+                                {isRain ? 'Raining' : 'Clear Sky'}
                             </span>
                         </div>
-                    )}
+                        {data.forecast.rainfall_mm_next_10min > 0 && (
+                            <span style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--accent-cyan)' }}>
+                                {data.forecast.rainfall_mm_next_10min} mm
+                            </span>
+                        )}
+                    </div>
+                )}
 
+                {/* 3. Metrics Grid */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '12px'
+                }}>
                     {/* Temp */}
                     {metrics.has('temp') && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '1.2rem' }}>🌡️</span>
-                            <span style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>
-                                {data.current_weather?.temperature != null ? `${data.current_weather.temperature}°` : "--"}
+                        <div style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            padding: '12px',
+                            borderRadius: '16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                                <span>🌡️</span> Temp
+                            </div>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 600, color: 'white' }}>
+                                {data.current_weather?.temperature != null ? `${data.current_weather.temperature}°C` : "--"}
                             </span>
                         </div>
                     )}
 
                     {/* Humidity */}
                     {metrics.has('hum') && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '1.2rem' }}>💧</span>
-                            <span style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>
+                        <div style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            padding: '12px',
+                            borderRadius: '16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                                <span>💧</span> Humidity
+                            </div>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 600, color: 'white' }}>
                                 {data.current_weather?.humidity != null ? `${data.current_weather.humidity}%` : "--"}
                             </span>
                         </div>
@@ -159,38 +237,26 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
 
                     {/* PM2.5 */}
                     {metrics.has('pm25') && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '1.2rem' }}>😷</span>
-                            <span style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>
-                                {data.current_weather?.pm25 != null ? `${data.current_weather.pm25}` : "--"}
-                            </span>
-                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>µg</span>
+                        <div style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            padding: '12px',
+                            borderRadius: '16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                                <span>😷</span> PM2.5
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                <span style={{ fontSize: '1.2rem', fontWeight: 600, color: 'white' }}>
+                                    {data.current_weather?.pm25 != null ? `${data.current_weather.pm25}` : "--"}
+                                </span>
+                                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>µg</span>
+                            </div>
                         </div>
                     )}
                 </div>
-
-                {/* Close/Minimize Button (Small X at end) */}
-                <div style={{ marginLeft: 'auto', paddingLeft: '10px' }}>
-                    <button
-                        onClick={() => setIsMinimized(true)}
-                        style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
-                    >
-                        ✕
-                    </button>
-                </div>
-            </div>
-
-            {/* Tiny Updated Timestamp Below */}
-            <div style={{
-                marginTop: '6px',
-                fontSize: '0.75rem',
-                color: 'rgba(255,255,255,0.8)',
-                textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-                background: 'rgba(0,0,0,0.3)',
-                padding: '2px 8px',
-                borderRadius: '10px'
-            }}>
-                Updated: {new Date(data.timestamp).toLocaleString()}
             </div>
         </div>
     );

@@ -2,7 +2,7 @@
 # fetch_latest_model.sh
 # Helper for API server to pull latest model
 
-S3_BUCKET="s3://weather-ai-models-jinhui"
+S3_BUCKET="s3://weather-ai-models-de08370c"
 MODEL_FILE="weather_fusion_model.pth"
 
 echo "Fetching latest model from $S3_BUCKET..."
