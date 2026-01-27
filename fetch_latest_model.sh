@@ -7,12 +7,18 @@ MODEL_FILE="weather_fusion_model.pth"
 
 echo "Fetching latest model from $S3_BUCKET..."
 
+ENDPOINT_FLAG=""
+if [ -n "$S3_ENDPOINT_URL" ]; then
+    ENDPOINT_FLAG="--endpoint-url $S3_ENDPOINT_URL"
+    echo "Using custom endpoint: $S3_ENDPOINT_URL"
+fi
+
 if [ -f "$MODEL_FILE" ]; then
     cp "$MODEL_FILE" "${MODEL_FILE}.backup"
     echo "Backed up current model."
 fi
 
-aws s3 cp "$S3_BUCKET/models/latest.pth" "$MODEL_FILE"
+aws s3 cp "$S3_BUCKET/models/latest.pth" "$MODEL_FILE" $ENDPOINT_FLAG
 
 if [ $? -eq 0 ]; then
     echo "✅ Successfully downloaded latest model."

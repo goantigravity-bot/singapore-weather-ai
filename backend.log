@@ -1,0 +1,609 @@
+INFO:     Will watch for changes in these directories: ['/Users/jinhui/development/tools/claude-skill']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [82610] using StatReload
+INFO:     Started server process [82613]
+INFO:     Waiting for application startup.
+2026-01-27 10:50:15,657 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 10:50:16,128 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+Loading Model...
+⚠️ Error loading model weights: Error(s) in loading state_dict for WeatherFusionNet:
+	size mismatch for sensor_encoder.lstm.weight_ih_l0: copying a param with shape torch.Size([256, 3]) from checkpoint, the shape in current model is torch.Size([256, 4]).
+⚠️ Starting with initialized model (random weights) for testing/verification.
+Loading Sensor Database...
+[Info] Fetched metadata for 61 rainfall stations.
+INFO:     127.0.0.1:54085 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54107 - "GET /popular-searches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54109 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54111 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54107 - "GET /popular-searches HTTP/1.1" 200 OK
+2026-01-27 10:50:34,156 - api - INFO - Simulating Live Data: Real Time 2026-01-27 10:50:00 -> Mapped to History 2026-01-19 10:50:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 10:50:35,188 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.41km)', 'S71 (2.21km)']
+2026-01-27 10:50:35,188 - api - INFO - Interpolating using 2 stations.
+2026-01-27 10:50:35,221 - api - INFO - Prediction Result -- Rain: 0.0674 | Temp: 26.3 | Hum: 77.7 | PM2.5: 16.0
+Built Delaunay Mesh with 61 points.
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.41km)
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54107 - "GET /predict?lat=1.301298111119534&lon=103.79924143352498 HTTP/1.1" 200 OK
+2026-01-27 10:50:35,223 - api - INFO - Simulating Live Data: Real Time 2026-01-27 10:50:00 -> Mapped to History 2026-01-19 10:50:00+08:00
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.41km)
+INFO:     127.0.0.1:54107 - "GET /stations HTTP/1.1" 200 OK
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 10:50:36,206 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.41km)', 'S71 (2.21km)']
+2026-01-27 10:50:36,206 - api - INFO - Interpolating using 2 stations.
+2026-01-27 10:50:36,241 - api - INFO - Prediction Result -- Rain: 0.0674 | Temp: 26.3 | Hum: 77.7 | PM2.5: 16.0
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54111 - "GET /predict?lat=1.301298111119534&lon=103.79924143352498 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54111 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54141 - "OPTIONS /log-search HTTP/1.1" 200 OK
+2026-01-27 10:51:17,306 - api - INFO - Path Prediction Request for: Sentosa
+2026-01-27 10:51:17,309 - api - INFO - Search logged: 'Sentosa' from IP: 127.0.0.1
+Querying Overpass API for: Sentosa
+INFO:     127.0.0.1:54141 - "POST /log-search HTTP/1.1" 200 OK
+2026-01-27 10:51:18,734 - api - INFO - Sampled 1 points along path.
+Path Logic: Force=False
+Path Filtering: Found 1 valid path segments.
+Geometric Selection: Inside Triangle ['S60', 'S226', 'S222']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 3 (Nearest: 1.53km)
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54140 - "GET /predict/path?query=Sentosa HTTP/1.1" 200 OK
+2026-01-27 10:57:08,861 - api - INFO - Simulating Live Data: Real Time 2026-01-27 10:50:00 -> Mapped to History 2026-01-19 10:50:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 10:57:09,750 - api - INFO - Initial Nearest Sensors for query: ['S07 (1.91km)', 'S69 (2.58km)', 'S213 (3.29km)']
+2026-01-27 10:57:09,750 - api - INFO - Interpolating using 3 stations.
+2026-01-27 10:57:09,794 - api - INFO - Prediction Result -- Rain: 0.0629 | Temp: 25.8 | Hum: 77.5 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S07', 'S69', 'S213']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 3 (Nearest: 1.91km)
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54328 - "GET /predict?lat=1.3521&lon=103.8198 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54353 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54351 - "GET /popular-searches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54353 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54355 - "GET /popular-searches HTTP/1.1" 200 OK
+2026-01-27 10:57:34,546 - api - INFO - Simulating Live Data: Real Time 2026-01-27 10:50:00 -> Mapped to History 2026-01-19 10:50:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 10:57:35,412 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.32km)', 'S71 (2.29km)']
+2026-01-27 10:57:35,412 - api - INFO - Interpolating using 2 stations.
+2026-01-27 10:57:35,440 - api - INFO - Prediction Result -- Rain: 0.0678 | Temp: 26.3 | Hum: 77.6 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.32km)
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54355 - "GET /predict?lat=1.3012416587938347&lon=103.80009822080297 HTTP/1.1" 200 OK
+2026-01-27 10:57:35,442 - api - INFO - Simulating Live Data: Real Time 2026-01-27 10:50:00 -> Mapped to History 2026-01-19 10:50:00+08:00
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.32km)
+INFO:     127.0.0.1:54355 - "GET /stations HTTP/1.1" 200 OK
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 10:57:36,410 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.32km)', 'S71 (2.29km)']
+2026-01-27 10:57:36,410 - api - INFO - Interpolating using 2 stations.
+2026-01-27 10:57:36,440 - api - INFO - Prediction Result -- Rain: 0.0678 | Temp: 26.3 | Hum: 77.6 | PM2.5: 16.0
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54353 - "GET /predict?lat=1.3012416587938347&lon=103.80009822080297 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54353 - "GET /stations HTTP/1.1" 200 OK
+2026-01-27 10:57:36,926 - api - INFO - Simulating Live Data: Real Time 2026-01-27 10:50:00 -> Mapped to History 2026-01-19 10:50:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 10:57:37,741 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.69km)', 'S92 (1.66km)', 'S226 (2.28km)']
+2026-01-27 10:57:37,742 - api - INFO - Interpolating using 3 stations.
+2026-01-27 10:57:37,786 - api - INFO - Prediction Result -- Rain: 0.0644 | Temp: 26.2 | Hum: 78.1 | PM2.5: 17.0
+Geometric Selection: Inside Triangle ['S223', 'S92', 'S226']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 3 (Nearest: 0.69km)
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54353 - "GET /predict?lat=1.2946917715387336&lon=103.79916514718417 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54353 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54480 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54478 - "GET /popular-searches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54482 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54484 - "GET /popular-searches HTTP/1.1" 200 OK
+2026-01-27 10:59:59,815 - api - INFO - Simulating Live Data: Real Time 2026-01-27 10:50:00 -> Mapped to History 2026-01-19 10:50:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:00:00,709 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.38km)', 'S71 (2.26km)']
+2026-01-27 11:00:00,709 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:00:00,738 - api - INFO - Prediction Result -- Rain: 0.0676 | Temp: 26.3 | Hum: 77.6 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.38km)
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0250_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54484 - "GET /predict?lat=1.30148265525322&lon=103.79965929946472 HTTP/1.1" 200 OK
+2026-01-27 11:00:00,740 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:00:00 -> Mapped to History 2026-01-19 11:00:00+08:00
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.38km)
+INFO:     127.0.0.1:54484 - "GET /stations HTTP/1.1" 200 OK
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:00:01,740 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.38km)', 'S71 (2.26km)']
+2026-01-27 11:00:01,740 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:00:01,771 - api - INFO - Prediction Result -- Rain: 0.1898 | Temp: 26.3 | Hum: 77.6 | PM2.5: 16.0
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54482 - "GET /predict?lat=1.30148265525322&lon=103.79965929946472 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54482 - "GET /stations HTTP/1.1" 200 OK
+2026-01-27 11:00:25,233 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:00:00 -> Mapped to History 2026-01-19 11:00:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:00:26,143 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.27km)', 'S92 (2.07km)', 'S226 (2.60km)']
+2026-01-27 11:00:26,143 - api - INFO - Interpolating using 3 stations.
+2026-01-27 11:00:26,189 - api - INFO - Prediction Result -- Rain: 0.1901 | Temp: 26.3 | Hum: 77.6 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S223', 'S92', 'S226']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 3 (Nearest: 0.27km)
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54493 - "GET /predict?lat=1.2979922935167199&lon=103.8010597229004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54493 - "GET /stations HTTP/1.1" 200 OK
+2026-01-27 11:02:18,813 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:00:00 -> Mapped to History 2026-01-19 11:00:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:02:19,698 - api - INFO - Initial Nearest Sensors for query: ['S223 (2.12km)', 'S50 (2.64km)', 'S201 (2.68km)']
+2026-01-27 11:02:19,698 - api - INFO - Interpolating using 3 stations.
+2026-01-27 11:02:19,742 - api - INFO - Prediction Result -- Rain: 0.2033 | Temp: 26.7 | Hum: 75.1 | PM2.5: 15.0
+Geometric Selection: Inside Triangle ['S223', 'S50', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 3 (Nearest: 2.12km)
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54527 - "GET /predict?lat=1.3134378057934368&lon=103.78921508789062 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54527 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54540 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54538 - "GET /popular-searches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54540 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54538 - "GET /popular-searches HTTP/1.1" 200 OK
+2026-01-27 11:02:26,051 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:00:00 -> Mapped to History 2026-01-19 11:00:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:02:26,933 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.43km)', 'S71 (2.22km)']
+2026-01-27 11:02:26,933 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:02:26,988 - api - INFO - Prediction Result -- Rain: 0.1896 | Temp: 26.3 | Hum: 77.7 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.43km)
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54538 - "GET /predict?lat=1.3015607585406173&lon=103.79920813532428 HTTP/1.1" 200 OK
+2026-01-27 11:02:26,989 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:00:00 -> Mapped to History 2026-01-19 11:00:00+08:00
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.43km)
+INFO:     127.0.0.1:54538 - "GET /stations HTTP/1.1" 200 OK
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:02:27,957 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.43km)', 'S71 (2.22km)']
+2026-01-27 11:02:27,957 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:02:27,988 - api - INFO - Prediction Result -- Rain: 0.1896 | Temp: 26.3 | Hum: 77.7 | PM2.5: 16.0
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54540 - "GET /predict?lat=1.3015607585406173&lon=103.79920813532428 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54540 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54660 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54658 - "GET /popular-searches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54660 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54662 - "GET /popular-searches HTTP/1.1" 200 OK
+2026-01-27 11:07:59,343 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:00:00 -> Mapped to History 2026-01-19 11:00:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:08:00,349 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.33km)', 'S71 (2.30km)']
+2026-01-27 11:08:00,349 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:08:00,383 - api - INFO - Prediction Result -- Rain: 0.1900 | Temp: 26.3 | Hum: 77.6 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.33km)
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54662 - "GET /predict?lat=1.3013651283881773&lon=103.80010927792759 HTTP/1.1" 200 OK
+2026-01-27 11:08:00,385 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:00:00 -> Mapped to History 2026-01-19 11:00:00+08:00
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.33km)
+INFO:     127.0.0.1:54662 - "GET /stations HTTP/1.1" 200 OK
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:08:01,337 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.33km)', 'S71 (2.30km)']
+2026-01-27 11:08:01,337 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:08:01,368 - api - INFO - Prediction Result -- Rain: 0.1900 | Temp: 26.3 | Hum: 77.6 | PM2.5: 16.0
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0300_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54660 - "GET /predict?lat=1.3013651283881773&lon=103.80010927792759 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54660 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54735 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54733 - "GET /popular-searches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54735 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54737 - "GET /popular-searches HTTP/1.1" 200 OK
+2026-01-27 11:10:30,259 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:10:00 -> Mapped to History 2026-01-19 11:10:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:10:31,194 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.37km)', 'S71 (2.23km)']
+2026-01-27 11:10:31,194 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:10:31,231 - api - INFO - Prediction Result -- Rain: 0.1948 | Temp: 26.3 | Hum: 77.6 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.37km)
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54737 - "GET /predict?lat=1.3011671636765367&lon=103.79956914684723 HTTP/1.1" 200 OK
+2026-01-27 11:10:31,233 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:10:00 -> Mapped to History 2026-01-19 11:10:00+08:00
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.37km)
+INFO:     127.0.0.1:54737 - "GET /stations HTTP/1.1" 200 OK
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:10:32,212 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.37km)', 'S71 (2.23km)']
+2026-01-27 11:10:32,212 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:10:32,242 - api - INFO - Prediction Result -- Rain: 0.1948 | Temp: 26.3 | Hum: 77.6 | PM2.5: 16.0
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54735 - "GET /predict?lat=1.3011671636765367&lon=103.79956914684723 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54735 - "GET /stations HTTP/1.1" 200 OK
+2026-01-27 11:11:35,064 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:10:00 -> Mapped to History 2026-01-19 11:10:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:11:35,969 - api - INFO - Initial Nearest Sensors for query: ['S223 (1.00km)', 'S71 (1.57km)']
+2026-01-27 11:11:35,969 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:11:35,998 - api - INFO - Prediction Result -- Rain: 0.1871 | Temp: 26.1 | Hum: 78.8 | PM2.5: 17.0
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 1.00km)
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54773 - "GET /predict?lat=1.2994622170517818&lon=103.79367828369142 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54773 - "GET /stations HTTP/1.1" 200 OK
+2026-01-27 11:11:39,780 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:10:00 -> Mapped to History 2026-01-19 11:10:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:11:40,595 - api - INFO - Initial Nearest Sensors for query: ['S213 (2.19km)', 'S50 (2.20km)', 'S223 (2.56km)']
+2026-01-27 11:11:40,596 - api - INFO - Interpolating using 3 stations.
+2026-01-27 11:11:40,656 - api - INFO - Prediction Result -- Rain: 0.2154 | Temp: 27.0 | Hum: 73.6 | PM2.5: 15.0
+Geometric Selection: Inside Triangle ['S213', 'S50', 'S223']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 3 (Nearest: 2.19km)
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54773 - "GET /predict?lat=1.3194630033515242&lon=103.79058837890626 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54773 - "GET /stations HTTP/1.1" 200 OK
+2026-01-27 11:11:42,176 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:10:00 -> Mapped to History 2026-01-19 11:10:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:11:43,073 - api - INFO - Initial Nearest Sensors for query: ['S71 (1.34km)', 'S223 (1.67km)', 'S201 (3.24km)']
+2026-01-27 11:11:43,073 - api - INFO - Interpolating using 3 stations.
+2026-01-27 11:11:43,116 - api - INFO - Prediction Result -- Rain: 0.1793 | Temp: 26.0 | Hum: 80.0 | PM2.5: 18.0
+Geometric Selection: Inside Triangle ['S71', 'S223', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 3 (Nearest: 1.34km)
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0310_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:54773 - "GET /predict?lat=1.3025358039426431&lon=103.78787871206877 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54773 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56044 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56042 - "GET /popular-searches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56044 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56046 - "GET /popular-searches HTTP/1.1" 200 OK
+2026-01-27 11:54:28,698 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:50:00 -> Mapped to History 2026-01-19 11:50:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:54:29,659 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.43km)', 'S71 (2.22km)']
+2026-01-27 11:54:29,659 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:54:29,694 - api - INFO - Prediction Result -- Rain: 0.2012 | Temp: 26.3 | Hum: 77.7 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.43km)
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:56046 - "GET /predict?lat=1.3015908509403653&lon=103.79920958444134 HTTP/1.1" 200 OK
+2026-01-27 11:54:29,696 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:50:00 -> Mapped to History 2026-01-19 11:50:00+08:00
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.43km)
+INFO:     127.0.0.1:56046 - "GET /stations HTTP/1.1" 200 OK
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:54:30,645 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.43km)', 'S71 (2.22km)']
+2026-01-27 11:54:30,645 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:54:30,675 - api - INFO - Prediction Result -- Rain: 0.2012 | Temp: 26.3 | Hum: 77.7 | PM2.5: 16.0
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:56044 - "GET /predict?lat=1.3015908509403653&lon=103.79920958444134 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56044 - "GET /stations HTTP/1.1" 200 OK
+2026-01-27 11:54:56,840 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:50:00 -> Mapped to History 2026-01-19 11:50:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:54:57,695 - api - INFO - Initial Nearest Sensors for query: ['S120 (0.00km)', 'S77 (1.78km)', 'S223 (1.97km)']
+2026-01-27 11:54:57,696 - api - INFO - Interpolating using 3 stations.
+2026-01-27 11:54:57,741 - api - INFO - Prediction Result -- Rain: 0.2022 | Temp: 26.3 | Hum: 77.5 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S120', 'S77', 'S223']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 3 (Nearest: 0.00km)
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:56048 - "GET /predict?lat=1.30874&lon=103.818 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56048 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56116 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56114 - "GET /popular-searches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56116 - "GET /stations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56118 - "GET /popular-searches HTTP/1.1" 200 OK
+2026-01-27 11:56:43,126 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:50:00 -> Mapped to History 2026-01-19 11:50:00+08:00
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:56:43,995 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.43km)', 'S71 (2.22km)']
+2026-01-27 11:56:43,995 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:56:44,028 - api - INFO - Prediction Result -- Rain: 0.2012 | Temp: 26.3 | Hum: 77.7 | PM2.5: 16.0
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.43km)
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:56118 - "GET /predict?lat=1.3015908509403653&lon=103.79920958444134 HTTP/1.1" 200 OK
+2026-01-27 11:56:44,030 - api - INFO - Simulating Live Data: Real Time 2026-01-27 11:50:00 -> Mapped to History 2026-01-19 11:50:00+08:00
+Geometric Selection: Inside Triangle ['S223', 'S71', 'S201']
+Geometric Selection: Fallback to K-Nearest Candidates.
+Sensor Pruning: 3 -> 2 (Nearest: 0.43km)
+INFO:     127.0.0.1:56118 - "GET /stations HTTP/1.1" 200 OK
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'nominatim.openstreetmap.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 11:56:44,993 - api - INFO - Initial Nearest Sensors for query: ['S223 (0.43km)', 'S71 (2.22km)']
+2026-01-27 11:56:44,993 - api - INFO - Interpolating using 2 stations.
+2026-01-27 11:56:45,022 - api - INFO - Prediction Result -- Rain: 0.2012 | Temp: 26.3 | Hum: 77.7 | PM2.5: 16.0
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+Loaded Cached Image: NC_H09_20260119_0350_R21_FLDK.07001_06001.npy
+INFO:     127.0.0.1:56116 - "GET /predict?lat=1.3015908509403653&lon=103.79920958444134 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56116 - "GET /stations HTTP/1.1" 200 OK
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [82613]
+INFO:     Started server process [17495]
+INFO:     Waiting for application startup.
+2026-01-27 14:33:53,915 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:33:54,491 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'train.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17495]
+INFO:     Started server process [17830]
+INFO:     Waiting for application startup.
+2026-01-27 14:35:09,307 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:35:09,813 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17830]
+INFO:     Started server process [19075]
+INFO:     Waiting for application startup.
+2026-01-27 14:38:15,469 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:38:16,024 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19075]
+INFO:     Started server process [19940]
+INFO:     Waiting for application startup.
+2026-01-27 14:40:02,745 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:40:03,328 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19940]
+INFO:     Started server process [20095]
+INFO:     Waiting for application startup.
+2026-01-27 14:40:26,421 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:40:26,982 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20095]
+INFO:     Started server process [20176]
+INFO:     Waiting for application startup.
+2026-01-27 14:40:54,006 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:40:54,553 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20176]
+INFO:     Started server process [20817]
+INFO:     Waiting for application startup.
+2026-01-27 14:41:42,716 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:41:43,274 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20817]
+INFO:     Started server process [22265]
+INFO:     Waiting for application startup.
+2026-01-27 14:46:09,935 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:46:10,454 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22265]
+INFO:     Started server process [22342]
+INFO:     Waiting for application startup.
+2026-01-27 14:47:02,531 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:47:03,033 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22342]
+INFO:     Started server process [23250]
+INFO:     Waiting for application startup.
+2026-01-27 14:48:09,682 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:48:10,214 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [23250]
+INFO:     Started server process [23932]
+INFO:     Waiting for application startup.
+2026-01-27 14:49:01,495 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:49:02,039 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'download_jaxa_data.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [23932]
+INFO:     Started server process [27640]
+INFO:     Waiting for application startup.
+2026-01-27 14:58:25,211 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 14:58:25,829 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'train_rolling_window.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [27640]
+INFO:     Started server process [44857]
+INFO:     Waiting for application startup.
+2026-01-27 15:17:15,211 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 15:17:15,815 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'api.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [44857]
+Process SpawnProcess-15:
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 320, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/uvicorn/_subprocess.py", line 80, in subprocess_started
+    target(sockets=sockets)
+    ~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+    ~~~~~~~~~~~^^
+  File "/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/uvicorn/config.py", line 439, in load
+    self.loaded_app = import_from_string(self.app)
+                      ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1398, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "/Users/jinhui/development/tools/claude-skill/api.py", line 68, in <module>
+    S3_BUCKET = os.environ.get("S3_BUCKET", None)
+                ^^
+NameError: name 'os' is not defined. Did you forget to import 'os'?
+WARNING:  StatReload detected changes in 'api.py'. Reloading...
+INFO:     Started server process [46454]
+INFO:     Waiting for application startup.
+2026-01-27 15:20:35,634 - api - INFO - API Startup: Loading Model and Data...
+/Users/jinhui/development/tools/claude-skill/venv/lib/python3.14/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.data.gov.sg'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-01-27 15:20:36,204 - api - INFO - API Startup: Success.
+INFO:     Application startup complete.
+Loading Model...
+⚠️ Error loading model weights: Error(s) in loading state_dict for WeatherFusionNet:
+	size mismatch for sensor_encoder.lstm.weight_ih_l0: copying a param with shape torch.Size([256, 3]) from checkpoint, the shape in current model is torch.Size([256, 4]).
+⚠️ Starting with initialized model (random weights) for testing/verification.
+Loading Sensor Database...
+[Info] Fetched metadata for 61 rainfall stations.
+INFO:     127.0.0.1:60420 - "GET /training/status HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [46454]
+INFO:     Stopping reloader process [82610]

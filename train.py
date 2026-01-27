@@ -43,13 +43,54 @@ def train_model():
     # 🆕 增量学习: 检查是否存在已训练模型
     if os.path.exists(MODEL_SAVE_PATH):
         print(f"\n🔄 检测到已有模型: {MODEL_SAVE_PATH}")
-        print("   使用增量学习模式（微调）")
+        print("   尝试增量学习加载...")
         try:
-            model.load_state_dict(torch.load(MODEL_SAVE_PATH, map_location=DEVICE))
+            # Smart Loading Logic
+            saved_state = torch.load(MODEL_SAVE_PATH, map_location=DEVICE)
+            model_state = model.state_dict()
+            
+            # Check for shape mismatch in SensorEncoder (3 vs 4 features)
+            pixel_layer_weight = 'sensor_encoder.lstm.weight_ih_l0'
+            
+            if pixel_layer_weight in saved_state and pixel_layer_weight in model_state:
+                saved_shape = saved_state[pixel_layer_weight].shape
+                model_shape = model_state[pixel_layer_weight].shape
+                
+                # Default shape for LSTM weight_ih_l0 is (4*hidden_size, input_size)
+                # saved: (256, 3), model: (256, 4) if hidden=64
+                if saved_shape != model_shape:
+                    print(f"   ⚠️  Layer Shape Mismatch detected: {pixel_layer_weight}")
+                    print(f"   Saved: {saved_shape} | Current: {model_shape}")
+                    
+                    if saved_shape[0] == model_shape[0] and saved_shape[1] < model_shape[1]:
+                        print("   💡 Performing Smart Adaptation (3->4 features)...")
+                        # Copy existing weights
+                        new_weight = model_state[pixel_layer_weight].clone()
+                        # Copy old weights to the corresponding slice
+                        # Assuming inputs were [Temp, Hum, Rain] and now [Temp, Hum, Rain, PM2.5]
+                        # We copy the first 3 columns
+                        new_weight[:, :saved_shape[1]] = saved_state[pixel_layer_weight]
+                        
+                        # Use initialized random weights for the new column(s) (already in new_weight)
+                        # Optional: Initialize with smaller variance or zero to not disrupt training initially?
+                        # Using model's default init (which is usually uniform/xavier) is fine.
+                        
+                        # Update the saved state dict to inject modified weight
+                        saved_state[pixel_layer_weight] = new_weight
+                        
+                        # Do the same for bias? LSTM bias is (4*hidden,), it doesn't depend on input size.
+                        # Wait, weight_ih_l0 is input-hidden weights. bias_ih_l0 is bias. 
+                        # Bias shape depends only on hidden size, so it should match if hidden size didn't change.
+                        print("   ✅ Smart adaptation applied to weights.")
+            
+            # Load with strict=False to allow for minor mismatches if any, but our fix should make it perfect match
+            # But let's verify keys first.
+            model.load_state_dict(saved_state, strict=False)
             EPOCHS = EPOCHS_INCREMENTAL
-            print(f"   ✅ 模型加载成功，将训练 {EPOCHS} epochs")
+            print(f"   ✅ 模型加载成功 (增量模式)，将训练 {EPOCHS} epochs")
+            
         except Exception as e:
-            print(f"   ⚠️  模型加载失败: {e}")
+            print(f"   ⚠️  模型加载失败 (Error: {e})")
             print(f"   将从头开始训练 {EPOCHS_INITIAL} epochs")
             EPOCHS = EPOCHS_INITIAL
     else:
@@ -137,6 +178,23 @@ def train_model():
 
     print(f"\nTraining Complete. Best Val Loss: {best_loss:.4f}")
     print(f"Model saved to: {MODEL_SAVE_PATH}")
+    
+    # Save Metrics for Dashboard
+    metrics = {
+        "best_val_loss": best_loss,
+        "final_epoch": EPOCHS,
+        "last_train_mae": avg_train_mae,
+        "last_val_mae": avg_val_mae,
+        "rmse": best_loss ** 0.5,
+        "success": True
+    }
+    with open("training_metrics.json", "w") as f:
+        import json
+        json.dump(metrics, f, indent=2)
+    
+    print("Force exiting to prevent MPS hang...")
+    import sys
+    sys.exit(0)
 
 if __name__ == "__main__":
     if not os.path.exists(CSV_PATH):

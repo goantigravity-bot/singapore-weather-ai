@@ -30,6 +30,10 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
                         <span style={{ fontSize: '1.2rem' }}>📊</span> Popular Places
                     </Link>
 
+                    <Link to="/training" className="menu-item" onClick={onClose}>
+                        <span style={{ fontSize: '1.2rem' }}>🚀</span> Training Monitor
+                    </Link>
+
                     <Link to="/settings" className="menu-item" onClick={onClose}>
                         <span style={{ fontSize: '1.2rem' }}>⚙️</span> Settings
                     </Link>

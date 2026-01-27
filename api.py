@@ -6,6 +6,7 @@ import torch
 import pandas as pd
 from typing import Optional
 from datetime import datetime, timedelta
+import os
 
 # Import from predict.py
 from predict import (
@@ -63,6 +64,45 @@ init_db()
 
 class SearchLog(BaseModel):
     query: str
+
+# --- S3 Config for Training status ---
+S3_BUCKET = os.environ.get("S3_BUCKET", None)
+S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
+
+@app.get("/training/status")
+def get_training_status():
+    """Fetch current training state from S3"""
+    if not S3_BUCKET:
+        return {"status": "unknown", "message": "S3_BUCKET not configured"}
+    
+    try:
+        import boto3
+        import json
+        s3 = boto3.client('s3', endpoint_url=S3_ENDPOINT_URL)
+        obj = s3.get_object(Bucket=S3_BUCKET, Key="state/training_state.json")
+        data = json.loads(obj['Body'].read().decode('utf-8'))
+        return data
+    except Exception as e:
+        # If file not found or other error, return idle/unknown
+        logger.warning(f"Failed to fetch training status: {e}")
+        return {"status": "idle", "message": str(e)}
+
+@app.get("/training/history")
+def get_training_history():
+    """Fetch training history from S3"""
+    if not S3_BUCKET:
+        return []
+        
+    try:
+        import boto3
+        import json
+        s3 = boto3.client('s3', endpoint_url=S3_ENDPOINT_URL)
+        obj = s3.get_object(Bucket=S3_BUCKET, Key="history/training_history.json")
+        data = json.loads(obj['Body'].read().decode('utf-8'))
+        return data
+    except Exception as e:
+        logger.warning(f"Failed to fetch history: {e}")
+        return []
 
 
 # Global variables to hold model and data

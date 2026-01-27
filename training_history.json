@@ -26,5 +26,50 @@
       "learning_rate": 0.001,
       "device": "MPS (Apple Silicon)"
     }
+  },
+  {
+    "timestamp": "2026-01-27T07:54:05.867620",
+    "duration_formatted": "N/A",
+    "success": true,
+    "metrics": {
+      "mae": 0.09313462927860452,
+      "rmse": 0.0,
+      "accuracy": 0.0
+    },
+    "data_info": {
+      "date_range": "2026-01-25 to 2026-01-25",
+      "sensor_records": 0
+    },
+    "id": 2
+  },
+  {
+    "timestamp": "2026-01-27T08:23:06.027153+00:00",
+    "duration_formatted": "N/A",
+    "success": true,
+    "metrics": {
+      "mae": 0.0808061746503591,
+      "rmse": 0.8174653568819017,
+      "accuracy": 0.0
+    },
+    "data_info": {
+      "date_range": "2026-01-25 to 2026-01-25",
+      "sensor_records": 0
+    },
+    "id": 3
+  },
+  {
+    "timestamp": "2026-01-27T08:53:26.159605+00:00",
+    "duration_formatted": "N/A",
+    "success": true,
+    "metrics": {
+      "mae": 0.05107100415938246,
+      "rmse": 0.7405395103395969,
+      "accuracy": 0.0
+    },
+    "data_info": {
+      "date_range": "2026-01-25 to 2026-01-25",
+      "sensor_records": 0
+    },
+    "id": 4
   }
 ]

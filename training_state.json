@@ -1,3 +1,9 @@
 {
-  "last_training_end_date": "2026-01-25"
+  "status": "completed",
+  "current_batch": 1,
+  "total_batches": 2,
+  "batch_start": "2026-01-25",
+  "batch_end": "2026-01-25",
+  "current_step": "Done",
+  "last_updated": "2026-01-27T08:53:33.387561+00:00"
 }

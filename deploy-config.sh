@@ -1,0 +1,8 @@
+EC2_IP="3.0.28.161"
+EC2_HOST="ubuntu@3.0.28.161"
+EC2_KEY="~/.ssh/id_rsa"
+REMOTE_DIR="/home/ubuntu/weather-ai"
+S3_BUCKET="weather-ai-frontend-jinhui-20260126"
+CLOUDFRONT_ID="E3NTCXM5BZ2EUY"
+FRONTEND_URL="https://d1em23i2wkbin3.cloudfront.net"
+AWS_REGION="ap-southeast-1"

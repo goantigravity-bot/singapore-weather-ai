@@ -1,0 +1,8 @@
+{
+  "best_val_loss": 0.5483987663740099,
+  "final_epoch": 1,
+  "last_train_mae": 0.05137856668172347,
+  "last_val_mae": 0.05107100415938246,
+  "rmse": 0.7405395103395969,
+  "success": true
+}

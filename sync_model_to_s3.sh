@@ -13,10 +13,17 @@ fi
 
 echo "Syncing models to $S3_BUCKET..."
 
+# Check for custom endpoint (e.g., local moto server)
+ENDPOINT_FLAG=""
+if [ -n "$S3_ENDPOINT_URL" ]; then
+    ENDPOINT_FLAG="--endpoint-url $S3_ENDPOINT_URL"
+    echo "Using custom endpoint: $S3_ENDPOINT_URL"
+fi
+
 # 1. Upload Model
 if [ -f "weather_fusion_model.pth" ]; then
-    aws s3 cp weather_fusion_model.pth "$S3_BUCKET/models/$TIMESTAMP/weather_fusion_model.pth"
-    aws s3 cp weather_fusion_model.pth "$S3_BUCKET/models/latest.pth"
+    aws s3 cp weather_fusion_model.pth "$S3_BUCKET/models/$TIMESTAMP/weather_fusion_model.pth" $ENDPOINT_FLAG
+    aws s3 cp weather_fusion_model.pth "$S3_BUCKET/models/latest.pth" $ENDPOINT_FLAG
     echo "✅ Uploaded model"
 else
     echo "⚠️ Model file not found"
@@ -24,12 +31,12 @@ fi
 
 # 2. Upload History
 if [ -f "training_history.json" ]; then
-    aws s3 cp training_history.json "$S3_BUCKET/history/training_history.json"
+    aws s3 cp training_history.json "$S3_BUCKET/history/training_history.json" $ENDPOINT_FLAG
     echo "✅ Uploaded history"
 fi
 
 # 3. Upload State
 if [ -f "training_state.json" ]; then
-    aws s3 cp training_state.json "$S3_BUCKET/state/training_state.json"
+    aws s3 cp training_state.json "$S3_BUCKET/state/training_state.json" $ENDPOINT_FLAG
     echo "✅ Uploaded state"
 fi
