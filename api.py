@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import torch
@@ -36,6 +36,12 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Singapore Weather AI API")
 
+# 创建 API 路由器
+# 所有路由都会注册在根路径和 /api 前缀下，以支持：
+# - 本地开发：直接访问 http://localhost:8000/predict
+# - CloudFront 生产环境：通过 /api/predict 访问
+api_router = APIRouter()
+
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
@@ -69,7 +75,7 @@ class SearchLog(BaseModel):
 S3_BUCKET = os.environ.get("S3_BUCKET", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 
-@app.get("/training/status")
+@api_router.get("/training/status")
 def get_training_status():
     """Fetch current training state from S3"""
     if not S3_BUCKET:
@@ -87,7 +93,7 @@ def get_training_status():
         logger.warning(f"Failed to fetch training status: {e}")
         return {"status": "idle", "message": str(e)}
 
-@app.get("/training/history")
+@api_router.get("/training/history")
 def get_training_history():
     """Fetch training history from S3"""
     if not S3_BUCKET:
@@ -123,18 +129,18 @@ def startup_event():
     except Exception as e:
         logger.error(f"API Startup Failed: {e}")
 
-@app.get("/health")
+@api_router.get("/health")
 def health_check():
     if model is None:
         return {"status": "error", "message": "Model not loaded"}
     return {"status": "ok"}
 
-@app.get("/stations")
+@api_router.get("/stations")
 def get_stations():
     global stations_meta
     return stations_meta
 
-@app.post("/log-search")
+@api_router.post("/log-search")
 def log_search(log: SearchLog, request: Request):
     try:
         # 获取客户端IP地址
@@ -161,7 +167,7 @@ def log_search(log: SearchLog, request: Request):
         logger.error(f"Error logging search: {e}")
         return {"status": "error", "message": str(e)}
 
-@app.get("/popular-searches")
+@api_router.get("/popular-searches")
 def get_popular_searches():
     try:
         conn = sqlite3.connect('weather.db')
@@ -187,7 +193,7 @@ def get_popular_searches():
         logger.error(f"Error fetching popular searches: {e}")
         return []
 
-@app.get("/predict/path")
+@api_router.get("/predict/path")
 def predict_weather_path(
     query: str = Query(..., description="Name of the landmark or path (e.g. 'Rail Corridor')")
 ):
@@ -316,7 +322,7 @@ def predict_weather_path(
         "points": results
     }
 
-@app.get("/predict")
+@api_router.get("/predict")
 def predict_weather(
     location: Optional[str] = Query(None, description="Location name or address"),
     lat: Optional[float] = Query(None, description="Latitude"),
@@ -563,6 +569,12 @@ def predict_weather(
             "pm25": final_pm25
         }
     }
+
+# 注册路由器：同时支持根路径和 /api 前缀
+# - 根路径：本地开发使用 http://localhost:8000/predict
+# - /api 前缀：CloudFront 代理使用 https://xxx.cloudfront.net/api/predict
+app.include_router(api_router)  # 根路径
+app.include_router(api_router, prefix="/api")  # /api 前缀
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
