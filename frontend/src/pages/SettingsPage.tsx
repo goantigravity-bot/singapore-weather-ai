@@ -41,11 +41,14 @@ const SettingsPage: React.FC = () => {
                 Select which weather metrics to display on the forecast panel.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 {renderToggle('rain', 'Rainfall Prediction', '🌧️')}
                 {renderToggle('temp', 'Temperature', '🌡️')}
                 {renderToggle('hum', 'Humidity', '💧')}
+                {renderToggle('pm25', 'PM2.5 (Air Quality)', '😷')}
+            </div>
 
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
                 <hr style={{ width: '100%', borderColor: 'rgba(255,255,255,0.1)' }} />
 
                 {/* Manual Visual Toggle for Triangle (Using similar style but referencing boolean directly) */}

@@ -27,6 +27,7 @@ interface ForecastResult {
   current_weather: {
     temperature: number | null;
     humidity: number | null;
+    pm25: number | null;
   };
 }
 
@@ -111,7 +112,8 @@ function App() {
               },
               current_weather: {
                 temperature: first.forecast.temperature,
-                humidity: null
+                humidity: null,
+                pm25: null
               }
             });
             return; // Stop here, don't do single point forecast

@@ -92,12 +92,17 @@ class TrainingPipeline:
             if isinstance(cmd, str):
                 cmd = cmd.split()
             
+            # 🆕 添加环境变量强制无缓冲输出
+            env = os.environ.copy()
+            env['PYTHONUNBUFFERED'] = '1'
+            
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                check=True
+                check=True,
+                env=env  # 🆕 传递环境变量
             )
             
             logger.info(f"✅ {step_name} 完成")
@@ -249,8 +254,17 @@ class TrainingPipeline:
         minutes = int(duration.total_seconds() // 60)
         seconds = int(duration.total_seconds() % 60)
         
+        # 🆕 从环境变量读取实际配置
+        epochs_initial = int(os.environ.get('EPOCHS_INITIAL', 30))
+        epochs_incremental = int(os.environ.get('EPOCHS_INCREMENTAL', 5))
+        
+        # 判断是否存在模型文件来确定使用哪个epochs值
+        model_exists = os.path.exists("weather_fusion_model.pth")
+        actual_epochs = epochs_incremental if model_exists else epochs_initial
+        
         return {
-            'epochs': 30,  # 从train.py读取
+            'epochs': actual_epochs,
+            'epochs_mode': '增量训练' if model_exists else '首次训练',
             'batch_size': 4,
             'learning_rate': 0.001,
             'duration': f"{minutes}分{seconds}秒",

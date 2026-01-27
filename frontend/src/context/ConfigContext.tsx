@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export type Metric = 'rain' | 'temp' | 'hum';
+export type Metric = 'rain' | 'temp' | 'hum' | 'pm25';
 
 interface ConfigState {
     metrics: Set<Metric>;
@@ -23,7 +23,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 console.error("Failed to parse metrics", e);
             }
         }
-        return new Set<Metric>(['rain', 'temp', 'hum']); // Default all on
+        return new Set<Metric>(['rain', 'temp', 'hum', 'pm25']); // Default all on
     });
 
     const [showTriangle, setShowTriangle] = useState<boolean>(() => {

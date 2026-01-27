@@ -47,6 +47,25 @@ class WeatherDataset(Dataset):
         
         self.sensor_df['timestamp'] = pd.to_datetime(self.sensor_df['timestamp'])
         
+        # 🆕 滑动窗口优化: 只使用最近N天的数据
+        MAX_TRAINING_DAYS = 30  # 可配置参数
+        
+        if len(self.sensor_df) > 0:
+            max_date = self.sensor_df['timestamp'].max()
+            cutoff_date = max_date - timedelta(days=MAX_TRAINING_DAYS)
+            original_count = len(self.sensor_df)
+            
+            self.sensor_df = self.sensor_df[self.sensor_df['timestamp'] >= cutoff_date]
+            
+            print(f"📊 滑动窗口优化:")
+            print(f"   - 窗口大小: 最近 {MAX_TRAINING_DAYS} 天")
+            print(f"   - 数据范围: {self.sensor_df['timestamp'].min()} 至 {self.sensor_df['timestamp'].max()}")
+            print(f"   - 原始记录: {original_count:,} 条")
+            print(f"   - 过滤后记录: {len(self.sensor_df):,} 条")
+            print(f"   - 减少: {original_count - len(self.sensor_df):,} 条 ({(1 - len(self.sensor_df)/original_count)*100:.1f}%)")
+        else:
+            print("⚠️  数据集为空")
+        
         # --- PRE-SCAN AVAILABLE SATELLITE FILES ---
         self.available_sat_timestamps = set()
         
@@ -97,7 +116,8 @@ class WeatherDataset(Dataset):
             r = group.resample('10min').agg({
                 'temperature': 'mean',
                 'humidity': 'mean',
-                'rainfall': 'sum'
+                'rainfall': 'sum',
+                'pm25': 'mean'
             }).dropna().reset_index()
             r['sensor_id'] = sensor_id
             resampled_dfs.append(r)
@@ -149,7 +169,7 @@ class WeatherDataset(Dataset):
         group = sample_info['group_data']
         
         # 1. Get Sensor Data
-        feature_cols = ['temperature', 'rainfall', 'humidity']
+        feature_cols = ['temperature', 'rainfall', 'humidity', 'pm25']
         sensor_seq = group.iloc[sample_info['input_idx_start'] : sample_info['input_idx_end']][feature_cols].values
         
         # NORMALIZATION (Simple Manual Scaling)
@@ -157,6 +177,7 @@ class WeatherDataset(Dataset):
         sensor_seq[:, 0] = (sensor_seq[:, 0] - 28.0) / 5.0  # Temp
         sensor_seq[:, 1] = sensor_seq[:, 1] / 10.0          # Rain
         sensor_seq[:, 2] = (sensor_seq[:, 2] - 80.0) / 20.0 # Humidity
+        sensor_seq[:, 3] = (sensor_seq[:, 3] - 20.0) / 20.0 # PM2.5 (Mean~10-50?) - Rough norm
         
         sensor_tensor = torch.tensor(sensor_seq, dtype=torch.float32)
         

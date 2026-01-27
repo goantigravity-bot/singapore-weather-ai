@@ -8,7 +8,14 @@ import os
 # --- Hyperparameters ---
 BATCH_SIZE = 4
 LEARNING_RATE = 1e-3
-EPOCHS = 30
+
+# 🆕 动态Epochs配置
+EPOCHS_INITIAL = 30      # 首次训练
+EPOCHS_INCREMENTAL = 5   # 增量训练（微调）
+
+# 支持环境变量覆盖
+EPOCHS_INITIAL = int(os.environ.get('EPOCHS_INITIAL', EPOCHS_INITIAL))
+EPOCHS_INCREMENTAL = int(os.environ.get('EPOCHS_INCREMENTAL', EPOCHS_INCREMENTAL))
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda")
 elif torch.backends.mps.is_available():
@@ -31,12 +38,39 @@ def train_model():
     train_loader, val_loader = get_dataloaders(CSV_PATH, SAT_DIR, batch_size=BATCH_SIZE)
     
     # 2. Model
-    model = WeatherFusionNet(sat_channels=1, sensor_features=3, prediction_dim=1) # Sat channel=1 because we use B13 (Infrared) only
+    model = WeatherFusionNet(sat_channels=1, sensor_features=4, prediction_dim=1) # Sat channel=1 because we use B13 (Infrared) only
+    
+    # 🆕 增量学习: 检查是否存在已训练模型
+    if os.path.exists(MODEL_SAVE_PATH):
+        print(f"\n🔄 检测到已有模型: {MODEL_SAVE_PATH}")
+        print("   使用增量学习模式（微调）")
+        try:
+            model.load_state_dict(torch.load(MODEL_SAVE_PATH, map_location=DEVICE))
+            EPOCHS = EPOCHS_INCREMENTAL
+            print(f"   ✅ 模型加载成功，将训练 {EPOCHS} epochs")
+        except Exception as e:
+            print(f"   ⚠️  模型加载失败: {e}")
+            print(f"   将从头开始训练 {EPOCHS_INITIAL} epochs")
+            EPOCHS = EPOCHS_INITIAL
+    else:
+        print(f"\n🆕 首次训练，从头开始")
+        EPOCHS = EPOCHS_INITIAL
+        print(f"   将训练 {EPOCHS} epochs")
+    
     model.to(DEVICE)
     
     # 3. Loss & Optimizer
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    
+    print(f"\n{'='*60}")
+    print(f"训练配置:")
+    print(f"  - 模式: {'增量学习' if os.path.exists(MODEL_SAVE_PATH) else '首次训练'}")
+    print(f"  - Epochs: {EPOCHS}")
+    print(f"  - Batch Size: {BATCH_SIZE}")
+    print(f"  - Learning Rate: {LEARNING_RATE}")
+    print(f"  - Device: {DEVICE}")
+    print(f"{'='*60}\n")
     
     print("Starting Training...")
     best_loss = float('inf')

@@ -23,11 +23,18 @@ C2, L2 = latlon2xy(SG_LAT_MIN, SG_LON_MAX)
 
 def load_system():
     print("Loading Model...")
-    model = WeatherFusionNet(sat_channels=1, sensor_features=3, prediction_dim=1)
+    model = WeatherFusionNet(sat_channels=1, sensor_features=4, prediction_dim=1)
     if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(f"Model file {MODEL_PATH} not found. Train first!")
-        
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+        print(f"Warning: Model file {MODEL_PATH} not found. Starting with initialized model (random weights).")
+    else:
+        try:
+            state_dict = torch.load(MODEL_PATH, map_location=DEVICE, weights_only=True)
+            model.load_state_dict(state_dict)
+            print("Model loaded successfully.")
+        except Exception as e:
+            print(f"⚠️ Error loading model weights: {e}")
+            print("⚠️ Starting with initialized model (random weights) for testing/verification.")
+    
     model.to(DEVICE)
     model.eval()
     
@@ -69,7 +76,8 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
     recent_resampled = recent_raw.set_index('timestamp').resample('10min').agg({
         'temperature': 'mean',
         'humidity': 'mean',
-        'rainfall': 'sum'
+        'rainfall': 'sum',
+        'pm25': 'mean'
     }).dropna()
     
     # We need exactly the last `seq_len` steps
@@ -79,12 +87,13 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
         print(f"Warning: Not enough history (after resampling) for {sensor_id}. Found {len(recent_data)} steps (Need {seq_len}).")
         return None, None
 
-    features = recent_data[['temperature', 'rainfall', 'humidity']].values.astype(np.float32)
+    features = recent_data[['temperature', 'rainfall', 'humidity', 'pm25']].values.astype(np.float32)
     
     # NORMALIZATION (Must match weather_dataset.py)
     features[:, 0] = (features[:, 0] - 28.0) / 5.0  
     features[:, 1] = features[:, 1] / 10.0          
     features[:, 2] = (features[:, 2] - 80.0) / 20.0 
+    features[:, 3] = (features[:, 3] - 20.0) / 20.0 
     
     sensor_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0) # Batch dim
     

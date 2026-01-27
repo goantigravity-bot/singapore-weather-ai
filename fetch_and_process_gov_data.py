@@ -17,10 +17,19 @@ FETCH_CONFIG = [
 
     # 3. First Date range: 18 Jan to 21 Jan
     {'start': datetime.date(2026, 1, 17), 'end': datetime.date(2026, 1, 20)},
-
-    # 4. You can add more ranges! Example:
-    # {'start': datetime.date(2026, 2, 1), 'end': datetime.date(2026, 2, 5)},
 ]
+
+# 🆕 Check Environment Variables (Override/Append)
+if os.environ.get('FETCH_START_DATE') and os.environ.get('FETCH_END_DATE'):
+    try:
+        s = datetime.date.fromisoformat(os.environ.get('FETCH_START_DATE'))
+        e = datetime.date.fromisoformat(os.environ.get('FETCH_END_DATE'))
+        print(f"Adding Env Config: {s} to {e}")
+        FETCH_CONFIG.insert(0, {'start': s, 'end': e})
+        # Optional: Clear others if you want STRICT env control
+        # FETCH_CONFIG = [{'start': s, 'end': e}]
+    except ValueError as err:
+        print(f"Error parsing env dates: {err}")
 
 OUTPUT_FILE = "real_sensor_data.csv"
 # TODO: Replace with your actual .pem or .crt file path
@@ -32,8 +41,32 @@ BASE_URL = "https://api.data.gov.sg/v1/environment"
 ENDPOINTS = {
     "temperature": "air-temperature",
     "rainfall": "rainfall",
-    "humidity": "relative-humidity"
+    "humidity": "relative-humidity",
+    "pm25": "pm25"
 }
+
+# --- Region Mapping for PM2.5 ---
+# Coordinates (approx centroids) for Singapore regions
+REGION_CENTROIDS = {
+    "north": {"lat": 1.41803, "lon": 103.8200},
+    "south": {"lat": 1.29587, "lon": 103.8200},
+    "east":  {"lat": 1.35735, "lon": 103.9400},
+    "west":  {"lat": 1.35735, "lon": 103.7000},
+    "central": {"lat": 1.35735, "lon": 103.8200}
+}
+
+def get_region_from_latlon(lat, lon):
+    """Find the nearest region key for a given lat/lon."""
+    min_dist = float('inf')
+    best_region = "central" # default
+    
+    for region, coords in REGION_CENTROIDS.items():
+        # Simple Euclidean distance is sufficient for small area
+        d = ((lat - coords['lat'])**2 + (lon - coords['lon'])**2)**0.5
+        if d < min_dist:
+            min_dist = d
+            best_region = region
+    return best_region
 
 def fetch_data(date_str, type_key):
     """Fetch one day of data for a specific type (e.g., rainfall)."""
@@ -65,11 +98,29 @@ def process_day(date_obj):
     date_str = date_obj.strftime("%Y-%m-%d")
     print(f"Processing {date_str}...")
     
-    # 1. Fetch all 3 types
+    # 1. Fetch metadata first (to build station map)
+    # We use temperature call to get station metadata
+    print("    Fetching metadata from temperature endpoint...")
+    temp_data = fetch_data(date_str, "temperature")
+    
+    station_region_map = {} # station_id -> region_key
+    
+    if temp_data and 'metadata' in temp_data and 'stations' in temp_data['metadata']:
+        for s in temp_data['metadata']['stations']:
+            if 'location' in s and 'latitude' in s['location']:
+                lat = s['location']['latitude']
+                lon = s['location']['longitude']
+                sid = s['id']
+                station_region_map[sid] = get_region_from_latlon(lat, lon)
+    
+    # 2. Fetch all types
     data_raw = {}
+    data_raw['temperature'] = temp_data # Reuse
+    
     for key in ENDPOINTS:
+        if key == 'temperature': continue
         data_raw[key] = fetch_data(date_str, key)
-        time.sleep(0.5) # Be nice to API
+        time.sleep(0.5)
 
     # 2. Flatten Data
     # structure: { metadata: {stations...}, items: [{timestamp, readings: [{station_id, value}]}] }
@@ -83,18 +134,41 @@ def process_day(date_obj):
         if not json_data or 'items' not in json_data:
             continue
             
-        for item in json_data['items']:
-            timestamp = item['timestamp']
-            for reading in item['readings']:
-                sid = reading['station_id']
-                val = reading['value']
+        if dtype == 'pm25':
+            # Structure: items -> [{timestamp, readings: {pm25_one_hourly: {west: X, ...}}}]
+            # Iterate through time steps
+            for item in json_data['items']:
+                timestamp = item['timestamp']
+                if 'readings' not in item or 'pm25_one_hourly' not in item['readings']:
+                    continue
+                    
+                regional_readings = item['readings']['pm25_one_hourly']
                 
-                records.append({
-                    "timestamp": timestamp,
-                    "sensor_id": sid,
-                    "type": dtype,
-                    "value": val
-                })
+                # For every known station, assign the value of its region
+                for sid, region_key in station_region_map.items():
+                    if region_key in regional_readings:
+                        val = regional_readings[region_key]
+                        
+                        records.append({
+                            "timestamp": timestamp,
+                            "sensor_id": sid,
+                            "type": "pm25",
+                            "value": val
+                        })
+        else:
+            # Standard Structure: items -> [{timestamp, readings: [{station_id: ..., value: ...}]}]
+            for item in json_data['items']:
+                timestamp = item['timestamp']
+                for reading in item['readings']:
+                    sid = reading['station_id']
+                    val = reading['value']
+                    
+                    records.append({
+                        "timestamp": timestamp,
+                        "sensor_id": sid,
+                        "type": dtype,
+                        "value": val
+                    })
 
     if not records:
         return pd.DataFrame()
@@ -159,9 +233,9 @@ def main():
     final_df = final_df.sort_values(['sensor_id', 'timestamp'])
     
     # Rename type columns to match our Dataset (if needed)
-    # Our code expects: temperature, rainfall, humidity
+    # Our code expects: temperature, rainfall, humidity, pm25
     # Check if columns exist
-    required = ['temperature', 'rainfall', 'humidity']
+    required = ['temperature', 'rainfall', 'humidity', 'pm25']
     for col in required:
         if col not in final_df.columns:
             print(f"Warning: Column '{col}' missing (maybe no data returned). Filling 0.")

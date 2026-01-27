@@ -389,6 +389,7 @@ def predict_weather(
     # --- COLLECT DATA FROM SENTORS ---
     temp_values = []
     hum_values = []
+    pm25_values = []
     rain_preds = []
     valid_distances = []
     
@@ -432,8 +433,10 @@ def predict_weather(
                     rec = relevant.iloc[-1]
                     t = float(rec['temperature'])
                     h = float(rec['humidity'])
+                    p = float(rec.get('pm25', 0.0))
                     temp_values.append(t)
                     hum_values.append(h)
+                    pm25_values.append(p)
                     
                     # Only add distance if we successfully got data
                     # (Assuming rain pred success usually implies data exists, but need to align lists)
@@ -450,6 +453,7 @@ def predict_weather(
                         if len(temp_values) > len(valid_distances):
                              temp_values.pop()
                              hum_values.pop()
+                             pm25_values.pop()
         except Exception:
             pass
 
@@ -457,11 +461,12 @@ def predict_weather(
     
     # Use valid_distances for weighting
     # If list lengths mismatch (rare), truncate to min length
-    min_len = min(len(rain_preds), len(temp_values), len(hum_values), len(valid_distances))
+    min_len = min(len(rain_preds), len(temp_values), len(hum_values), len(pm25_values), len(valid_distances))
     
     final_rain = 0.0
     final_temp = None
     final_hum = None
+    final_pm25 = None
     
     if min_len > 0:
         # Slice to sync
@@ -469,15 +474,18 @@ def predict_weather(
         v_rain = rain_preds[:min_len]
         v_temp = temp_values[:min_len]
         v_hum = hum_values[:min_len]
+        v_pm25 = pm25_values[:min_len]
         
         final_rain = calculate_idw(v_rain, v_dists)
         final_temp = calculate_idw(v_temp, v_dists)
         final_hum = calculate_idw(v_hum, v_dists)
+        final_pm25 = calculate_idw(v_pm25, v_dists)
         
         final_temp = round(final_temp, 1)
         final_hum = round(final_hum, 1)
+        final_pm25 = round(final_pm25, 0)
         
-        logger.info(f"Prediction Result -- Rain: {final_rain:.4f} | Temp: {final_temp} | Hum: {final_hum}")
+        logger.info(f"Prediction Result -- Rain: {final_rain:.4f} | Temp: {final_temp} | Hum: {final_hum} | PM2.5: {final_pm25}")
     else:
         # Fallback to single closest if everything failed (shouldn't happen with valid fallback logic)
         raise HTTPException(status_code=500, detail="Failed to aggregate data from any station")
@@ -511,7 +519,8 @@ def predict_weather(
         },
         "current_weather": {
             "temperature": final_temp,
-            "humidity": final_hum
+            "humidity": final_hum,
+            "pm25": final_pm25
         }
     }
 

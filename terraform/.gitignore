@@ -1,0 +1,30 @@
+# Terraform配置文件说明
+
+## 文件结构
+
+```
+terraform/
+├── main.tf                    # 主配置文件（资源定义）
+├── variables.tf               # 变量定义
+├── outputs.tf                 # 输出值定义
+├── user-data.sh              # EC2初始化脚本
+├── terraform.tfvars.example  # 配置示例
+├── terraform.tfvars          # 实际配置（不提交到Git）
+└── README.md                 # 使用指南
+```
+
+## 忽略文件
+
+创建 `.gitignore`:
+```
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+terraform.tfvars
+
+# SSH密钥
+*.pem
+*.key
+```

@@ -15,6 +15,7 @@ interface ForecastData {
     current_weather?: {
         temperature: number | null;
         humidity: number | null;
+        pm25: number | null;
     };
 }
 
@@ -153,6 +154,17 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
                             <span style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>
                                 {data.current_weather?.humidity != null ? `${data.current_weather.humidity}%` : "--"}
                             </span>
+                        </div>
+                    )}
+
+                    {/* PM2.5 */}
+                    {metrics.has('pm25') && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '1.2rem' }}>😷</span>
+                            <span style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>
+                                {data.current_weather?.pm25 != null ? `${data.current_weather.pm25}` : "--"}
+                            </span>
+                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>µg</span>
                         </div>
                     )}
                 </div>

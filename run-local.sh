@@ -23,7 +23,10 @@ fi
 source venv/bin/activate
 
 echo "安装 Python 依赖..."
-pip install -q fastapi uvicorn httpx python-dotenv pydantic
+echo "安装 Python 依赖..."
+pip install -q -r requirements.txt
+# Ensure torch is installed (sometimes requirements.txt might be minimal)
+pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # 检查前端依赖
 echo ""
@@ -52,7 +55,7 @@ echo "后端 PID: $BACKEND_PID"
 
 # 等待后端启动
 echo "等待后端启动..."
-sleep 3
+sleep 10
 
 # 检查后端是否运行
 if curl -s http://localhost:8000/health > /dev/null; then
