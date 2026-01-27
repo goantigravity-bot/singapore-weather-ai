@@ -22,6 +22,16 @@ aws s3 cp "$S3_BUCKET/models/latest.pth" "$MODEL_FILE" $ENDPOINT_FLAG
 
 if [ $? -eq 0 ]; then
     echo "✅ Successfully downloaded latest model."
+    
+    # 下载传感器数据
+    echo "Fetching sensor data..."
+    aws s3 cp "$S3_BUCKET/sensor_data/real_sensor_data.csv" "real_sensor_data.csv" $ENDPOINT_FLAG 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo "✅ Successfully downloaded sensor data."
+    else
+        echo "⚠️ Sensor data not available in S3 (using existing local copy)."
+    fi
+    
     # Optional: Restart API service
     # sudo systemctl restart weather-api
 else
