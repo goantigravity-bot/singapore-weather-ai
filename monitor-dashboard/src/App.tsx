@@ -57,12 +57,8 @@ function DownloadTab({
 }) {
   const progress = Math.round((data.completedDays / data.totalDays) * 100);
 
-  // 模拟按日期的数据（实际应从API获取）
-  const dateProgress = [
-    { date: '2025-10-01', satellite: { done: 144, total: 144 }, nea: { done: 4, total: 4 }, status: 'completed' },
-    { date: '2025-10-02', satellite: { done: data.filesDownloaded % 144, total: 144 }, nea: { done: 4, total: 4 }, status: 'running' },
-    { date: '2025-10-03', satellite: { done: 0, total: 144 }, nea: { done: 0, total: 4 }, status: 'pending' },
-  ];
+  // 使用 API 返回的真实数据
+  const dateProgress = data.dateProgress || [];
 
   return (
     <div className="tab-content">
@@ -110,8 +106,8 @@ function DownloadTab({
             {dateProgress.map(row => (
               <tr key={row.date} className={row.status}>
                 <td>{row.date}</td>
-                <td>{row.satellite.done} / {row.satellite.total}</td>
-                <td>{row.nea.done} / {row.nea.total}</td>
+                <td>{row.satelliteFiles} / {row.satelliteTotal}</td>
+                <td>{row.neaFiles} / {row.neaTotal}</td>
                 <td>
                   {row.status === 'completed' && <span className="status-icon success">{Icons.check}</span>}
                   {row.status === 'running' && <span className="status-icon running">{Icons.running}</span>}

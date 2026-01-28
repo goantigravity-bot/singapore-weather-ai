@@ -31,6 +31,16 @@ TRAINING_SERVER = os.environ.get("TRAINING_SERVER", "46.137.236.8")
 # 数据模型
 # ========================
 
+class DateProgress(BaseModel):
+    """单日下载进度"""
+    date: str
+    satelliteFiles: int = 0
+    satelliteTotal: int = 144
+    neaFiles: int = 0
+    neaTotal: int = 4
+    status: str = "pending"  # pending, running, completed
+
+
 class DownloadStatus(BaseModel):
     """下载状态"""
     currentDate: Optional[str] = None
@@ -40,6 +50,7 @@ class DownloadStatus(BaseModel):
     parallelProcesses: int = 0
     status: str = "unknown"  # running, idle, error
     lastUpdate: Optional[str] = None
+    dateProgress: List[DateProgress] = []
 
 
 class TrainingPhase(BaseModel):
@@ -116,6 +127,67 @@ def count_completed_days() -> int:
     except Exception as e:
         logger.error(f"Failed to count completed days: {e}")
         return 0
+
+
+def get_date_progress() -> List[DateProgress]:
+    """获取每日下载进度详情"""
+    try:
+        s3 = get_s3_client()
+        progress_list = []
+        
+        # 列出所有日期目录
+        paginator = s3.get_paginator('list_objects_v2')
+        date_dirs = set()
+        
+        for page in paginator.paginate(Bucket=S3_BUCKET, Prefix="satellite/", Delimiter='/'):
+            for prefix in page.get('CommonPrefixes', []):
+                # 提取日期 e.g. satellite/20251001/ -> 20251001
+                date_str = prefix['Prefix'].split('/')[1]
+                if date_str.isdigit() and len(date_str) == 8:
+                    date_dirs.add(date_str)
+        
+        # 对每个日期目录统计文件数
+        for date_str in sorted(date_dirs)[:10]:  # 只返回最近10天
+            satellite_count = 0
+            has_complete = False
+            
+            # 统计卫星文件
+            for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=f"satellite/{date_str}/"):
+                for obj in page.get('Contents', []):
+                    if obj['Key'].endswith('.complete'):
+                        has_complete = True
+                    elif obj['Key'].endswith('.nc'):
+                        satellite_count += 1
+            
+            # 统计 NEA 数据
+            formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+            nea_count = 0
+            for api in ['rainfall', 'temperature', 'humidity', 'pm25']:
+                try:
+                    s3.head_object(Bucket=S3_BUCKET, Key=f"govdata/{api}_{formatted_date}.json")
+                    nea_count += 1
+                except:
+                    pass
+            
+            # 确定状态
+            if has_complete:
+                status = "completed"
+            elif satellite_count > 0:
+                status = "running"
+            else:
+                status = "pending"
+            
+            progress_list.append(DateProgress(
+                date=formatted_date,
+                satelliteFiles=satellite_count,
+                neaFiles=nea_count,
+                status=status
+            ))
+        
+        return progress_list
+    except Exception as e:
+        logger.error(f"Failed to get date progress: {e}")
+        return []
 
 
 def read_log_file(log_path: str, lines: int = 100) -> str:
@@ -195,12 +267,24 @@ def get_download_status():
         # 统计总文件数
         total_files = count_s3_files("satellite/")
         
+        # 获取每日进度
+        date_progress = get_date_progress()
+        
+        # 获取当前日期（最后一个 running 状态的日期）
+        current_date = None
+        for dp in date_progress:
+            if dp.status == "running":
+                current_date = dp.date
+                break
+        
         return DownloadStatus(
+            currentDate=current_date,
             completedDays=completed_days,
             totalDays=119,
             filesDownloaded=total_files,
             status="running" if completed_days < 119 else "completed",
-            lastUpdate=datetime.now().isoformat()
+            lastUpdate=datetime.now().isoformat(),
+            dateProgress=date_progress
         )
     except Exception as e:
         logger.error(f"Failed to get download status: {e}")

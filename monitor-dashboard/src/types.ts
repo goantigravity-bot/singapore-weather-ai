@@ -1,5 +1,14 @@
 // 监控仪表盘 API 类型定义
 
+export interface DateProgress {
+    date: string;
+    satelliteFiles: number;
+    satelliteTotal: number;
+    neaFiles: number;
+    neaTotal: number;
+    status: 'pending' | 'running' | 'completed';
+}
+
 export interface DownloadStatus {
     currentDate: string | null;
     completedDays: number;
@@ -8,6 +17,7 @@ export interface DownloadStatus {
     parallelProcesses: number;
     status: 'running' | 'idle' | 'error' | 'completed';
     lastUpdate: string | null;
+    dateProgress: DateProgress[];
 }
 
 export interface TrainingPhase {

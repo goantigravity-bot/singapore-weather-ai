@@ -44,7 +44,8 @@ export function getMockOverview(): OverviewStatus {
             filesDownloaded: 855,
             parallelProcesses: 4,
             status: 'running',
-            lastUpdate: new Date().toISOString()
+            lastUpdate: new Date().toISOString(),
+            dateProgress: []
         },
         training: {
             currentDate: '2025-10-01',
