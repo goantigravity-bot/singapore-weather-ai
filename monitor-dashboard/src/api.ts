@@ -60,7 +60,8 @@ export function getMockOverview(): OverviewStatus {
             ],
             diskUsage: '93 GB / 194 GB',
             status: 'running',
-            lastUpdate: new Date().toISOString()
+            lastUpdate: new Date().toISOString(),
+            history: []
         },
         sync: {
             modelSynced: true,

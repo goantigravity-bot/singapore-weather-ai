@@ -204,16 +204,35 @@ function TrainingTab({
         <table className="data-table">
           <thead>
             <tr>
-              <th>日期</th>
+              <th>数据范围</th>
+              <th>MAE (mm)</th>
+              <th>RMSE (mm)</th>
               <th>Epochs</th>
-              <th>耗时</th>
               <th>状态</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td colSpan={4} className="empty-row">暂无训练记录</td>
-            </tr>
+            {data.history && data.history.length > 0 ? (
+              data.history.slice().reverse().map((item) => (
+                <tr key={item.id} className={item.success ? 'completed' : 'error'}>
+                  <td>{item.dateRange}</td>
+                  <td>{item.mae.toFixed(4)}</td>
+                  <td>{item.rmse.toFixed(4)}</td>
+                  <td>{item.epochs}</td>
+                  <td>
+                    {item.success ? (
+                      <span className="status-icon success">{Icons.check}</span>
+                    ) : (
+                      <span className="status-icon error">{Icons.error}</span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="empty-row">暂无训练记录</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

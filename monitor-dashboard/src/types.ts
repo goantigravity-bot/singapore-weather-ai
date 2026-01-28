@@ -27,6 +27,17 @@ export interface TrainingPhase {
     message?: string;
 }
 
+export interface TrainingHistoryItem {
+    id: number;
+    timestamp: string;
+    dateRange: string;
+    epochs: number;
+    duration: string;
+    mae: number;
+    rmse: number;
+    success: boolean;
+}
+
 export interface TrainingStatus {
     currentDate: string | null;
     completedBatches: number;
@@ -36,6 +47,7 @@ export interface TrainingStatus {
     diskUsage: string | null;
     status: 'running' | 'idle' | 'error' | 'waiting';
     lastUpdate: string | null;
+    history: TrainingHistoryItem[];
 }
 
 export interface SyncStatus {

@@ -61,6 +61,18 @@ class TrainingPhase(BaseModel):
     message: Optional[str] = None
 
 
+class TrainingHistoryItem(BaseModel):
+    """训练历史记录"""
+    id: int
+    timestamp: str
+    dateRange: str
+    epochs: int = 0
+    duration: str = "N/A"
+    mae: float = 0.0
+    rmse: float = 0.0
+    success: bool = True
+
+
 class TrainingStatus(BaseModel):
     """训练状态"""
     currentDate: Optional[str] = None
@@ -71,6 +83,7 @@ class TrainingStatus(BaseModel):
     diskUsage: Optional[str] = None
     status: str = "unknown"
     lastUpdate: Optional[str] = None
+    history: List[TrainingHistoryItem] = []
 
 
 class SyncStatus(BaseModel):
@@ -220,6 +233,31 @@ def get_training_state() -> dict:
         return {}
 
 
+def get_training_history() -> List[TrainingHistoryItem]:
+    """获取训练历史记录"""
+    try:
+        s3 = get_s3_client()
+        obj = s3.get_object(Bucket=S3_BUCKET, Key="history/training_history.json")
+        data = json.loads(obj['Body'].read().decode('utf-8'))
+        
+        history = []
+        for item in data[-10:]:  # 只返回最近10条
+            history.append(TrainingHistoryItem(
+                id=item.get("id", 0),
+                timestamp=item.get("timestamp", ""),
+                dateRange=item.get("data_info", {}).get("date_range", "N/A"),
+                epochs=item.get("training_config", {}).get("epochs", 0),
+                duration=item.get("duration_formatted", "N/A"),
+                mae=item.get("metrics", {}).get("mae", 0.0),
+                rmse=item.get("metrics", {}).get("rmse", 0.0),
+                success=item.get("success", True)
+            ))
+        return history
+    except Exception as e:
+        logger.warning(f"Training history not found: {e}")
+        return []
+
+
 def read_s3_log(log_key: str, lines: int = 100) -> str:
     """从 S3 读取日志文件"""
     try:
@@ -326,7 +364,8 @@ def get_training_status():
             currentPhase=state.get("currentPhase", "idle"),
             phases=phases,
             status=state.get("status", "idle"),
-            lastUpdate=state.get("lastUpdate", datetime.now().isoformat())
+            lastUpdate=state.get("lastUpdate", datetime.now().isoformat()),
+            history=get_training_history()
         )
     except Exception as e:
         logger.error(f"Failed to get training status: {e}")
