@@ -172,33 +172,7 @@ function TrainingTab({
         )}
       </div>
 
-      {/* 阶段进度 */}
-      <div className="phases-container">
-        <h3>流程阶段</h3>
-        <div className="phases-list">
-          {phases.map((phase, i) => (
-            <div key={i} className={`phase-item ${phase.status}`}>
-              <div className="phase-number">{i + 1}</div>
-              <div className="phase-details">
-                <span className="phase-name">{phase.name}</span>
-                <div className="phase-progress-bar">
-                  <div
-                    className="phase-progress-fill"
-                    style={{ width: `${phase.progress || 0}%` }}
-                  />
-                </div>
-              </div>
-              <div className="phase-status">
-                {phase.status === 'completed' && Icons.check}
-                {phase.status === 'running' && `${phase.progress || 0}%`}
-                {phase.status === 'pending' && '待处理'}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 训练历史 */}
+      {/* 训练历史 - 移到顶部 */}
       <div className="data-table-container">
         <h3>训练历史</h3>
         <table className="data-table">
@@ -235,6 +209,32 @@ function TrainingTab({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* 阶段进度 */}
+      <div className="phases-container">
+        <h3>流程阶段</h3>
+        <div className="phases-list">
+          {phases.map((phase, i) => (
+            <div key={i} className={`phase-item ${phase.status}`}>
+              <div className="phase-number">{i + 1}</div>
+              <div className="phase-details">
+                <span className="phase-name">{phase.name}</span>
+                <div className="phase-progress-bar">
+                  <div
+                    className="phase-progress-fill"
+                    style={{ width: `${phase.progress || 0}%` }}
+                  />
+                </div>
+              </div>
+              <div className="phase-status">
+                {phase.status === 'completed' && Icons.check}
+                {phase.status === 'running' && `${phase.progress || 0}%`}
+                {phase.status === 'pending' && '待处理'}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <button className="view-logs-btn" onClick={onViewLogs}>
