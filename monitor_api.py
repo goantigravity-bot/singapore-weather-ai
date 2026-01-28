@@ -169,17 +169,23 @@ def get_date_progress() -> List[DateProgress]:
                 except:
                     pass
             
-            # 确定状态
+            # 确定状态和 total
             if has_complete:
                 status = "completed"
+                # 已完成时，total = 实际下载数
+                satellite_total = satellite_count
             elif satellite_count > 0:
                 status = "running"
+                # 进行中，使用估计值 144
+                satellite_total = 144
             else:
                 status = "pending"
+                satellite_total = 144
             
             progress_list.append(DateProgress(
                 date=formatted_date,
                 satelliteFiles=satellite_count,
+                satelliteTotal=satellite_total,
                 neaFiles=nea_count,
                 status=status
             ))
