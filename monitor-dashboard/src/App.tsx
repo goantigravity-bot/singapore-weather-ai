@@ -3,90 +3,52 @@ import './index.css';
 import type { OverviewStatus } from './types';
 import { getOverview, getLogs } from './api';
 
-// 图标组件
+// 图标
 const Icons = {
   download: '📥',
   training: '🧠',
-  sync: '☁️',
+  api: '☁️',
   check: '✅',
   error: '❌',
   loading: '⏳',
+  running: '🔄',
+  pending: '⏸️',
   log: '📋',
   close: '✕'
 };
 
-// 进度环组件
-function ProgressRing({ progress, size = 80 }: { progress: number; size?: number }) {
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (progress / 100) * circumference;
+// 标签页类型
+type TabType = 'download' | 'training' | 'api';
 
-  return (
-    <div className="progress-ring" style={{ width: size, height: size }}>
-      <svg width={size} height={size}>
-        <circle className="bg" cx={size / 2} cy={size / 2} r={radius} />
-        <circle
-          className="progress"
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-        />
-      </svg>
-      <span className="progress-text">{progress}%</span>
-    </div>
-  );
-}
-
-// 端到端管道进度组件
-function PipelineProgress({ currentStage }: { currentStage: string }) {
-  const stages = [
-    { id: 'download', label: 'FTP下载', icon: '📥' },
-    { id: 'storage', label: 'S3存储', icon: '🗄️' },
-    { id: 'training-download', label: '训练下载', icon: '⬇️' },
-    { id: 'preprocess', label: '预处理', icon: '⚙️' },
-    { id: 'training', label: '训练', icon: '🧠' },
-    { id: 'sync', label: 'API同步', icon: '☁️' }
+// 标签页导航
+function TabNav({ activeTab, onTabChange }: {
+  activeTab: TabType;
+  onTabChange: (tab: TabType) => void;
+}) {
+  const tabs = [
+    { id: 'download' as TabType, label: 'File Download', icon: Icons.download },
+    { id: 'training' as TabType, label: 'Training Process', icon: Icons.training },
+    { id: 'api' as TabType, label: 'API Application', icon: Icons.api }
   ];
 
-  // 根据当前阶段计算进度
-  const getStageStatus = (stageId: string) => {
-    const stageOrder = ['download', 'storage', 'training-download', 'preprocess', 'training', 'sync'];
-    const currentIndex = stageOrder.indexOf(currentStage);
-    const stageIndex = stageOrder.indexOf(stageId);
-
-    if (stageIndex < currentIndex) return 'completed';
-    if (stageIndex === currentIndex) return 'running';
-    return 'pending';
-  };
-
-  const completedStages = stages.filter(s => getStageStatus(s.id) === 'completed').length;
-  const progressPercent = (completedStages / stages.length) * 100;
-
   return (
-    <div className="pipeline-progress">
-      <h2>端到端流程进度</h2>
-      <div className="pipeline-steps">
-        <div className="pipeline-line">
-          <div className="pipeline-line-progress" style={{ width: `${progressPercent}%` }} />
-        </div>
-        {stages.map((stage) => (
-          <div key={stage.id} className="pipeline-step">
-            <div className={`step-icon ${getStageStatus(stage.id)}`}>
-              {stage.icon}
-            </div>
-            <span className="step-label">{stage.label}</span>
-          </div>
-        ))}
-      </div>
+    <div className="tab-nav">
+      {tabs.map(tab => (
+        <button
+          key={tab.id}
+          className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+          onClick={() => onTabChange(tab.id)}
+        >
+          <span className="tab-icon">{tab.icon}</span>
+          <span className="tab-label">{tab.label}</span>
+        </button>
+      ))}
     </div>
   );
 }
 
-// 下载状态卡片
-function DownloadCard({
+// Tab 1: File Download
+function DownloadTab({
   data,
   onViewLogs
 }: {
@@ -95,33 +57,72 @@ function DownloadCard({
 }) {
   const progress = Math.round((data.completedDays / data.totalDays) * 100);
 
+  // 模拟按日期的数据（实际应从API获取）
+  const dateProgress = [
+    { date: '2025-10-01', satellite: { done: 144, total: 144 }, nea: { done: 4, total: 4 }, status: 'completed' },
+    { date: '2025-10-02', satellite: { done: data.filesDownloaded % 144, total: 144 }, nea: { done: 4, total: 4 }, status: 'running' },
+    { date: '2025-10-03', satellite: { done: 0, total: 144 }, nea: { done: 0, total: 4 }, status: 'pending' },
+  ];
+
   return (
-    <div className="status-card">
-      <div className="card-header">
-        <h3 className="card-title">{Icons.download} FTP → S3 下载</h3>
-        <span className={`card-status ${data.status}`}>
-          {data.status === 'running' ? '运行中' : data.status === 'completed' ? '已完成' : data.status}
+    <div className="tab-content">
+      <div className="tab-header">
+        <h2>{Icons.download} 文件下载进度</h2>
+        <span className={`status-badge ${data.status}`}>
+          {data.status === 'running' ? '运行中' : data.status}
         </span>
       </div>
 
-      <div className="progress-ring-container">
-        <ProgressRing progress={progress} />
-        <div className="progress-details">
-          <div className="progress-stat">
-            <span className="stat-label">已完成天数</span>
-            <span className="stat-value">{data.completedDays} / {data.totalDays}</span>
+      {/* 总体进度 */}
+      <div className="progress-overview">
+        <div className="progress-bar-container">
+          <div className="progress-bar" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="progress-stats">
+          <div className="stat">
+            <span className="stat-label">总体进度</span>
+            <span className="stat-value">{data.completedDays} / {data.totalDays} 天 ({progress}%)</span>
           </div>
-          <div className="progress-stat">
+          <div className="stat">
             <span className="stat-label">已下载文件</span>
             <span className="stat-value">{data.filesDownloaded.toLocaleString()}</span>
           </div>
-          <div className="progress-stat">
+          <div className="stat">
             <span className="stat-label">并行进程</span>
             <span className="stat-value">{data.parallelProcesses}</span>
           </div>
         </div>
       </div>
 
+      {/* 按日期详情表格 */}
+      <div className="data-table-container">
+        <h3>按日期下载状态</h3>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>卫星文件</th>
+              <th>NEA 数据</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dateProgress.map(row => (
+              <tr key={row.date} className={row.status}>
+                <td>{row.date}</td>
+                <td>{row.satellite.done} / {row.satellite.total}</td>
+                <td>{row.nea.done} / {row.nea.total}</td>
+                <td>
+                  {row.status === 'completed' && <span className="status-icon success">{Icons.check}</span>}
+                  {row.status === 'running' && <span className="status-icon running">{Icons.running}</span>}
+                  {row.status === 'pending' && <span className="status-icon pending">{Icons.pending}</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <button className="view-logs-btn" onClick={onViewLogs}>
         {Icons.log} 查看日志
       </button>
@@ -129,54 +130,96 @@ function DownloadCard({
   );
 }
 
-// 训练状态卡片
-function TrainingCard({
+// Tab 2: Training Process
+function TrainingTab({
   data,
   onViewLogs
 }: {
   data: OverviewStatus['training'];
   onViewLogs: () => void;
 }) {
+  const phases = [
+    { name: '从 S3 下载数据', status: data.phases[0]?.status || 'pending', progress: data.phases[0]?.progress },
+    { name: '预处理 (裁剪新加坡)', status: data.phases[1]?.status || 'pending', progress: data.phases[1]?.progress },
+    { name: '批量训练', status: data.phases[2]?.status || 'pending', progress: data.phases[2]?.progress },
+    { name: '上传模型到 S3', status: data.phases[3]?.status || 'pending', progress: data.phases[3]?.progress }
+  ];
+
   return (
-    <div className="status-card">
-      <div className="card-header">
-        <h3 className="card-title">{Icons.training} 训练流程</h3>
-        <span className={`card-status ${data.status}`}>
+    <div className="tab-content">
+      <div className="tab-header">
+        <h2>{Icons.training} 训练流程</h2>
+        <span className={`status-badge ${data.status}`}>
           {data.status === 'running' ? '运行中' : data.status === 'waiting' ? '等待数据' : data.status}
         </span>
       </div>
 
-      <div className="progress-details" style={{ marginBottom: '1rem' }}>
-        <div className="progress-stat">
-          <span className="stat-label">当前处理日期</span>
-          <span className="stat-value">{data.currentDate || '-'}</span>
+      {/* 当前批次信息 */}
+      <div className="batch-info">
+        <div className="info-card">
+          <span className="info-label">当前处理日期</span>
+          <span className="info-value">{data.currentDate || '-'}</span>
         </div>
-        <div className="progress-stat">
-          <span className="stat-label">已完成批次</span>
-          <span className="stat-value">{data.completedBatches}</span>
+        <div className="info-card">
+          <span className="info-label">已完成批次</span>
+          <span className="info-value">{data.completedBatches}</span>
         </div>
-        <div className="progress-stat">
-          <span className="stat-label">总 Epochs</span>
-          <span className="stat-value">{data.totalEpochs}</span>
+        <div className="info-card">
+          <span className="info-label">总 Epochs</span>
+          <span className="info-value">{data.totalEpochs}</span>
         </div>
         {data.diskUsage && (
-          <div className="progress-stat">
-            <span className="stat-label">磁盘使用</span>
-            <span className="stat-value">{data.diskUsage}</span>
+          <div className="info-card">
+            <span className="info-label">磁盘使用</span>
+            <span className="info-value">{data.diskUsage}</span>
           </div>
         )}
       </div>
 
-      <div className="phases">
-        {data.phases.map((phase, i) => (
-          <div key={i} className="phase">
-            <div className={`phase-indicator ${phase.status}`} />
-            <span className="phase-name">{phase.name}</span>
-            {phase.progress !== undefined && (
-              <span className="phase-status">{phase.progress}%</span>
-            )}
-          </div>
-        ))}
+      {/* 阶段进度 */}
+      <div className="phases-container">
+        <h3>流程阶段</h3>
+        <div className="phases-list">
+          {phases.map((phase, i) => (
+            <div key={i} className={`phase-item ${phase.status}`}>
+              <div className="phase-number">{i + 1}</div>
+              <div className="phase-details">
+                <span className="phase-name">{phase.name}</span>
+                <div className="phase-progress-bar">
+                  <div
+                    className="phase-progress-fill"
+                    style={{ width: `${phase.progress || 0}%` }}
+                  />
+                </div>
+              </div>
+              <div className="phase-status">
+                {phase.status === 'completed' && Icons.check}
+                {phase.status === 'running' && `${phase.progress || 0}%`}
+                {phase.status === 'pending' && '待处理'}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 训练历史 */}
+      <div className="data-table-container">
+        <h3>训练历史</h3>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>Epochs</th>
+              <th>耗时</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={4} className="empty-row">暂无训练记录</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <button className="view-logs-btn" onClick={onViewLogs}>
@@ -186,39 +229,76 @@ function TrainingCard({
   );
 }
 
-// 同步状态卡片
-function SyncCard({
+// Tab 3: API Application
+function ApiTab({
   data,
   onViewLogs
 }: {
   data: OverviewStatus['sync'];
   onViewLogs: () => void;
 }) {
+  const healthChecks = [
+    { endpoint: '/predict', status: 'ok' },
+    { endpoint: '/health', status: 'ok' },
+    { endpoint: '/training-status', status: 'ok' }
+  ];
+
   return (
-    <div className="status-card">
-      <div className="card-header">
-        <h3 className="card-title">{Icons.sync} API 同步</h3>
-        <span className={`card-status ${data.status === 'ok' ? 'completed' : data.status}`}>
+    <div className="tab-content">
+      <div className="tab-header">
+        <h2>{Icons.api} API Application</h2>
+        <span className={`status-badge ${data.status}`}>
           {data.status === 'ok' ? '正常' : data.status}
         </span>
       </div>
 
-      <div className="progress-details">
-        <div className="progress-stat">
-          <span className="stat-label">模型同步</span>
-          <span className="stat-value">
-            {data.modelSynced ? Icons.check : Icons.loading}
-          </span>
+      {/* 数据就绪状态 */}
+      <div className="readiness-container">
+        <h3>数据就绪状态</h3>
+        <div className="readiness-list">
+          <div className={`readiness-item ${data.modelSynced ? 'ready' : 'pending'}`}>
+            <span className="readiness-icon">{data.modelSynced ? Icons.check : Icons.loading}</span>
+            <div className="readiness-details">
+              <span className="readiness-name">模型文件</span>
+              <span className="readiness-status">
+                {data.modelSynced ? '已同步' : '同步中'}
+              </span>
+            </div>
+          </div>
+          <div className={`readiness-item ${data.sensorDataSynced ? 'ready' : 'pending'}`}>
+            <span className="readiness-icon">{data.sensorDataSynced ? Icons.check : Icons.loading}</span>
+            <div className="readiness-details">
+              <span className="readiness-name">传感器数据</span>
+              <span className="readiness-status">
+                {data.sensorDataSynced ? '已同步' : '同步中'}
+              </span>
+            </div>
+          </div>
+          <div className="readiness-item ready">
+            <span className="readiness-icon">{Icons.check}</span>
+            <div className="readiness-details">
+              <span className="readiness-name">预测服务</span>
+              <span className="readiness-status">可用</span>
+            </div>
+          </div>
         </div>
-        <div className="progress-stat">
-          <span className="stat-label">传感器数据</span>
-          <span className="stat-value">
-            {data.sensorDataSynced ? Icons.check : Icons.loading}
-          </span>
+        <div className="last-sync">
+          最后同步时间: {data.lastSyncTime}
         </div>
-        <div className="progress-stat">
-          <span className="stat-label">最后同步时间</span>
-          <span className="stat-value">{data.lastSyncTime || '-'}</span>
+      </div>
+
+      {/* API 健康检查 */}
+      <div className="health-container">
+        <h3>API 健康检查</h3>
+        <div className="health-list">
+          {healthChecks.map(check => (
+            <div key={check.endpoint} className={`health-item ${check.status}`}>
+              <span className="health-endpoint">{check.endpoint}</span>
+              <span className="health-status">
+                {check.status === 'ok' ? `${Icons.check} 200 OK` : `${Icons.error} Error`}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -229,8 +309,8 @@ function SyncCard({
   );
 }
 
-// 日志面板 - 模态框
-function LogPanel({
+// 日志模态框
+function LogModal({
   title,
   logs,
   onClose
@@ -239,7 +319,6 @@ function LogPanel({
   logs: string[];
   onClose: () => void;
 }) {
-  // 根据日志内容高亮
   const getLineClass = (line: string) => {
     if (line.includes('ERROR') || line.includes('❌')) return 'error';
     if (line.includes('SUCCESS') || line.includes('✅')) return 'success';
@@ -248,25 +327,20 @@ function LogPanel({
     return '';
   };
 
-  // 点击背景关闭
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+    if (e.target === e.currentTarget) onClose();
   };
 
   return (
-    <div className="log-panel" onClick={handleBackdropClick}>
-      <div className="log-panel-inner">
+    <div className="log-modal" onClick={handleBackdropClick}>
+      <div className="log-modal-inner">
         <h3>
           {Icons.log} {title}
           <button className="close-btn" onClick={onClose}>{Icons.close}</button>
         </h3>
         <div className="log-content">
           {logs.map((line, i) => (
-            <div key={i} className={`log-line ${getLineClass(line)}`}>
-              {line}
-            </div>
+            <div key={i} className={`log-line ${getLineClass(line)}`}>{line}</div>
           ))}
         </div>
       </div>
@@ -279,13 +353,12 @@ function App() {
   const [data, setData] = useState<OverviewStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('download');
   const [activeLog, setActiveLog] = useState<string | null>(null);
   const [logContent, setLogContent] = useState<string[]>([]);
 
-  // 获取数据
   const fetchData = useCallback(async () => {
     try {
-      // 使用真实 API 数据
       const overview = await getOverview();
       setData(overview);
       setLastUpdate(new Date());
@@ -296,14 +369,12 @@ function App() {
     }
   }, []);
 
-  // 初始加载 + 10秒自动刷新
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // 查看日志 - 调用真实 API
   const handleViewLogs = async (type: string) => {
     setActiveLog(type);
     setLogContent(['加载中...']);
@@ -350,25 +421,22 @@ function App() {
         </span>
       </header>
 
-      <PipelineProgress currentStage={data.currentStage} />
+      <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="status-grid">
-        <DownloadCard
-          data={data.download}
-          onViewLogs={() => handleViewLogs('download')}
-        />
-        <TrainingCard
-          data={data.training}
-          onViewLogs={() => handleViewLogs('training')}
-        />
-        <SyncCard
-          data={data.sync}
-          onViewLogs={() => handleViewLogs('sync')}
-        />
+      <div className="tab-panel">
+        {activeTab === 'download' && (
+          <DownloadTab data={data.download} onViewLogs={() => handleViewLogs('download')} />
+        )}
+        {activeTab === 'training' && (
+          <TrainingTab data={data.training} onViewLogs={() => handleViewLogs('training')} />
+        )}
+        {activeTab === 'api' && (
+          <ApiTab data={data.sync} onViewLogs={() => handleViewLogs('sync')} />
+        )}
       </div>
 
       {activeLog && (
-        <LogPanel
+        <LogModal
           title={`${activeLog} 日志`}
           logs={logContent}
           onClose={() => setActiveLog(null)}
