@@ -229,7 +229,7 @@ function SyncCard({
   );
 }
 
-// 日志面板
+// 日志面板 - 模态框
 function LogPanel({
   title,
   logs,
@@ -248,18 +248,27 @@ function LogPanel({
     return '';
   };
 
+  // 点击背景关闭
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="log-panel">
-      <h3>
-        {Icons.log} {title}
-        <button className="close-btn" onClick={onClose}>{Icons.close}</button>
-      </h3>
-      <div className="log-content">
-        {logs.map((line, i) => (
-          <div key={i} className={`log-line ${getLineClass(line)}`}>
-            {line}
-          </div>
-        ))}
+    <div className="log-panel" onClick={handleBackdropClick}>
+      <div className="log-panel-inner">
+        <h3>
+          {Icons.log} {title}
+          <button className="close-btn" onClick={onClose}>{Icons.close}</button>
+        </h3>
+        <div className="log-content">
+          {logs.map((line, i) => (
+            <div key={i} className={`log-line ${getLineClass(line)}`}>
+              {line}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

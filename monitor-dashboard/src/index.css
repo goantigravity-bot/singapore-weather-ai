@@ -119,8 +119,15 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .step-label {
@@ -311,8 +318,15 @@ body {
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .phase-name {
@@ -349,16 +363,42 @@ body {
   border-color: var(--accent-blue);
 }
 
-/* 日志面板 */
+/* 日志面板 - 模态框覆盖层 */
 .log-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.log-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(8px);
+  z-index: -1;
+}
+
+.log-panel-inner {
   background: var(--bg-secondary);
   border-radius: 1rem;
   padding: 1.5rem;
   border: 1px solid var(--border-color);
-  margin-top: 1.5rem;
+  width: 100%;
+  max-width: 900px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.log-panel h3 {
+.log-panel-inner h3 {
   font-size: 1rem;
   margin-bottom: 1rem;
   display: flex;
@@ -432,7 +472,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 响应式 */
@@ -440,16 +482,16 @@ body {
   .dashboard {
     padding: 1rem;
   }
-  
+
   .status-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .pipeline-steps {
     flex-wrap: wrap;
     gap: 1rem;
   }
-  
+
   .step-label {
     font-size: 0.625rem;
   }
