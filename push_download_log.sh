@@ -3,7 +3,7 @@
 # 将下载日志推送到 S3，供监控仪表盘读取
 
 S3_BUCKET="${S3_BUCKET:-weather-ai-models-de08370c}"
-LOG_FILE="$HOME/download.log"
+LOG_FILE="$HOME/download_parallel.log"
 S3_KEY="logs/download.log"
 
 # 确保日志文件存在
