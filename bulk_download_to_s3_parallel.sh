@@ -141,31 +141,51 @@ while [[ "$current" < "$END_DATE" ]] || [[ "$current" == "$END_DATE" ]]; do
     target_files=$(echo "$target_files" | grep -v "^$" || echo "")
     file_count=$(echo "$target_files" | grep -c "." || echo "0")
     
-    echo "   📁 找到 $file_count 个文件 (优先 07001，fallback 06001)"
-    echo "   🚀 使用 $PARALLEL_JOBS 并行下载"
+    echo "   📁 找到 $file_count 个卫星文件 (优先 07001，fallback 06001)"
+    echo "   🚀 卫星数据和政府数据并行下载..."
     
-    # 并行下载
-    echo "$target_files" | xargs -P "$PARALLEL_JOBS" -I {} bash -c \
-        "download_single_file '{}' '$remote_path' '$date_fmt'"
+    # 定义政府数据下载函数
+    download_govdata() {
+        local current_date="$1"
+        for api in "rainfall" "temperature" "humidity" "pm25"; do
+            s3_key="$GOVDATA_PREFIX/${api}_${current_date}.json"
+            
+            if aws s3 ls "s3://$S3_BUCKET/$s3_key" > /dev/null 2>&1; then
+                continue
+            fi
+            
+            case $api in
+                rainfall) url="https://api.data.gov.sg/v1/environment/rainfall" ;;
+                temperature) url="https://api.data.gov.sg/v1/environment/air-temperature" ;;
+                humidity) url="https://api.data.gov.sg/v1/environment/relative-humidity" ;;
+                pm25) url="https://api.data.gov.sg/v1/environment/pm25" ;;
+            esac
+            
+            curl -s "$url?date=$current_date" | aws s3 cp - "s3://$S3_BUCKET/$s3_key" --quiet 2>/dev/null || true
+        done
+        echo "   ✅ 政府数据完成: $current_date"
+    }
+    export -f download_govdata
+    export S3_BUCKET GOVDATA_PREFIX
     
-    # 下载政府数据
-    echo "   📊 下载政府数据..."
-    for api in "rainfall" "temperature" "humidity" "pm25"; do
-        s3_key="$GOVDATA_PREFIX/${api}_${current}.json"
-        
-        if aws s3 ls "s3://$S3_BUCKET/$s3_key" > /dev/null 2>&1; then
-            continue
-        fi
-        
-        case $api in
-            rainfall) url="https://api.data.gov.sg/v1/environment/rainfall" ;;
-            temperature) url="https://api.data.gov.sg/v1/environment/air-temperature" ;;
-            humidity) url="https://api.data.gov.sg/v1/environment/relative-humidity" ;;
-            pm25) url="https://api.data.gov.sg/v1/environment/pm25" ;;
-        esac
-        
-        curl -s "$url?date=$current" | aws s3 cp - "s3://$S3_BUCKET/$s3_key" --quiet 2>/dev/null || true
-    done
+    # 并行执行：卫星数据 + 政府数据
+    (
+        # 任务1：并行下载卫星文件
+        echo "$target_files" | xargs -P "$PARALLEL_JOBS" -I {} bash -c \
+            "download_single_file '{}' '$remote_path' '$date_fmt'"
+        echo "   ✅ 卫星数据完成: $current"
+    ) &
+    satellite_pid=$!
+    
+    (
+        # 任务2：下载政府数据
+        download_govdata "$current"
+    ) &
+    govdata_pid=$!
+    
+    # 等待两个任务都完成
+    wait $satellite_pid
+    wait $govdata_pid
     
     # 创建完成标记
     echo "$current" | aws s3 cp - "s3://$S3_BUCKET/$SATELLITE_PREFIX/$date_fmt/.complete" --quiet
