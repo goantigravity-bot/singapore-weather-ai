@@ -107,18 +107,31 @@ def send_training_success_email(report_path, plot_path, metrics):
             html_body = f.read()
     else:
         # 如果报告不存在，创建简单的HTML
+        data_date = metrics.get('date', 'N/A')
         html_body = f"""
         <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; }}
+                .metrics {{ background-color: #e8f5e9; padding: 15px; border-radius: 5px; }}
+                .info {{ color: #1976d2; }}
+            </style>
+        </head>
         <body>
             <h2>✅ 模型训练成功</h2>
-            <p><strong>时间:</strong> {timestamp}</p>
-            <h3>评估指标</h3>
-            <ul>
-                <li>MAE: {metrics.get('mae', 'N/A'):.4f} mm</li>
-                <li>RMSE: {metrics.get('rmse', 'N/A'):.4f} mm</li>
-                <li>准确率: {metrics.get('accuracy', 'N/A'):.2%}</li>
-            </ul>
-            <p>详细报告和图表请查看附件。</p>
+            <p><strong>完成时间:</strong> {timestamp}</p>
+            <p><strong>训练数据:</strong> {data_date}</p>
+            
+            <div class="metrics">
+                <h3>📊 评估指标</h3>
+                <ul>
+                    <li><strong>MAE:</strong> {metrics.get('mae', 0):.4f} mm</li>
+                    <li><strong>RMSE:</strong> {metrics.get('rmse', 0):.4f} mm</li>
+                    <li><strong>Epochs:</strong> {metrics.get('epochs', 100)}</li>
+                </ul>
+            </div>
+            
+            <p class="info">📈 查看更多详情: <a href="http://3.0.28.161:8000/monitor/">训练监控仪表盘</a></p>
         </body>
         </html>
         """
