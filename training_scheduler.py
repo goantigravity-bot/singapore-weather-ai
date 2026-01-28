@@ -292,20 +292,52 @@ def archive_s3_data(date_str):
 def send_notification(success, date_str, error_msg=None):
     """发送邮件通知"""
     try:
+        # 读取训练指标
+        metrics_file = WORK_DIR / "training_metrics.json"
+        metrics = {"date": date_str, "mae": 0.0, "rmse": 0.0, "accuracy": 0.0}
+        if metrics_file.exists():
+            with open(metrics_file, 'r') as f:
+                data = json.load(f)
+                metrics["mae"] = data.get("last_val_mae", 0.0)
+                metrics["rmse"] = data.get("rmse", 0.0)
+        
+        # 保存 metrics 到临时文件
+        temp_metrics = WORK_DIR / ".temp_metrics.json"
+        with open(temp_metrics, 'w') as f:
+            json.dump(metrics, f)
+        
+        # 构建 Python 脚本
         if success:
-            subprocess.run([
-                "python", "-c", f"""
+            python_script = '''
+import json
 from notification import send_training_success_email
-send_training_success_email('', '', {{'date': '{date_str}'}})
-"""
-            ], cwd=str(WORK_DIR))
+with open(".temp_metrics.json", "r") as f:
+    metrics = json.load(f)
+send_training_success_email("", "", metrics)
+'''
         else:
-            subprocess.run([
-                "python", "-c", f"""
+            python_script = f'''
 from notification import send_training_failure_email
-send_training_failure_email('{error_msg}', 'Batch {date_str}')
-"""
-            ], cwd=str(WORK_DIR))
+send_training_failure_email("{error_msg}", "Batch {date_str}")
+'''
+        
+        # 使用 bash 加载环境变量
+        shell_cmd = f'''cd {WORK_DIR} && source venv/bin/activate && set -a && source .env.production && set +a && python3 -c '{python_script}' '''
+        
+        result = subprocess.run(
+            ["bash", "-c", shell_cmd],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            logger.info(f"📧 邮件通知已发送: {date_str}")
+        else:
+            logger.warning(f"邮件发送可能失败: {result.stderr}")
+        
+        # 清理临时文件
+        if temp_metrics.exists():
+            temp_metrics.unlink()
+            
     except Exception as e:
         logger.error(f"发送通知失败: {e}")
 
@@ -415,9 +447,8 @@ def run_scheduler(max_batches=None, wait_for_data=True):
             logger.info(f"✅ 批次完成: {next_date}")
             batches_run += 1
             
-            # 发送成功通知（可选，每 N 批发一次）
-            if batches_run % 10 == 0:
-                send_notification(True, next_date)
+            # 发送成功通知
+            send_notification(True, next_date)
                 
         except Exception as e:
             logger.error(f"❌ 批次失败: {e}")
