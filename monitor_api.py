@@ -303,25 +303,30 @@ def get_training_status():
     try:
         state = get_training_state()
         
-        phases = [
-            TrainingPhase(name="下载数据", status="pending"),
-            TrainingPhase(name="预处理", status="pending"),
-            TrainingPhase(name="训练", status="pending"),
-            TrainingPhase(name="同步模型", status="pending"),
-        ]
-        
-        current_phase = "idle"
-        if state.get("waiting_for_data"):
-            current_phase = "waiting"
+        # 新格式直接使用 S3 数据
+        if state.get("phases"):
+            phases = [
+                TrainingPhase(
+                    name=p.get("name", ""),
+                    status=p.get("status", "pending")
+                ) for p in state.get("phases", [])
+            ]
+        else:
+            phases = [
+                TrainingPhase(name="下载数据", status="pending"),
+                TrainingPhase(name="预处理", status="pending"),
+                TrainingPhase(name="训练", status="pending"),
+                TrainingPhase(name="同步模型", status="pending"),
+            ]
         
         return TrainingStatus(
-            currentDate=state.get("last_processed_date"),
-            completedBatches=state.get("total_batches_completed", 0),
-            totalEpochs=state.get("total_epochs", 0),
-            currentPhase=current_phase,
+            currentDate=state.get("currentDate"),
+            completedBatches=state.get("completedBatches", 0),
+            totalEpochs=state.get("totalEpochs", 0),
+            currentPhase=state.get("currentPhase", "idle"),
             phases=phases,
-            status="idle" if not state else "running",
-            lastUpdate=datetime.now().isoformat()
+            status=state.get("status", "idle"),
+            lastUpdate=state.get("lastUpdate", datetime.now().isoformat())
         )
     except Exception as e:
         logger.error(f"Failed to get training status: {e}")
