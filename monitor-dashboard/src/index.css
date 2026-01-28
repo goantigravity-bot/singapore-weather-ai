@@ -90,8 +90,8 @@ body {
 }
 
 .tab-btn.active {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  background: var(--accent-blue);
+  color: white;
   z-index: 1;
 }
 
@@ -109,13 +109,13 @@ body {
 .tab-btn.active::before {
   left: -12px;
   border-bottom-right-radius: 12px;
-  box-shadow: 6px 0 0 0 var(--bg-secondary);
+  box-shadow: 6px 0 0 0 var(--accent-blue);
 }
 
 .tab-btn.active::after {
   right: -12px;
   border-bottom-left-radius: 12px;
-  box-shadow: -6px 0 0 0 var(--bg-secondary);
+  box-shadow: -6px 0 0 0 var(--accent-blue);
 }
 
 .tab-icon {
