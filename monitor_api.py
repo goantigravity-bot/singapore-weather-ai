@@ -159,8 +159,9 @@ def get_date_progress() -> List[DateProgress]:
                 if date_str.isdigit() and len(date_str) == 8:
                     date_dirs.add(date_str)
         
-        # 对每个日期目录统计文件数
-        for date_str in sorted(date_dirs)[:10]:  # 只返回最近10天
+        # 对每个日期目录统计文件数（显示最新20天）
+        sorted_dates = sorted(date_dirs, reverse=True)[:20]  # 取最新20天
+        for date_str in sorted(sorted_dates):  # 按日期顺序显示
             satellite_count = 0
             has_complete = False
             
