@@ -94,7 +94,7 @@ const MapComponent: React.FC<Props & {
     } | null
 }> = ({ onStationClick, flyToCoords, contributingStationIds, pathData }) => {
     const [stations, setStations] = useState<Station[]>([]);
-    const { showTriangle } = useConfig();
+    const { showTriangle, showStations } = useConfig();
 
     useEffect(() => {
         // Fetch stations on load
@@ -181,8 +181,8 @@ const MapComponent: React.FC<Props & {
                 </Marker>
             )}
 
-            {/* 2. Render Sensor Stations (Green or Blue) */}
-            {stations.map(station => {
+            {/* 2. Render Sensor Stations (Green or Blue) - only if showStations is enabled */}
+            {showStations && stations.map(station => {
                 const isContributing = contributingStationIds?.includes(station.id);
                 // If this station happens to be exactly the user location (unlikely with float precision but possible),
                 // we might want to hide it or let Red cover it.

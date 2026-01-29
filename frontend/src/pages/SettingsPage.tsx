@@ -3,7 +3,7 @@ import { useConfig, type Metric } from '../context/ConfigContext';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsPage: React.FC = () => {
-    const { metrics, toggleMetric, showTriangle, toggleShowTriangle } = useConfig();
+    const { metrics, toggleMetric, showTriangle, toggleShowTriangle, showStations, toggleShowStations } = useConfig();
     const navigate = useNavigate();
 
     const renderToggle = (metric: Metric, label: string, icon: string) => {
@@ -66,6 +66,24 @@ const SettingsPage: React.FC = () => {
                     </div>
                     <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: showTriangle ? 'var(--accent-green)' : 'gray' }}>
                         {showTriangle ? '☑' : '☐'}
+                    </div>
+                </div>
+
+                {/* Site Locations Toggle */}
+                <div
+                    className="metric-card"
+                    style={{ cursor: 'pointer', borderColor: showStations ? 'var(--accent-purple)' : 'transparent', opacity: showStations ? 1 : 0.6 }}
+                    onClick={toggleShowStations}
+                >
+                    <div className="metric-icon">📍</div>
+                    <div className="metric-info">
+                        <div className="metric-label">Weather Station Markers</div>
+                        <div className="metric-value" style={{ fontSize: '1rem', color: showStations ? 'var(--accent-purple)' : 'gray' }}>
+                            {showStations ? 'Visible' : 'Hidden'}
+                        </div>
+                    </div>
+                    <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: showStations ? 'var(--accent-green)' : 'gray' }}>
+                        {showStations ? '☑' : '☐'}
                     </div>
                 </div>
             </div>

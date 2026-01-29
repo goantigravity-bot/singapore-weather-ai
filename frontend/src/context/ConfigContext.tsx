@@ -7,6 +7,8 @@ interface ConfigState {
     toggleMetric: (m: Metric) => void;
     showTriangle: boolean;
     toggleShowTriangle: () => void;
+    showStations: boolean;
+    toggleShowStations: () => void;
 }
 
 const ConfigContext = createContext<ConfigState | undefined>(undefined);
@@ -31,6 +33,11 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return saved ? JSON.parse(saved) : false;
     });
 
+    const [showStations, setShowStations] = useState<boolean>(() => {
+        const saved = localStorage.getItem('show_stations');
+        return saved ? JSON.parse(saved) : true; // Default to showing stations
+    });
+
     useEffect(() => {
         localStorage.setItem('forecast_metrics', JSON.stringify(Array.from(metrics)));
     }, [metrics]);
@@ -38,6 +45,10 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     useEffect(() => {
         localStorage.setItem('show_triangle', JSON.stringify(showTriangle));
     }, [showTriangle]);
+
+    useEffect(() => {
+        localStorage.setItem('show_stations', JSON.stringify(showStations));
+    }, [showStations]);
 
     const toggleMetric = (m: Metric) => {
         setMetrics(prev => {
@@ -55,8 +66,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setShowTriangle(prev => !prev);
     };
 
+    const toggleShowStations = () => {
+        setShowStations(prev => !prev);
+    };
+
     return (
-        <ConfigContext.Provider value={{ metrics, toggleMetric, showTriangle, toggleShowTriangle }}>
+        <ConfigContext.Provider value={{ metrics, toggleMetric, showTriangle, toggleShowTriangle, showStations, toggleShowStations }}>
             {children}
         </ConfigContext.Provider>
     );
