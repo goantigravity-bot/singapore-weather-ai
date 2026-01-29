@@ -168,7 +168,7 @@ def train_model():
         
         print(f"Epoch [{epoch+1}/{EPOCHS}] "
               f"Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} || "
-              f"MAE: {avg_train_mae:.4f} | Val MAE: {avg_val_mae:.4f}")
+              f"MAE: {avg_train_mae:.4f} | Val MAE: {avg_val_mae:.4f}", flush=True)
         
         # Save Best (based on Val Loss)
         if avg_val_loss < best_loss:
