@@ -3,7 +3,7 @@ import axios from 'axios';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import MapComponent from './components/MapComponent';
 import ForecastPanel from './components/ForecastPanel';
-import QuickLinks from './components/QuickLinks';
+
 import SettingsPage from './pages/SettingsPage';
 import StatsPage from './pages/StatsPage';
 import AboutPage from './pages/AboutPage';
@@ -165,11 +165,7 @@ function AppContent() {
     logSearch(searchQuery);
   };
 
-  const handleQuickLink = (location: string) => {
-    setSearchQuery(location);
-    fetchForecast({ location });
-    logSearch(location);
-  };
+
 
   const handleMapClick = (lat: number, lon: number) => {
     fetchForecast({ lat, lon });
@@ -199,7 +195,7 @@ function AppContent() {
             </form>
           </div>
 
-          <QuickLinks onSelectLocation={handleQuickLink} />
+
 
           <MapComponent
             onStationClick={handleMapClick}
