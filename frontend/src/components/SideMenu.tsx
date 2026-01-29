@@ -30,9 +30,9 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
                         <span style={{ fontSize: '1.2rem' }}>📊</span> Popular Places
                     </Link>
 
-                    <a href="http://3.0.28.161:8000/monitor/" target="_blank" rel="noopener noreferrer" className="menu-item" onClick={onClose}>
+                    <Link to="/training" className="menu-item" onClick={onClose}>
                         <span style={{ fontSize: '1.2rem' }}>🚀</span> Training Monitor
-                    </a>
+                    </Link>
 
                     <Link to="/settings" className="menu-item" onClick={onClose}>
                         <span style={{ fontSize: '1.2rem' }}>⚙️</span> Settings

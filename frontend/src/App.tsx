@@ -43,12 +43,13 @@ function AppContent() {
   const [flyTo, setFlyTo] = useState<{ lat: number, lon: number } | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // 检查是否在训练监控页面
+  // 检查是否在全屏独立页面（不需要地图组件）
+  const isStandalonePage = ['/training', '/settings', '/stats', '/about'].includes(location.pathname);
   const isTrainingPage = location.pathname === '/training';
 
   useEffect(() => {
-    // 如果在训练页面,跳过默认位置加载
-    if (isTrainingPage) return;
+    // 如果在独立页面,跳过默认位置加载
+    if (isStandalonePage) return;
 
     // Default location (Singapore Center - MacRitchie)
     const defaultLat = 1.3521;
@@ -81,7 +82,7 @@ function AppContent() {
     } else {
       fallbackToDefault();
     }
-  }, [isTrainingPage]);
+  }, [isStandalonePage]);
 
   const fetchForecast = async (params: any) => {
     setLoading(true);
@@ -176,8 +177,8 @@ function AppContent() {
       {/* 侧边菜单始终可用 */}
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
-      {/* 只在非训练页面显示主页组件 */}
-      {!isTrainingPage && (
+      {/* 只在主页显示地图等组件 */}
+      {!isStandalonePage && (
         <>
           <div className="search-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 10px', background: 'transparent' }}>
             <button onClick={() => setIsMenuOpen(true)} className="burger-btn">

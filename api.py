@@ -596,7 +596,10 @@ if FRONTEND_DIR.exists():
     async def serve_spa(full_path: str):
         """Handle SPA routing by serving index.html for all unmatched routes"""
         # 如果是 API 路径，让 FastAPI 处理
-        if full_path.startswith(("api/", "docs", "openapi.json", "health", "stations", "predict", "log-search", "popular-searches", "training", "monitor")):
+        # 只过滤 API 端点路径，不过滤前端 SPA 路由
+        # 注意：/training 和 /monitor 是前端页面，不应该被过滤
+        # /training/status 和 /monitor/overview 等 API 端点已由 FastAPI 路由器处理
+        if full_path.startswith(("api/", "docs", "openapi.json", "health", "stations", "predict", "log-search", "popular-searches")):
             raise HTTPException(status_code=404, detail="Not found")
         
         # 检查是否是静态文件请求
