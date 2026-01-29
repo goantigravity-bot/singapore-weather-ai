@@ -8,7 +8,7 @@ S3_BUCKET="weather-ai-models-de08370c"
 SATELLITE_PREFIX="satellite"
 ARCHIVED_PREFIX="archived/satellite"  # 已处理的数据归档位置
 GOVDATA_PREFIX="govdata"
-MIN_FILES_PER_DAY=100  # 每天最少文件数，低于此值不标记为完成
+MIN_FILES_PER_DAY=50  # 每天最少文件数，低于此值不标记为完成
 
 # 并行配置
 PARALLEL_JOBS="${PARALLEL_JOBS:-4}"  # 默认 4 个并行下载
