@@ -6,7 +6,9 @@
 # S3 配置
 S3_BUCKET="weather-ai-models-de08370c"
 SATELLITE_PREFIX="satellite"
+ARCHIVED_PREFIX="archived/satellite"  # 已处理的数据归档位置
 GOVDATA_PREFIX="govdata"
+MIN_FILES_PER_DAY=100  # 每天最少文件数，低于此值不标记为完成
 
 # 并行配置
 PARALLEL_JOBS="${PARALLEL_JOBS:-4}"  # 默认 4 个并行下载
@@ -89,11 +91,21 @@ while [[ "$current" < "$END_DATE" ]] || [[ "$current" == "$END_DATE" ]]; do
     echo ""
     echo "📅 [$day_count/$total_days] 处理: $current"
     
-    # 检查是否已完成
+    # 检查是否已完成（同时检查 satellite/ 和 archived/satellite/）
     if aws s3 ls "s3://$S3_BUCKET/$SATELLITE_PREFIX/$date_fmt/.complete" > /dev/null 2>&1; then
-        echo "   ⏭️ 日期已完成，跳过"
+        echo "   ⏭️ 日期已完成（satellite/），跳过"
         current=$(date -d "$current + 1 day" "+%Y-%m-%d" 2>/dev/null || date -j -v+1d -f "%Y-%m-%d" "$current" "+%Y-%m-%d")
         continue
+    fi
+    
+    # 检查是否在归档文件夹中
+    if aws s3 ls "s3://$S3_BUCKET/$ARCHIVED_PREFIX/$date_fmt/" > /dev/null 2>&1; then
+        archived_count=$(aws s3 ls "s3://$S3_BUCKET/$ARCHIVED_PREFIX/$date_fmt/" 2>/dev/null | grep -c ".nc" || echo "0")
+        if [ "$archived_count" -ge "$MIN_FILES_PER_DAY" ]; then
+            echo "   ⏭️ 日期已归档（archived/，$archived_count 文件），跳过"
+            current=$(date -d "$current + 1 day" "+%Y-%m-%d" 2>/dev/null || date -j -v+1d -f "%Y-%m-%d" "$current" "+%Y-%m-%d")
+            continue
+        fi
     fi
     
     remote_path="/jma/netcdf/$year_month/$day"
@@ -187,10 +199,16 @@ while [[ "$current" < "$END_DATE" ]] || [[ "$current" == "$END_DATE" ]]; do
     wait $satellite_pid
     wait $govdata_pid
     
-    # 创建完成标记
-    echo "$current" | aws s3 cp - "s3://$S3_BUCKET/$SATELLITE_PREFIX/$date_fmt/.complete" --quiet
+    # 验证下载的文件数量
+    actual_count=$(aws s3 ls "s3://$S3_BUCKET/$SATELLITE_PREFIX/$date_fmt/" 2>/dev/null | grep -c ".nc" || echo "0")
     
-    echo "   ✅ 日期完成: $current"
+    if [ "$actual_count" -ge "$MIN_FILES_PER_DAY" ]; then
+        # 创建完成标记（只有达到最低文件数才标记）
+        echo "$current" | aws s3 cp - "s3://$S3_BUCKET/$SATELLITE_PREFIX/$date_fmt/.complete" --quiet
+        echo "   ✅ 日期完成: $current ($actual_count 文件)"
+    else
+        echo "   ⚠️ 日期未完成: $current (只有 $actual_count 文件，需要 >= $MIN_FILES_PER_DAY)"
+    fi
     
     # 下一天
     current=$(date -d "$current + 1 day" "+%Y-%m-%d" 2>/dev/null || date -j -v+1d -f "%Y-%m-%d" "$current" "+%Y-%m-%d")
