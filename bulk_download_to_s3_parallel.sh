@@ -108,19 +108,19 @@ while [[ "$current" < "$END_DATE" ]] || [[ "$current" == "$END_DATE" ]]; do
     fi
     
     # 智能文件选择：优先 07001_06001，fallback 到 06001_06001
-    # 文件名格式: NC_H09_YYYYMMDD_HHMM_R21_FLDK.0X001_06001.nc
-    primary_files=$(echo "$files" | grep -E "^NC_H09_.*_R21_FLDK\.07001_06001\.nc$" || echo "")
-    fallback_files=$(echo "$files" | grep -E "^NC_H09_.*_R21_FLDK\.06001_06001\.nc$" || echo "")
+    # 文件名格式: NC_H0[89]_YYYYMMDD_HHMM_R21_FLDK.0X001_06001.nc
+    primary_files=$(echo "$files" | grep -E "^NC_H0[89]_.*_R21_FLDK\.07001_06001\.nc$" || echo "")
+    fallback_files=$(echo "$files" | grep -E "^NC_H0[89]_.*_R21_FLDK\.06001_06001\.nc$" || echo "")
     
     # 提取时间戳并选择文件
     target_files=""
     # 从 primary 文件中获取所有时间戳
-    primary_timestamps=$(echo "$primary_files" | sed -n 's/NC_H09_\([0-9]*_[0-9]*\)_.*/\1/p' | sort -u)
-    fallback_timestamps=$(echo "$fallback_files" | sed -n 's/NC_H09_\([0-9]*_[0-9]*\)_.*/\1/p' | sort -u)
+    primary_timestamps=$(echo "$primary_files" | sed -n 's/NC_H0[89]_\([0-9]*_[0-9]*\)_.*/\1/p' | sort -u)
+    fallback_timestamps=$(echo "$fallback_files" | sed -n 's/NC_H0[89]_\([0-9]*_[0-9]*\)_.*/\1/p' | sort -u)
     
     # 对每个 primary 时间戳，只保留 07001 文件
     for ts in $primary_timestamps; do
-        file=$(echo "$primary_files" | grep "NC_H09_${ts}_" | head -1)
+        file=$(echo "$primary_files" | grep "NC_H0[89]_${ts}_" | head -1)
         if [ -n "$file" ]; then
             target_files="$target_files$file"$'\n'
         fi
@@ -129,7 +129,7 @@ while [[ "$current" < "$END_DATE" ]] || [[ "$current" == "$END_DATE" ]]; do
     # 对于 primary 中没有的时间戳，使用 fallback
     for ts in $fallback_timestamps; do
         if ! echo "$primary_timestamps" | grep -q "^${ts}$"; then
-            file=$(echo "$fallback_files" | grep "NC_H09_${ts}_" | head -1)
+            file=$(echo "$fallback_files" | grep "NC_H0[89]_${ts}_" | head -1)
             if [ -n "$file" ]; then
                 target_files="$target_files$file"$'\n'
                 echo "   ℹ️ 使用备选: $file"
