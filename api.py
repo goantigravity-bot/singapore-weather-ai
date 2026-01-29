@@ -1,7 +1,10 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from pathlib import Path
 import torch
 import pandas as pd
 from typing import Optional
@@ -26,6 +29,7 @@ import numpy as np
 import sqlite3
 from collections import Counter
 import logging
+from monitor_api import router as monitor_router
 
 # Logger Setup
 logging.basicConfig(
@@ -575,6 +579,41 @@ def predict_weather(
 # - /api 前缀：CloudFront 代理使用 https://xxx.cloudfront.net/api/predict
 app.include_router(api_router)  # 根路径
 app.include_router(api_router, prefix="/api")  # /api 前缀
+
+# 注册监控仪表盘路由 /monitor/*
+app.include_router(monitor_router)
+
+# --- 静态文件服务（前端）---
+# 自动检测前端构建目录，支持开发环境和生产环境
+FRONTEND_DIR = Path(__file__).parent / "frontend" / "dist"
+
+if FRONTEND_DIR.exists():
+    # 挂载静态资源目录（JS/CSS/图片等）
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
+    
+    # SPA fallback：所有未匹配的路由返回 index.html
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Handle SPA routing by serving index.html for all unmatched routes"""
+        # 如果是 API 路径，让 FastAPI 处理
+        if full_path.startswith(("api/", "docs", "openapi.json", "health", "stations", "predict", "log-search", "popular-searches", "training", "monitor")):
+            raise HTTPException(status_code=404, detail="Not found")
+        
+        # 检查是否是静态文件请求
+        static_file = FRONTEND_DIR / full_path
+        if static_file.exists() and static_file.is_file():
+            return FileResponse(static_file)
+        
+        # 返回 index.html 支持 SPA 路由
+        index_file = FRONTEND_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    logger.info(f"Frontend static files mounted from: {FRONTEND_DIR}")
+else:
+    logger.warning(f"Frontend directory not found: {FRONTEND_DIR} - Static file serving disabled")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
