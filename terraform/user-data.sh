@@ -13,6 +13,10 @@ echo "开始初始化 ${project_name} 服务器"
 echo "时间: $(date)"
 echo "========================================="
 
+# 设置时区为新加坡（确保日志和时间戳一致）
+echo "设置时区为 Asia/Singapore..."
+timedatectl set-timezone Asia/Singapore
+
 # 更新系统
 echo "更新系统包..."
 apt-get update
