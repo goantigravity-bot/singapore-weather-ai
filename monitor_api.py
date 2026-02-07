@@ -159,19 +159,26 @@ def get_date_progress() -> List[DateProgress]:
                 if date_str.isdigit() and len(date_str) == 8:
                     date_dirs.add(date_str)
         
-        # 对每个日期目录统计文件数（显示最新20天）
-        sorted_dates = sorted(date_dirs, reverse=True)[:20]  # 取最新20天
-        for date_str in sorted(sorted_dates):  # 按日期顺序显示
-            satellite_count = 0
+        # 显示所有可用日期（不限制数量）
+        sorted_dates = sorted(date_dirs)
+        for date_str in sorted_dates:
+            # 快速检查：只看该目录下是否有文件，不逐个统计
+            # 用 MaxKeys=2 减少 API 调用开销
+            nc_count = 0
             has_complete = False
-            
-            # 统计卫星文件
-            for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=f"satellite/{date_str}/"):
-                for obj in page.get('Contents', []):
+            try:
+                resp = s3.list_objects_v2(
+                    Bucket=S3_BUCKET,
+                    Prefix=f"satellite/{date_str}/",
+                    MaxKeys=150
+                )
+                for obj in resp.get('Contents', []):
                     if obj['Key'].endswith('.complete'):
                         has_complete = True
                     elif obj['Key'].endswith('.nc'):
-                        satellite_count += 1
+                        nc_count += 1
+            except Exception:
+                pass
             
             # 统计 NEA 数据
             formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
@@ -184,13 +191,11 @@ def get_date_progress() -> List[DateProgress]:
                     pass
             
             # 确定状态和 total
-            if has_complete:
+            if has_complete or nc_count >= 100:
                 status = "completed"
-                # 已完成时，total = 实际下载数
-                satellite_total = satellite_count
-            elif satellite_count > 0:
+                satellite_total = nc_count
+            elif nc_count > 0:
                 status = "running"
-                # 进行中，使用估计值 144
                 satellite_total = 144
             else:
                 status = "pending"
@@ -198,7 +203,7 @@ def get_date_progress() -> List[DateProgress]:
             
             progress_list.append(DateProgress(
                 date=formatted_date,
-                satelliteFiles=satellite_count,
+                satelliteFiles=nc_count,
                 satelliteTotal=satellite_total,
                 neaFiles=nea_count,
                 status=status
@@ -325,9 +330,9 @@ def get_download_status():
         return DownloadStatus(
             currentDate=current_date,
             completedDays=completed_days,
-            totalDays=119,
+            totalDays=len(date_progress),
             filesDownloaded=total_files,
-            status="running" if completed_days < 119 else "completed",
+            status="running" if completed_days < len(date_progress) else "completed",
             lastUpdate=datetime.now().isoformat(),
             dateProgress=date_progress
         )

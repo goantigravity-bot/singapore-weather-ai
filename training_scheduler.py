@@ -40,16 +40,28 @@ TRAINING_END_DATE = "2026-01-27"
 
 def load_state():
     """加载训练状态"""
-    if STATE_FILE.exists():
-        with open(STATE_FILE, 'r') as f:
-            return json.load(f)
-    return {
+    defaults = {
         "last_processed_date": None,
         "total_batches_completed": 0,
         "total_epochs": 0,
         "waiting_for_data": False,
         "history": []
     }
+    
+    if STATE_FILE.exists():
+        try:
+            with open(STATE_FILE, 'r') as f:
+                state = json.load(f)
+                # Merge defaults for missing keys
+                for k, v in defaults.items():
+                    if k not in state:
+                        state[k] = v
+                return state
+        except Exception as e:
+            logger.warning(f"无法读取状态文件: {e}，使用默认状态")
+            return defaults
+            
+    return defaults
 
 
 def save_state(state):
@@ -151,18 +163,30 @@ def upload_history_to_s3(date_str, metrics):
 def check_data_available(date_str):
     """
     检查指定日期的数据是否在 S3 中就绪
-    通过 .complete 标记文件判断
+    通过检查是否存在实际 .nc 文件判断（不依赖 .complete 标记）
     """
     date_fmt = date_str.replace("-", "")
-    complete_key = f"{SATELLITE_PREFIX}/{date_fmt}/.complete"
     
     try:
         s3 = boto3.client('s3')
-        s3.head_object(Bucket=S3_BUCKET, Key=complete_key)
-        logger.info(f"✅ 数据就绪: {date_str}")
-        return True
-    except Exception:
-        logger.info(f"⏳ 数据未就绪: {date_str}")
+        response = s3.list_objects_v2(
+            Bucket=S3_BUCKET,
+            Prefix=f"{SATELLITE_PREFIX}/{date_fmt}/",
+            MaxKeys=5
+        )
+        # 检查是否有 .nc 文件（排除 .complete 等标记文件）
+        nc_files = [
+            obj for obj in response.get('Contents', [])
+            if obj['Key'].endswith('.nc')
+        ]
+        if nc_files:
+            logger.info(f"✅ 数据就绪: {date_str} ({len(nc_files)}+ 个 .nc 文件)")
+            return True
+        else:
+            logger.info(f"⏳ 数据未就绪: {date_str}")
+            return False
+    except Exception as e:
+        logger.warning(f"检查数据可用性失败: {e}")
         return False
 
 
@@ -184,11 +208,18 @@ def download_from_s3(date_str):
         f"s3://{S3_BUCKET}/{SATELLITE_PREFIX}/{date_fmt}/",
         str(satellite_dir) + "/",
         "--exclude", ".complete"
-    ], capture_output=True)
+    ], capture_output=True, text=True)
     
+    # aws s3 sync 遇到临时文件（下载服务器上传产生的 .BfF2D0eF 等后缀）时
+    # 返回 warning + 非零 exit code，但实际 .nc 文件已下载成功
     if result.returncode != 0:
-        logger.error(f"卫星数据下载失败: {result.stderr.decode()}")
-        return False
+        stderr = result.stderr
+        # 只有 "Skipping file" 类的 warning 是非致命的，可以忽略
+        if "Skipping file" in stderr and "error" not in stderr.lower():
+            logger.warning(f"卫星数据下载有非致命警告（已忽略）: {stderr.strip()}")
+        else:
+            logger.error(f"卫星数据下载失败: {stderr}")
+            return False
     
     # 下载政府数据
     logger.info(f"📥 下载政府数据: {date_str}")
@@ -203,6 +234,50 @@ def download_from_s3(date_str):
         ], capture_output=True)
     
     return True
+
+
+def download_model_from_s3():
+    """
+    从 S3 下载最新模型并创建备份
+    """
+    model_key = "models/latest.pth"
+    local_model = WORK_DIR / "weather_fusion_model.pth"
+    
+    logger.info("🔍 检查 S3 上的最新模型...")
+    
+    try:
+        s3 = boto3.client('s3')
+        
+        # 检查模型是否存在
+        try:
+            head = s3.head_object(Bucket=S3_BUCKET, Key=model_key)
+            last_modified = head['LastModified']
+            # Convert to local time string for filename
+            timestamp = last_modified.strftime("%Y%m%d_%H%M%S")
+        except Exception:
+            logger.info("⚠️ S3 上未找到现有模型，将从头开始训练")
+            return True
+            
+        logger.info(f"⬇️ 发现现有模型 (最后修改: {last_modified})，正在下载...")
+        
+        # 下载模型
+        s3.download_file(S3_BUCKET, model_key, str(local_model))
+        
+        # 创建备份
+        backup_name = f"weather_fusion_model_backup_{timestamp}.pth"
+        backup_path = WORK_DIR / "model_backups" / backup_name
+        backup_path.parent.mkdir(exist_ok=True)
+        
+        import shutil
+        shutil.copy2(local_model, backup_path)
+        
+        logger.info(f"✅ 模型已下载并备份至: {backup_name}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ 模型下载/备份失败: {e}")
+        return False
+
 
 
 def preprocess_data():
@@ -223,13 +298,22 @@ def preprocess_data():
 
 
 def cleanup_raw_data():
-    """清理原始卫星数据（保留预处理数据）"""
+    """清理本地原始数据（卫星 .nc 和预处理 .npy），S3 数据保留不动"""
     satellite_dir = WORK_DIR / "satellite_data"
+    processed_dir = WORK_DIR / "processed_data"
     
+    nc_count = 0
     for nc_file in satellite_dir.glob("*.nc"):
         nc_file.unlink()
-        
-    logger.info("🗑️ 已清理原始卫星数据")
+        nc_count += 1
+    
+    # 清理 processed_data 中的 .npy（下一批次预处理会重新生成）
+    npy_count = 0
+    for npy_file in processed_dir.glob("*.npy"):
+        npy_file.unlink()
+        npy_count += 1
+    
+    logger.info(f"🗑️ 已清理本地数据: {nc_count} 个 .nc, {npy_count} 个 .npy")
 
 
 def train_model(date_str, epochs):
@@ -294,12 +378,13 @@ def send_notification(success, date_str, error_msg=None):
     try:
         # 读取训练指标
         metrics_file = WORK_DIR / "training_metrics.json"
-        metrics = {"date": date_str, "mae": 0.0, "rmse": 0.0, "accuracy": 0.0}
+        metrics = {"date": date_str, "mae": 0.0, "rmse": 0.0, "accuracy": 0.0, "epochs": 0}
         if metrics_file.exists():
             with open(metrics_file, 'r') as f:
                 data = json.load(f)
                 metrics["mae"] = data.get("last_val_mae", 0.0)
                 metrics["rmse"] = data.get("rmse", 0.0)
+                metrics["epochs"] = data.get("final_epoch", 0)
         
         # 保存 metrics 到临时文件
         temp_metrics = WORK_DIR / ".temp_metrics.json"
@@ -405,32 +490,52 @@ def run_scheduler(max_batches=None, wait_for_data=True):
         
         # 执行处理流程
         try:
+            # 0. 下载并备份模型
+            if not download_model_from_s3():
+                raise Exception("模型下载/备份失败")
+
             # 1. 下载数据 (增量下载，已存在的文件会跳过)
+            import time
+            start_time = time.time()
             if not download_from_s3(next_date):
                 raise Exception("下载失败")
+            logger.info(f"⏱️ 数据下载耗时: {time.time() - start_time:.1f}s")
             
             # 2. 预处理
+            start_time = time.time()
             if not preprocess_data():
                 raise Exception("预处理失败")
+            logger.info(f"⏱️ 预处理耗时: {time.time() - start_time:.1f}s")
             
             # 3. 训练 (传入日期参数)
+            start_time = time.time()
             if not train_model(next_date, EPOCHS_PER_BATCH):
                 raise Exception("训练失败")
+            logger.info(f"⏱️ 训练总耗时: {time.time() - start_time:.1f}s")
             
             # 4. 清理原始数据 (训练成功后再清理，避免失败时重复下载)
             cleanup_raw_data()
             
             # 5. 同步模型
+            start_time = time.time()
             if not sync_model_to_s3():
                 raise Exception("模型同步失败")
+            logger.info(f"⏱️ 模型同步耗时: {time.time() - start_time:.1f}s")
             
-            # 6. 归档 S3 数据
-            archive_s3_data(next_date)
+            # 6. S3 原始数据保留原位，不归档（便于重训练或排查）
             
             # 更新状态
             state["last_processed_date"] = next_date
             state["total_batches_completed"] += 1
-            state["total_epochs"] += EPOCHS_PER_BATCH
+            
+            # 从 training_metrics.json 读取实际训练的 epoch 数
+            actual_epochs = EPOCHS_PER_BATCH
+            metrics_file = WORK_DIR / "training_metrics.json"
+            if metrics_file.exists():
+                with open(metrics_file, 'r') as f:
+                    m = json.load(f)
+                    actual_epochs = m.get("final_epoch", EPOCHS_PER_BATCH)
+            state["total_epochs"] += actual_epochs
             state["history"].append({
                 "date": next_date,
                 "completed_at": datetime.now().isoformat()

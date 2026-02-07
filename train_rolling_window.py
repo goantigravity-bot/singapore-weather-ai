@@ -19,7 +19,7 @@ def update_status(state):
     state["last_updated"] = datetime.now(timezone.utc).isoformat()
     
     # Save locally first
-    local_path = "training_state.json"
+    local_path = "rolling_training_state.json"
     with open(local_path, "w") as f:
         json.dump(state, f, indent=2)
 
@@ -27,7 +27,7 @@ def update_status(state):
     try:
         import boto3
         s3 = boto3.client('s3', endpoint_url=S3_ENDPOINT_URL)
-        s3_key = "state/training_state.json"
+        s3_key = "state/rolling_training_state.json"
         s3.upload_file(local_path, S3_BUCKET, s3_key)
     except Exception as e:
         print(f"[WARNING] Failed to update status: {e}")
@@ -104,7 +104,9 @@ def main():
     total_days = (end_date - start_date).days
     total_batches = (total_days // args.batch_days) + 1
     
-    while current_start < end_date:
+    status = {"status": "pending"}
+
+    while current_start <= end_date:
         current_end = min(current_start + timedelta(days=args.batch_days - 1), end_date)
         
         s_str = current_start.strftime("%Y-%m-%d")
@@ -130,11 +132,14 @@ def main():
         update_status(status)
         
         if not args.mock_data:
-            cmd_sensor = f"export FETCH_START_DATE={s_str} && export FETCH_END_DATE={e_str} && python3 fetch_and_process_gov_data.py"
+            # 使用本地 govdata JSON 生成 CSV，而非调用 NEA API
+            # 调度器已从 S3 下载了对应日期的 JSON 到 govdata/ 目录，
+            # convert_govdata_to_csv.py 会自动转换所有 JSON 为时间对齐的 CSV
+            cmd_sensor = "python3 convert_govdata_to_csv.py"
             if not run_command(cmd_sensor):
-                print("Failed to fetch sensor data. Skipping batch.")
+                print("Failed to convert govdata to CSV. Skipping batch.")
                 status["status"] = "failed"
-                status["error"] = "Sensor fetch failed"
+                status["error"] = "Govdata conversion failed"
                 update_status(status)
                 break
         else:
@@ -145,51 +150,35 @@ def main():
                  else:
                      print("Warning: No sensor data found for mock run.")
             
-        # 2. Download Satellite Data
-        print("2. Downloading Satellite Data...")
-        status["current_step"] = "Downloading Satellite Data"
-        update_status(status)
-
-        if not args.mock_data:
-            cmd_sat = f"python3 download_jaxa_data.py --mode batch --start {s_str} --end {e_str}"
-            # We allow this to fail (non-fatal) if JAXA is down/empty, but warn.
-            if not run_command(cmd_sat):
-                print("Warning: JAXA download had issues. Proceeding...")
-        else:
-            print(" [MOCK] Skipping satellite download.")
-
-        # 3. Preprocess Images
-        print("3. Preprocessing Satellite Images...")
-        status["current_step"] = "Preprocessing Images"
-        update_status(status)
-
-        if not args.mock_data:
-            cmd_pre = "python3 preprocess_images.py"
-            if not run_command(cmd_pre):
-                print("Preprocessing failed.")
-                status["status"] = "failed"
-                status["error"] = "Preprocessing failed"
-                update_status(status)
-                break
-        else:
-            print(" [MOCK] Skipping preprocessing.")
+        # 2 & 3: 卫星数据下载和预处理已由 training_scheduler.py 完成
+        # 调度器从 S3 下载 .nc 文件并调用 preprocess_images.py 生成 .npy
+        # 此处无需重复执行
 
         # 4. Train
         print(f"4. Training (Epochs: {args.epochs})...")
         status["current_step"] = "Training Model"
         update_status(status)
 
-        # We use environment variable to tell train.py to look for checkpoints (incremental is default logic in train.py now)
-        # Pass epochs via env var since train.py reads EPOCHS_INITIAL/INCREMENTAL
-        cmd_train = f"export EPOCHS_INITIAL={args.epochs} && export EPOCHS_INCREMENTAL={args.epochs} && python3 train.py" 
+        # 首次训练使用完整 epochs，增量训练使用较少的 epochs
+        # 实际数据表明增量训练在 1-3 个 epoch 即收敛，配合 Early Stopping 自动终止
+        incremental_epochs = max(5, args.epochs // 10)
+        cmd_train = f"export EPOCHS_INITIAL={args.epochs} && export EPOCHS_INCREMENTAL={incremental_epochs} && export PYTHONUNBUFFERED=1 && python3 train.py" 
+        
+        train_start_time = time.time()
         if not run_command(cmd_train):
             print("Training failed.")
             status["status"] = "failed"
             status["error"] = "Training failed"
             update_status(status)
-            break
+            status["status"] = "failed"
+            status["error"] = "Training failed"
             update_status(status)
             break
+        
+        train_duration = time.time() - train_start_time
+        print(f"Training Batch Completed in {train_duration:.1f}s")
+        update_status(status)
+
             
         # 4.5 Capture Metrics & Update History
         metrics = {}

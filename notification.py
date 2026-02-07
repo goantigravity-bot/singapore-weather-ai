@@ -127,7 +127,7 @@ def send_training_success_email(report_path, plot_path, metrics):
                 <ul>
                     <li><strong>MAE:</strong> {metrics.get('mae', 0):.4f} mm</li>
                     <li><strong>RMSE:</strong> {metrics.get('rmse', 0):.4f} mm</li>
-                    <li><strong>Epochs:</strong> {metrics.get('epochs', 100)}</li>
+                    <li><strong>Epochs:</strong> {metrics.get('epochs', 'N/A')}</li>
                 </ul>
             </div>
             
