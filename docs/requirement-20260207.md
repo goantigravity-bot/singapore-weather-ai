@@ -43,3 +43,32 @@ ALL_RECIPIENTS = list(set(filter(None, [RECIPIENT_EMAIL] + CC_EMAILS)))
 ```
 
 邮件通过 `server.sendmail(SENDER_EMAIL, ALL_RECIPIENTS, text)` 发送给所有收件人。
+
+---
+
+## 服务器时区统一为新加坡时间
+
+**需求日期**: 2026-02-07  
+**状态**: ✅ 已实现  
+
+### 需求描述
+
+所有服务器日志和时间戳应显示新加坡本地时间（UTC+8），而非 UTC，方便运维团队阅读和排查问题。
+
+### 实施范围
+
+| 服务器 | IP | 用途 |
+|--------|-----|------|
+| 训练服务器 | 46.137.236.8 | 模型训练 |
+| API 服务器 | 3.0.28.161 | 预测 API / 监控仪表盘 |
+| 下载服务器 | 18.142.90.30 | 卫星数据下载 |
+
+### 配置命令
+
+```bash
+sudo timedatectl set-timezone Asia/Singapore
+```
+
+- 立即生效，无需重启服务
+- Python `logging` 模块自动使用系统时区
+
