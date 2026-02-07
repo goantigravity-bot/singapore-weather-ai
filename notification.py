@@ -20,6 +20,9 @@ SMTP_PORT = 587
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD")  # Gmail App Password
 RECIPIENT_EMAIL = os.environ.get("RECIPIENT_EMAIL", SENDER_EMAIL)
+# 额外收件人（逗号分隔），在 .env.production 中配置: CC_EMAILS=a@x.com,b@x.com
+CC_EMAILS = [e.strip() for e in os.environ.get("CC_EMAILS", "").split(",") if e.strip()]
+ALL_RECIPIENTS = list(set(filter(None, [RECIPIENT_EMAIL] + CC_EMAILS)))
 
 
 def send_email(subject, html_body, attachments=None, is_failure=False):
@@ -45,7 +48,7 @@ def send_email(subject, html_body, attachments=None, is_failure=False):
         # 创建邮件对象
         msg = MIMEMultipart('alternative')
         msg['From'] = SENDER_EMAIL
-        msg['To'] = RECIPIENT_EMAIL
+        msg['To'] = ", ".join(ALL_RECIPIENTS)
         msg['Subject'] = subject
         
         # 添加HTML正文
@@ -77,7 +80,7 @@ def send_email(subject, html_body, attachments=None, is_failure=False):
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         
         text = msg.as_string()
-        server.sendmail(SENDER_EMAIL, RECIPIENT_EMAIL, text)
+        server.sendmail(SENDER_EMAIL, ALL_RECIPIENTS, text)
         server.quit()
         
         logger.info(f"✅ 邮件发送成功: {subject}")
