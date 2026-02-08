@@ -348,7 +348,7 @@ def predict_weather(
                 "id": nearest or "unknown",
                 "name": nearest_name,
             },
-            "contributing_stations": [],
+            "contributing_stations": raw.get('contributing_sensors', []),
             "forecast": {
                 "rainfall_mm_next_10min": rain,
                 "description": raw.get('status', 'Unknown'),

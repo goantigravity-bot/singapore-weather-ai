@@ -205,6 +205,7 @@ def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size
 
     predictions = []
     weights = []
+    contributing_sensor_ids = []  # 记录实际参与插值的传感器 ID（前端 triangle 需要）
     
     debug_info = []
 
@@ -240,6 +241,7 @@ def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size
             
         predictions.append(pred)
         weights.append(w)
+        contributing_sensor_ids.append(sensor_id)
         debug_info.append(f"{sensor_id}({dist_km:.1f}km): {pred:.2f}mm")
 
     if not predictions:
@@ -290,6 +292,7 @@ def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size
         'status': status,
         'confidence': confidence,
         'cloud_cover': is_cloudy,
+        'contributing_sensors': contributing_sensor_ids,
         'debug': f"Ens: {', '.join(debug_info)} {cloud_msg}"
     }
 
