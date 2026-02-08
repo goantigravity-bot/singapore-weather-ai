@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-训练报告生成器
-生成HTML格式的训练和评估报告
+Training Report Generator
+Generates HTML format training and evaluation reports
 """
 import os
 import json
@@ -18,34 +18,34 @@ def generate_html_report(
     output_path="training_reports/report.html"
 ):
     """
-    生成HTML训练报告
+    Generate HTML training report
     
     Args:
-        metrics: 评估指标 {mae, rmse, accuracy, threshold}
-        training_info: 训练信息 {epochs, batch_size, learning_rate, duration, best_loss}
-        data_info: 数据信息 {satellite_files, sensor_records, date_range}
-        output_path: 输出文件路径
+        metrics: Evaluation metrics {mae, rmse, accuracy, threshold}
+        training_info: Training info {epochs, batch_size, learning_rate, duration, best_loss}
+        data_info: Data info {satellite_files, sensor_records, date_range}
+        output_path: Output file path
     
     Returns:
-        str: 报告文件路径
+        str: Report file path
     """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # 确保输出目录存在
+    # Ensure output directory exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
-    # 读取历史报告（如果存在）进行对比
+    # Load previous report (if exists) for comparison
     previous_metrics = load_previous_metrics()
     comparison_html = generate_comparison_section(metrics, previous_metrics)
     
-    # 生成HTML
+    # Generate HTML
     html_content = f"""
     <!DOCTYPE html>
-    <html lang="zh-CN">
+    <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>模型训练报告 - {timestamp}</title>
+        <title>Training Report - {timestamp}</title>
         <style>
             * {{
                 margin: 0;
@@ -54,7 +54,7 @@ def generate_html_report(
             }}
             
             body {{
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 padding: 20px;
                 line-height: 1.6;
@@ -225,111 +225,111 @@ def generate_html_report(
     <body>
         <div class="container">
             <div class="header">
-                <h1>🌤️ 新加坡天气预测模型</h1>
-                <h2>训练报告</h2>
-                <div class="timestamp">生成时间: {timestamp}</div>
+                <h1>🌤️ Singapore Weather AI</h1>
+                <h2>Training Report</h2>
+                <div class="timestamp">Generated: {timestamp}</div>
             </div>
             
             <div class="content">
-                <!-- 执行摘要 -->
+                <!-- Executive Summary -->
                 <div class="section">
-                    <h2>📊 执行摘要</h2>
+                    <h2>📊 Executive Summary</h2>
                     <div class="metrics-grid">
                         <div class="metric-card">
-                            <div class="label">平均绝对误差</div>
+                            <div class="label">MAE</div>
                             <div class="value">{metrics.get('mae', 0):.4f}</div>
                             <div class="unit">mm</div>
                         </div>
                         <div class="metric-card">
-                            <div class="label">均方根误差</div>
+                            <div class="label">RMSE</div>
                             <div class="value">{metrics.get('rmse', 0):.4f}</div>
                             <div class="unit">mm</div>
                         </div>
                         <div class="metric-card">
-                            <div class="label">降雨检测准确率</div>
+                            <div class="label">Rain Detection Accuracy</div>
                             <div class="value">{metrics.get('accuracy', 0)*100:.2f}</div>
                             <div class="unit">%</div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- 性能对比 -->
+                <!-- Performance Comparison -->
                 {comparison_html}
                 
-                <!-- 数据概览 -->
+                <!-- Data Overview -->
                 <div class="section">
-                    <h2>📁 数据概览</h2>
+                    <h2>📁 Data Overview</h2>
                     <table class="info-table">
                         <tr>
-                            <td>卫星数据文件</td>
-                            <td>{data_info.get('satellite_files', 'N/A')} 个</td>
+                            <td>Satellite Files</td>
+                            <td>{data_info.get('satellite_files', 'N/A')} files</td>
                         </tr>
                         <tr>
-                            <td>传感器记录数</td>
-                            <td>{data_info.get('sensor_records', 'N/A'):,} 条</td>
+                            <td>Sensor Records</td>
+                            <td>{data_info.get('sensor_records', 'N/A'):,} records</td>
                         </tr>
                         <tr>
-                            <td>数据时间范围</td>
+                            <td>Date Range</td>
                             <td>{data_info.get('date_range', 'N/A')}</td>
                         </tr>
                         <tr>
-                            <td>传感器数量</td>
-                            <td>{data_info.get('num_sensors', 'N/A')} 个</td>
+                            <td>Active Sensors</td>
+                            <td>{data_info.get('num_sensors', 'N/A')} sensors</td>
                         </tr>
                     </table>
                 </div>
                 
-                <!-- 训练详情 -->
+                <!-- Training Details -->
                 <div class="section">
-                    <h2>🔧 训练详情</h2>
+                    <h2>🔧 Training Details</h2>
                     <table class="info-table">
                         <tr>
-                            <td>训练轮数</td>
+                            <td>Epochs</td>
                             <td>{training_info.get('epochs', 'N/A')}</td>
                         </tr>
                         <tr>
-                            <td>批次大小</td>
+                            <td>Batch Size</td>
                             <td>{training_info.get('batch_size', 'N/A')}</td>
                         </tr>
                         <tr>
-                            <td>学习率</td>
+                            <td>Learning Rate</td>
                             <td>{training_info.get('learning_rate', 'N/A')}</td>
                         </tr>
                         <tr>
-                            <td>训练时长</td>
+                            <td>Duration</td>
                             <td>{training_info.get('duration', 'N/A')}</td>
                         </tr>
                         <tr>
-                            <td>最佳验证损失</td>
+                            <td>Best Valid Loss</td>
                             <td>{training_info.get('best_loss', 'N/A'):.4f}</td>
                         </tr>
                         <tr>
-                            <td>计算设备</td>
+                            <td>Device</td>
                             <td>{training_info.get('device', 'N/A')}</td>
                         </tr>
                     </table>
                 </div>
                 
-                <!-- 评估结果 -->
+                <!-- Evaluation Results -->
                 <div class="section">
-                    <h2>📈 评估结果</h2>
+                    <h2>📈 Evaluation Results</h2>
                     <table class="info-table">
                         <tr>
-                            <td>降雨阈值</td>
+                            <td>Rain Threshold</td>
                             <td>{metrics.get('threshold', 0.1)} mm</td>
                         </tr>
                         <tr>
-                            <td>评估样本数</td>
+                            <td>Test Samples</td>
                             <td>{metrics.get('num_samples', 'N/A')}</td>
                         </tr>
                         <tr>
-                            <td>模型状态</td>
-                            <td><span class="status-badge status-success">已部署</span></td>
+                            <td>Model Status</td>
+                            <td><span class="status-badge status-success">Deployed</span></td>
                         </tr>
                     </table>
                     
                     <div class="recommendation">
-                        <h3>💡 建议</h3>
+                        <h3>💡 Recommendations</h3>
                         {generate_recommendations(metrics, previous_metrics)}
                     </div>
                 </div>
@@ -344,36 +344,36 @@ def generate_html_report(
     </html>
     """
     
-    # 写入文件
+    # Write to file
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
-    logger.info(f"✅ 报告已生成: {output_path}")
+    logger.info(f"✅ Report generated: {output_path}")
     
-    # 保存当前指标供下次对比
+    # Save current metrics for next comparison
     save_current_metrics(metrics)
     
     return output_path
 
 
 def generate_comparison_section(current_metrics, previous_metrics):
-    """生成性能对比部分"""
+    """Generate performance comparison section"""
     if not previous_metrics:
         return ""
     
     def calculate_change(current, previous, reverse=False):
-        """计算变化百分比和趋势"""
+        """Calculate percentage change and trend"""
         if previous == 0:
             return "N/A", "neutral"
         
         change = ((current - previous) / previous) * 100
         
-        # 对于MAE和RMSE，降低是好的（reverse=True）
+        # For MAE and RMSE, lower is better (reverse=True)
         if reverse:
             if change < -5:
-                trend = "up"  # 改进
+                trend = "up"  # Improvement
             elif change > 5:
-                trend = "down"  # 退化
+                trend = "down"  # Degradation
             else:
                 trend = "neutral"
         else:
@@ -411,13 +411,13 @@ def generate_comparison_section(current_metrics, previous_metrics):
     
     return f"""
     <div class="section">
-        <h2>📊 性能对比</h2>
+        <h2>📊 Performance Comparison</h2>
         <table class="info-table">
             <tr>
-                <td><strong>指标</strong></td>
-                <td><strong>本次训练</strong></td>
-                <td><strong>上次训练</strong></td>
-                <td><strong>变化</strong></td>
+                <td><strong>Metric</strong></td>
+                <td><strong>Current</strong></td>
+                <td><strong>Previous</strong></td>
+                <td><strong>Change</strong></td>
             </tr>
             <tr>
                 <td>MAE</td>
@@ -436,7 +436,7 @@ def generate_comparison_section(current_metrics, previous_metrics):
                 </td>
             </tr>
             <tr>
-                <td>准确率</td>
+                <td>Accuracy</td>
                 <td>{current_metrics.get('accuracy', 0)*100:.2f}%</td>
                 <td>{previous_metrics.get('accuracy', 0)*100:.2f}%</td>
                 <td class="comparison">
@@ -449,38 +449,38 @@ def generate_comparison_section(current_metrics, previous_metrics):
 
 
 def generate_recommendations(current_metrics, previous_metrics):
-    """生成建议"""
+    """Generate recommendations"""
     recommendations = []
     
     mae = current_metrics.get('mae', 0)
     accuracy = current_metrics.get('accuracy', 0)
     
-    # 基于性能的建议
+    # Recommendations based on performance
     if mae > 0.5:
-        recommendations.append("• MAE较高，建议增加训练数据或调整模型架构")
+        recommendations.append("• MAE is high, consider adding more specific training data or adjusting architecture")
     elif mae < 0.1:
-        recommendations.append("• MAE表现优秀，模型性能良好")
+        recommendations.append("• MAE is excellent, model performance is strong")
     
     if accuracy < 0.7:
-        recommendations.append("• 准确率偏低，建议检查数据质量或调整降雨阈值")
+        recommendations.append("• Accuracy is low, check data quality or adjust rain threshold")
     elif accuracy > 0.9:
-        recommendations.append("• 准确率优秀，模型可以投入生产使用")
+        recommendations.append("• Accuracy is excellent, model is ready for production")
     
-    # 对比上次训练
+    # Compare with previous training
     if previous_metrics:
         if current_metrics.get('mae', 0) > previous_metrics.get('mae', 0) * 1.1:
-            recommendations.append("• ⚠️ 性能相比上次训练有所下降，建议检查数据质量")
+            recommendations.append("• ⚠️ Performance degraded compared to last training, check data quality")
         elif current_metrics.get('mae', 0) < previous_metrics.get('mae', 0) * 0.9:
-            recommendations.append("• ✅ 性能相比上次训练有显著提升")
+            recommendations.append("• ✅ Performance significantly improved compared to last training")
     
     if not recommendations:
-        recommendations.append("• 模型性能稳定，继续保持当前训练策略")
+        recommendations.append("• Model performance is stable, continue with current strategy")
     
     return "<br>".join(recommendations)
 
 
 def load_previous_metrics():
-    """加载上次训练的指标"""
+    """Load metrics from previous training"""
     metrics_file = "training_reports/latest_metrics.json"
     if os.path.exists(metrics_file):
         try:
@@ -492,7 +492,7 @@ def load_previous_metrics():
 
 
 def save_current_metrics(metrics):
-    """保存当前指标供下次对比"""
+    """Save current metrics for next comparison"""
     os.makedirs("training_reports", exist_ok=True)
     metrics_file = "training_reports/latest_metrics.json"
     
@@ -501,10 +501,10 @@ def save_current_metrics(metrics):
 
 
 if __name__ == "__main__":
-    # 测试报告生成
+    # Test report generation
     logging.basicConfig(level=logging.INFO)
     
-    # 模拟数据
+    # Mock data
     test_metrics = {
         'mae': 0.1234,
         'rmse': 0.2345,
@@ -517,7 +517,7 @@ if __name__ == "__main__":
         'epochs': 30,
         'batch_size': 4,
         'learning_rate': 0.001,
-        'duration': '15分30秒',
+        'duration': '15m 30s',
         'best_loss': 0.0456,
         'device': 'MPS (Apple Silicon)'
     }
@@ -525,7 +525,7 @@ if __name__ == "__main__":
     test_data_info = {
         'satellite_files': 240,
         'sensor_records': 50000,
-        'date_range': '2026-01-01 至 2026-01-20',
+        'date_range': '2026-01-01 to 2026-01-20',
         'num_sensors': 61
     }
     
@@ -536,5 +536,5 @@ if __name__ == "__main__":
         "training_reports/test_report.html"
     )
     
-    print(f"\n✅ 测试报告已生成: {report_path}")
-    print("请在浏览器中打开查看效果")
+    print(f"\n✅ Test report generated: {report_path}")
+    print("Please open in browser to check")

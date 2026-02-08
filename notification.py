@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-邮件通知系统
-用于发送训练报告和失败通知
+Email Notification System
+Used for sending training reports and failure notifications
 """
 import smtplib
 import os
@@ -14,52 +14,52 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# 邮件配置（从环境变量读取）
+# Email Configuration (Read from environment variables)
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD")  # Gmail App Password
 RECIPIENT_EMAIL = os.environ.get("RECIPIENT_EMAIL", SENDER_EMAIL)
-# 额外收件人（逗号分隔），在 .env.production 中配置: CC_EMAILS=a@x.com,b@x.com
+# Extra recipients (comma separated), configured in .env.production: CC_EMAILS=a@x.com,b@x.com
 CC_EMAILS = [e.strip() for e in os.environ.get("CC_EMAILS", "").split(",") if e.strip()]
 ALL_RECIPIENTS = list(set(filter(None, [RECIPIENT_EMAIL] + CC_EMAILS)))
 
 
 def send_email(subject, html_body, attachments=None, is_failure=False):
     """
-    发送HTML格式邮件
+    Send HTML format email
     
     Args:
-        subject: 邮件主题
-        html_body: HTML格式的邮件正文
-        attachments: 附件列表 [(文件路径, 文件名), ...]
-        is_failure: 是否为失败通知
+        subject: Email subject
+        html_body: Email body in HTML format
+        attachments: List of attachments [(file_path, file_name), ...]
+        is_failure: Whether this is a failure notification
     
     Returns:
-        bool: 发送是否成功
+        bool: Whether sending was successful
     """
-    # 检查配置
+    # Check configuration
     if not SENDER_EMAIL or not SENDER_PASSWORD:
-        logger.error("邮件配置缺失。请设置环境变量: SENDER_EMAIL, SENDER_PASSWORD")
-        logger.info("Gmail App Password 获取方式: https://myaccount.google.com/apppasswords")
+        logger.error("Email configuration missing. Please set environment variables: SENDER_EMAIL, SENDER_PASSWORD")
+        logger.info("How to get Gmail App Password: https://myaccount.google.com/apppasswords")
         return False
     
     try:
-        # 创建邮件对象
+        # Create email object
         msg = MIMEMultipart('alternative')
         msg['From'] = SENDER_EMAIL
         msg['To'] = ", ".join(ALL_RECIPIENTS)
         msg['Subject'] = subject
         
-        # 添加HTML正文
+        # Add HTML body
         html_part = MIMEText(html_body, 'html', 'utf-8')
         msg.attach(html_part)
         
-        # 添加附件
+        # Add attachments
         if attachments:
             for file_path, file_name in attachments:
                 if not os.path.exists(file_path):
-                    logger.warning(f"附件不存在，跳过: {file_path}")
+                    logger.warning(f"Attachment not found, skipping: {file_path}")
                     continue
                     
                 with open(file_path, 'rb') as f:
@@ -71,10 +71,10 @@ def send_email(subject, html_body, attachments=None, is_failure=False):
                         f'attachment; filename= {file_name}'
                     )
                     msg.attach(part)
-                    logger.info(f"已添加附件: {file_name}")
+                    logger.info(f"Attachment added: {file_name}")
         
-        # 连接SMTP服务器并发送
-        logger.info(f"正在连接到 {SMTP_SERVER}:{SMTP_PORT}...")
+        # Connect to SMTP server and send
+        logger.info(f"Connecting to {SMTP_SERVER}:{SMTP_PORT}...")
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.starttls()
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
@@ -83,33 +83,33 @@ def send_email(subject, html_body, attachments=None, is_failure=False):
         server.sendmail(SENDER_EMAIL, ALL_RECIPIENTS, text)
         server.quit()
         
-        logger.info(f"✅ 邮件发送成功: {subject}")
+        logger.info(f"✅ Email sent successfully: {subject}")
         return True
         
     except Exception as e:
-        logger.error(f"❌ 邮件发送失败: {e}")
+        logger.error(f"❌ Email sending failed: {e}")
         return False
 
 
 def send_training_success_email(report_path, plot_path, metrics):
     """
-    发送训练成功通知
+    Send training success notification
     
     Args:
-        report_path: HTML报告路径
-        plot_path: 评估图表路径
-        metrics: 评估指标字典 {mae, rmse, accuracy}
+        report_path: Path to HTML report
+        plot_path: Path to evaluation plot
+        metrics: Evaluation metrics dictionary {mae, rmse, accuracy}
     """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    subject = f"✅ 模型训练成功 - {timestamp}"
+    subject = f"✅ Model Training Success - {timestamp}"
     
-    # 读取报告内容
+    # Read report content
     if os.path.exists(report_path):
         with open(report_path, 'r', encoding='utf-8') as f:
             html_body = f.read()
     else:
-        # 如果报告不存在，创建简单的HTML
+        # If report does not exist, create simple HTML
         data_date = metrics.get('date', 'N/A')
         html_body = f"""
         <html>
@@ -121,12 +121,12 @@ def send_training_success_email(report_path, plot_path, metrics):
             </style>
         </head>
         <body>
-            <h2>✅ 模型训练成功</h2>
-            <p><strong>完成时间:</strong> {timestamp}</p>
-            <p><strong>训练数据:</strong> {data_date}</p>
+            <h2>✅ Model Training Success</h2>
+            <p><strong>Completion Time:</strong> {timestamp}</p>
+            <p><strong>Training Data:</strong> {data_date}</p>
             
             <div class="metrics">
-                <h3>📊 评估指标</h3>
+                <h3>📊 Evaluation Metrics</h3>
                 <ul>
                     <li><strong>MAE:</strong> {metrics.get('mae', 0):.4f} mm</li>
                     <li><strong>RMSE:</strong> {metrics.get('rmse', 0):.4f} mm</li>
@@ -134,12 +134,12 @@ def send_training_success_email(report_path, plot_path, metrics):
                 </ul>
             </div>
             
-            <p class="info">📈 查看更多详情: <a href="http://3.0.28.161:8000/monitor/">训练监控仪表盘</a></p>
+            <p class="info">📈 View more details: <a href="http://3.0.28.161:8000/monitor/">Training Monitor Dashboard</a></p>
         </body>
         </html>
         """
     
-    # 准备附件
+    # Prepare attachments
     attachments = []
     if os.path.exists(report_path):
         attachments.append((report_path, os.path.basename(report_path)))
@@ -151,16 +151,16 @@ def send_training_success_email(report_path, plot_path, metrics):
 
 def send_training_failure_email(error_message, step_failed, log_path=None):
     """
-    发送训练失败通知
+    Send training failure notification
     
     Args:
-        error_message: 错误信息
-        step_failed: 失败的步骤名称
-        log_path: 日志文件路径（可选）
+        error_message: Error message
+        step_failed: Name of the failed step
+        log_path: Path to log file (optional)
     """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    subject = f"❌ 模型训练失败 - {timestamp}"
+    subject = f"❌ Model Training Failed - {timestamp}"
     
     html_body = f"""
     <html>
@@ -172,31 +172,31 @@ def send_training_failure_email(error_message, step_failed, log_path=None):
         </style>
     </head>
     <body>
-        <h2>❌ 模型训练失败</h2>
-        <p><strong>时间:</strong> {timestamp}</p>
-        <p><strong>失败步骤:</strong> {step_failed}</p>
+        <h2>❌ Model Training Failed</h2>
+        <p><strong>Time:</strong> {timestamp}</p>
+        <p><strong>Failed Step:</strong> {step_failed}</p>
         
         <div class="error">
-            <h3>错误信息</h3>
+            <h3>Error Message</h3>
             <pre>{error_message}</pre>
         </div>
         
         <div class="info">
-            <h3>建议操作</h3>
+            <h3>Suggested Actions</h3>
             <ul>
-                <li>检查网络连接（FTP和API访问）</li>
-                <li>验证数据文件是否完整</li>
-                <li>查看完整日志文件（如有附件）</li>
-                <li>手动运行失败的步骤进行调试</li>
+                <li>Check network connection (FTP and API access)</li>
+                <li>Verify data file integrity</li>
+                <li>View full log file (if attached)</li>
+                <li>Manually run the failed step for debugging</li>
             </ul>
         </div>
         
-        <p><em>系统将在下次调度时自动重试。</em></p>
+        <p><em>The system will retry automatically at the next scheduled time.</em></p>
     </body>
     </html>
     """
     
-    # 准备附件
+    # Prepare attachments
     attachments = []
     if log_path and os.path.exists(log_path):
         attachments.append((log_path, os.path.basename(log_path)))
@@ -205,36 +205,36 @@ def send_training_failure_email(error_message, step_failed, log_path=None):
 
 
 if __name__ == "__main__":
-    # 测试邮件发送
+    # Test email sending
     logging.basicConfig(level=logging.INFO)
     
-    print("测试邮件通知系统...")
-    print(f"发件人: {SENDER_EMAIL}")
-    print(f"收件人: {RECIPIENT_EMAIL}")
+    print("Testing email notification system...")
+    print(f"Sender: {SENDER_EMAIL}")
+    print(f"Recipient: {RECIPIENT_EMAIL}")
     
     if not SENDER_EMAIL or not SENDER_PASSWORD:
-        print("\n❌ 请设置环境变量:")
+        print("\n❌ Please set environment variables:")
         print("export SENDER_EMAIL='your-email@gmail.com'")
         print("export SENDER_PASSWORD='your-app-password'")
-        print("\nGmail App Password 获取: https://myaccount.google.com/apppasswords")
+        print("\nGet Gmail App Password: https://myaccount.google.com/apppasswords")
     else:
-        # 发送测试邮件
+        # Send test email
         test_html = """
         <html>
         <body>
-            <h2>🧪 测试邮件</h2>
-            <p>这是一封来自 Weather AI 训练系统的测试邮件。</p>
-            <p>如果你收到这封邮件，说明邮件通知系统配置成功！</p>
+            <h2>🧪 Test Email</h2>
+            <p>This is a test email from the Weather AI Training System.</p>
+            <p>If you receive this email, the notification system is configured correctly!</p>
         </body>
         </html>
         """
         
         success = send_email(
-            subject="🧪 Weather AI - 邮件系统测试",
+            subject="🧪 Weather AI - Email System Test",
             html_body=test_html
         )
         
         if success:
-            print("\n✅ 测试邮件发送成功！请检查收件箱。")
+            print("\n✅ Test email sent successfully! Please check your inbox.")
         else:
-            print("\n❌ 测试邮件发送失败。请检查配置。")
+            print("\n❌ Test email failed to send. Please check configuration.")
