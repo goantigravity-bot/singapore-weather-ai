@@ -489,6 +489,12 @@ def monitor_overview():
     import json as _json
     import boto3
     
+    # 统一格式化时间到秒级，去除微秒和时区后缀
+    def fmt_time(iso_str):
+        if not iso_str:
+            return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return iso_str[:19].replace("T", " ")
+    
     csv_exists = os.path.exists("real_sensor_data.csv")
     model_exists = os.path.exists("weather_fusion_model.pth")
     
@@ -545,7 +551,7 @@ def monitor_overview():
         "totalDays": max(completed_days, 120),  # 目标约 120 天的历史数据
         "filesDownloaded": s3_total_files,
         "status": download_state.get("status", "idle"),
-        "lastUpdate": download_state.get("last_updated", datetime.now().isoformat()),
+        "lastUpdate": fmt_time(download_state.get("last_updated")),
         "dateProgress": [],
     }
     
@@ -585,23 +591,45 @@ def monitor_overview():
         "currentPhase": training_state.get("currentPhase", "idle"),
         "phases": translated_phases,
         "status": training_state.get("status", "completed" if model_exists else "idle"),
-        "lastUpdate": training_state.get("lastUpdate", datetime.now().isoformat()),
+        "lastUpdate": fmt_time(training_state.get("lastUpdate")),
         "history": [],
     }
     
-    # 如果有本地训练历史文件，加载它
-    if os.path.exists("training_history.json"):
+    # 从 S3 加载训练历史，并转换为前端 TrainingHistoryItem 格式
+    # 前端接口: { id, timestamp, dateRange, epochs, duration, mae, rmse, success }
+    # S3 数据:  { id, timestamp, duration_formatted, success, metrics: {mae, rmse}, data_info: {date_range}, training_config: {epochs} }
+    if S3_BUCKET:
         try:
-            with open("training_history.json") as f:
-                training_status["history"] = _json.load(f)
-        except Exception:
-            pass
+            s3_hist = boto3.client('s3', endpoint_url=S3_ENDPOINT_URL)
+            obj = s3_hist.get_object(Bucket=S3_BUCKET, Key="history/training_history.json")
+            raw_history = _json.loads(obj['Body'].read().decode('utf-8'))
+            mapped_history = []
+            for item in raw_history:
+                metrics = item.get("metrics", {})
+                data_info = item.get("data_info", {})
+                config = item.get("training_config", {})
+                mapped_history.append({
+                    "id": item.get("id", 0),
+                    "timestamp": item.get("timestamp", ""),
+                    "dateRange": data_info.get("date_range", ""),
+                    "epochs": config.get("epochs", 0),
+                    "duration": item.get("duration_formatted", "N/A"),
+                    "mae": metrics.get("mae", 0),
+                    "rmse": metrics.get("rmse", 0),
+                    "success": item.get("success", False),
+                })
+            training_status["history"] = mapped_history
+            logger.info(f"Monitor: Loaded {len(mapped_history)} training history entries from S3")
+        except Exception as e:
+            logger.warning(f"Monitor: Failed to load training history from S3: {e}")
     
     # --- 4. 构建同步状态 ---
+    # 格式化时间精确到秒（用户要求），避免原始 ISO 格式
+    now_formatted = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sync_status = {
         "modelSynced": model_exists,
         "sensorDataSynced": csv_exists,
-        "lastSyncTime": datetime.now().isoformat() if (model_exists or csv_exists) else None,
+        "lastSyncTime": now_formatted if (model_exists or csv_exists) else None,
         "status": "synced" if (model_exists and csv_exists) else "partial",
     }
     
