@@ -656,6 +656,7 @@ def monitor_overview():
 def monitor_logs(log_type: str, lines: int = 100):
     """返回指定类型的日志内容，优先从 S3 读取（各服务通过 crontab 推送日志到 S3）"""
     import boto3
+    import subprocess as _sp
     
     # S3 日志路径映射（由各实例的 push_log 脚本上传）
     s3_log_keys = {
@@ -682,9 +683,29 @@ def monitor_logs(log_type: str, lines: int = 100):
             logger.info(f"Logs: Loaded {len(log_lines)} lines from S3 {s3_key}")
         except Exception as e:
             logger.warning(f"Logs: Failed to read from S3 {s3_key}: {e}")
-            log_lines = [f"Failed to load logs from S3: {e}"]
-            source = "error"
-            path = s3_key
+            # sync 类型的日志在 API 服务器本地（systemd journal），直接从 journalctl 读取
+            if log_type == "sync":
+                try:
+                    result = _sp.run(
+                        ["/usr/bin/journalctl", "-u", "weather-api", "--no-pager", "-n", str(lines)],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    if result.stdout.strip():
+                        log_lines = result.stdout.strip().splitlines()
+                        source = "journalctl (weather-api)"
+                        path = "systemd journal"
+                    else:
+                        log_lines = ["No journal entries found for weather-api"]
+                        source = "journalctl"
+                        path = "systemd journal"
+                except Exception as je:
+                    log_lines = [f"Failed to read from both S3 and journalctl: {je}"]
+                    source = "error"
+                    path = s3_key
+            else:
+                log_lines = [f"Failed to load logs from S3: {e}"]
+                source = "error"
+                path = s3_key
     else:
         log_lines = [f"S3 not configured or unknown log type: {log_type}"]
         source = "none"
