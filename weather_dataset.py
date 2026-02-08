@@ -1,10 +1,12 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
-import xarray as xr
 import numpy as np
 import os
+import logging
 from datetime import datetime, timezone, timedelta
+
+logger = logging.getLogger(__name__)
 
 # --- Himawari-9 Constants & Projection Utils (EQR L3) ---
 # Projection: Equirectangular (EQR)
@@ -48,7 +50,8 @@ class WeatherDataset(Dataset):
         self.sensor_df['timestamp'] = pd.to_datetime(self.sensor_df['timestamp'])
         
         # 🆕 滑动窗口优化: 只使用最近N天的数据
-        MAX_TRAINING_DAYS = 30  # 可配置参数
+        # MAX_TRAINING_DAYS = 30  # 原逻辑：只取最新30天
+        MAX_TRAINING_DAYS = 365  # 临时修改：扩大窗口以支持历史数据回放训练 (Oct -> Dec)
         
         if len(self.sensor_df) > 0:
             max_date = self.sensor_df['timestamp'].max()
@@ -66,29 +69,34 @@ class WeatherDataset(Dataset):
         else:
             print("⚠️  数据集为空")
         
-        # --- PRE-SCAN AVAILABLE SATELLITE FILES ---
+        # --- 一次性预加载所有卫星 .npy 到内存（约 5MB，完全放得下内存）---
+        # 避免 __getitem__ 中每次 glob+np.load 磁盘 IO
+        self._sat_cache = {}
         self.available_sat_timestamps = set()
         
         processed_dir = "processed_data"
         if os.path.exists(processed_dir):
-            npy_files = os.listdir(processed_dir)
-            for f in npy_files:
+            for f in os.listdir(processed_dir):
                 if f.startswith("NC_H09_") and f.endswith(".npy"):
                     parts = f.split("_")
                     if len(parts) >= 4:
                         ts_str = f"{parts[2]}_{parts[3]}"
                         self.available_sat_timestamps.add(ts_str)
+                        # 预加载到内存
+                        try:
+                            self._sat_cache[ts_str] = np.load(os.path.join(processed_dir, f))
+                        except Exception:
+                            pass
 
         if os.path.exists(sat_dir):
-            raw_files = os.listdir(sat_dir)
-            for f in raw_files:
+            for f in os.listdir(sat_dir):
                  if f.startswith("NC_H09_") and f.endswith(".nc"):
                      parts = f.split("_")
                      if len(parts) >= 4:
                         ts_str = f"{parts[2]}_{parts[3]}"
                         self.available_sat_timestamps.add(ts_str)
         
-        print(f"Dataset Init: Found {len(self.available_sat_timestamps)} available satellite timestamps.")
+        logger.info(f"Dataset Init: Found {len(self.available_sat_timestamps)} satellite timestamps, {len(self._sat_cache)} preloaded to memory")
 
         # --- OPTIMIZED TIME ALIGNMENT (Vectorized) ---
         # 1. Create Satellite Index DataFrame
@@ -185,10 +193,9 @@ class WeatherDataset(Dataset):
         target_val = group.iloc[sample_info['target_idx']]['rainfall']
         target_tensor = torch.tensor([target_val], dtype=torch.float32)
         
-        # 3. Get Satellite Image
+        # 3. 从内存缓存获取卫星图像（O(1) 哈希查找，零磁盘 IO）
         current_ts = group.iloc[sample_info['input_idx_end'] - 1]['timestamp']
         
-        # Convert timestamps for filename matching
         minute = (current_ts.minute // 10) * 10
         sat_ts = current_ts.replace(minute=minute, second=0)
         
@@ -199,41 +206,37 @@ class WeatherDataset(Dataset):
              sat_ts_utc = sat_ts - timedelta(hours=8)
              utc_str = sat_ts_utc.strftime('%Y%m%d_%H%M')
         
-        # Try Cache First
-        processed_dir = "processed_data"
-        npy_path = os.path.join(processed_dir, f"NC_H09_{utc_str}_*.npy")
-        npy_files = import_glob().glob(npy_path)
-        
-        sat_tensor = torch.zeros(1, 64, 64) 
-        
-        if npy_files:
-             try:
-                 data = np.load(npy_files[0])
-                 sat_tensor = torch.tensor(data, dtype=torch.float32)
-                 if sat_tensor.ndim == 2:
-                     sat_tensor = sat_tensor.unsqueeze(0)
-                 sat_tensor = (sat_tensor - 200) / 100.0
-             except: pass
+        # 直接从内存字典取，O(1) 哈希查找
+        data = self._sat_cache.get(utc_str)
+        if data is not None:
+            sat_tensor = torch.tensor(data, dtype=torch.float32)
+            if sat_tensor.ndim == 2:
+                sat_tensor = sat_tensor.unsqueeze(0)
+            sat_tensor = (sat_tensor - 200) / 100.0
         else:
-            # Fallback (Slower raw read)
-            pass # In strict mode (which we enforced by algo), we expect file to exist or be cached.
-            # But duplicate code for raw reading omitted for brevity as 'preprocess' should handle it.
-            # If unmatched, returns zeros (black image).
-            pass
+            sat_tensor = torch.zeros(1, 64, 64)
         
         return sat_tensor, sensor_tensor, target_tensor
-
-def import_glob():
-    import glob
-    return glob
 
 def get_dataloaders(csv_path, sat_dir, batch_size=4, split=0.8):
     dataset = WeatherDataset(csv_path, sat_dir)
     train_size = int(split * len(dataset))
     val_size = len(dataset) - train_size
     train_ds, val_ds = torch.utils.data.random_split(dataset, [train_size, val_size])
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+    
+    # 多线程数据预取：4 个子进程并行准备下一批数据
+    # pin_memory 加速 CPU→GPU 传输，persistent_workers 避免每 epoch 重建进程
+    use_workers = 4 if batch_size > 1 else 0
+    train_loader = DataLoader(
+        train_ds, batch_size=batch_size, shuffle=True,
+        num_workers=use_workers, pin_memory=True,
+        persistent_workers=(use_workers > 0)
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=batch_size, shuffle=False,
+        num_workers=use_workers, pin_memory=True,
+        persistent_workers=(use_workers > 0)
+    )
     return train_loader, val_loader
 
 if __name__ == "__main__":

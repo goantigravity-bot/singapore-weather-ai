@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "timestamp": "2026-02-07T11:35:42.000000",
+    "duration_formatted": "5s",
+    "success": true,
+    "metrics": {
+      "mae": 0.0,
+      "rmse": 0.0,
+      "accuracy": 0.0
+    },
+    "data_info": {
+      "date_range": "2025-10-01",
+      "sensor_records": 0
+    },
+    "training_config": {
+      "epochs": 100
+    }
+  },
+  {
+    "id": 2,
+    "timestamp": "2026-02-07T11:50:28.522785",
+    "duration_formatted": "N/A",
+    "success": true,
+    "metrics": {
+      "mae": 0.05107100415938246,
+      "rmse": 0.7405395103395969,
+      "accuracy": 0.0
+    },
+    "data_info": {
+      "date_range": "2025-10-02",
+      "sensor_records": 0
+    },
+    "training_config": {
+      "epochs": 1
+    }
+  }
+]

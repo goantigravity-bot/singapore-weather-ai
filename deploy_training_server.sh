@@ -19,9 +19,21 @@ rsync -avz -e "ssh -i $KEY_FILE -o StrictHostKeyChecking=no" \
   --exclude 'node_modules' \
   --exclude '__pycache__' \
   --exclude '.git' \
+  --exclude '.github' \
+  --exclude '.claude' \
   --exclude 'processed_data' \
+  --exclude 'satellite_data' \
+  --exclude 'govdata' \
+  --exclude 'dummy_data' \
   --exclude 'training_logs' \
-  ./ ubuntu@$TRAINING_SERVER_IP:~/singapore-weather-ai/
+  --exclude 'model_backups' \
+  --exclude 'docs' \
+  --exclude 'document' \
+  --exclude 'terraform' \
+  --exclude '*.md' \
+  --exclude '*.txt' \
+  --exclude 'LICENSE' \
+  ./ ubuntu@$TRAINING_SERVER_IP:~/weather-ai/
 
 # 2. Setup Remote Environment
 echo "Setting up remote environment..."
@@ -32,7 +44,7 @@ ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@$TRAINING_SERVER_IP << 'EOF'
     sudo apt-get update
     sudo apt-get install -y python3.10 python3.10-venv python3-pip libhdf5-dev libnetcdf-dev awscli
     
-    cd ~/singapore-weather-ai
+    cd ~/weather-ai
     
     # Python Venv
     if [ ! -d "venv" ]; then
@@ -48,5 +60,5 @@ ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@$TRAINING_SERVER_IP << 'EOF'
     
     echo "✅ Setup Complete. "
     echo "To start training manually: "
-    echo "  cd ~/singapore-weather-ai && source venv/bin/activate && python3 auto_train_pipeline.py"
+    echo "  cd ~/weather-ai && source venv/bin/activate && python3 auto_train_pipeline.py"
 EOF

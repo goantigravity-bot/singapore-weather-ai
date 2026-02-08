@@ -51,6 +51,30 @@ function AppContent() {
     // 如果在独立页面,跳过默认位置加载
     if (isStandalonePage) return;
 
+    // 0. Check for URL search params (e.g. from Popular Places click)
+    const searchParams = new URLSearchParams(location.search);
+    const urlQuery = searchParams.get('search');
+    if (urlQuery) {
+      console.log("Using URL search query:", urlQuery);
+      setSearchQuery(urlQuery);
+      fetchForecast({ location: urlQuery });
+      return;
+    }
+
+    // 优先尝试从 LocalStorage 读取上次保存的位置
+    const savedLocation = localStorage.getItem('weather_saved_location');
+    if (savedLocation) {
+      try {
+        const { lat, lon, name } = JSON.parse(savedLocation);
+        console.log("Using saved location:", name, lat, lon);
+        fetchForecast({ lat, lon, location: name });
+        setFlyTo({ lat, lon });
+        return;
+      } catch (e) {
+        console.error("Failed to parse saved location", e);
+      }
+    }
+
     // Default location (Singapore Center - MacRitchie)
     const defaultLat = 1.3521;
     const defaultLon = 103.8198;
@@ -111,7 +135,7 @@ function AppContent() {
             setForecast({
               timestamp: new Date().toISOString(),
               location_query: params.location,
-              nearest_station: { id: 'path', name: `${params.location} (Path)` },
+              nearest_station: { id: 'path', name: params.location },
               forecast: {
                 rainfall_mm_next_10min: first.forecast.rainfall,
                 description: "Path Forecast (See Map)"
@@ -122,6 +146,12 @@ function AppContent() {
                 pm25: null
               }
             });
+            // 保存路径搜索的位置（使用起点坐标）
+            localStorage.setItem('weather_saved_location', JSON.stringify({
+              lat: points[0].lat,
+              lon: points[0].lon,
+              name: params.location
+            }));
             return;
           }
         } catch (e) {
@@ -133,6 +163,10 @@ function AppContent() {
       const res = await axios.get(`${API_BASE_URL}/predict`, { params });
       setForecast(res.data);
 
+      // 获取准确的坐标用于保存
+      let currentLat = params.lat;
+      let currentLon = params.lon;
+
       const stationsRes = await axios.get(`${API_BASE_URL}/stations`);
       if (params.lat && params.lon) {
         setFlyTo({ lat: params.lat, lon: params.lon });
@@ -140,7 +174,19 @@ function AppContent() {
         const station = stationsRes.data.find((s: any) => s.id === res.data.nearest_station.id);
         if (station) {
           setFlyTo({ lat: station.location.latitude, lon: station.location.longitude });
+          currentLat = station.location.latitude;
+          currentLon = station.location.longitude;
         }
+      }
+
+      // 保存成功获取的位置到 LocalStorage
+      if (currentLat && currentLon) {
+        const locName = params.location || res.data.nearest_station.name;
+        localStorage.setItem('weather_saved_location', JSON.stringify({
+          lat: currentLat,
+          lon: currentLon,
+          name: locName
+        }));
       }
 
     } catch (err: any) {

@@ -120,11 +120,19 @@ def upload_history_to_s3(date_str, metrics):
         # 生成新 ID
         new_id = max([h.get("id", 0) for h in history], default=0) + 1
         
+        # 格式化训练时长
+        train_secs = metrics.get("training_time_seconds", 0)
+        if train_secs > 0:
+            mins, secs = divmod(int(train_secs), 60)
+            duration_str = f"{mins}分{secs}秒" if mins > 0 else f"{secs}秒"
+        else:
+            duration_str = "N/A"
+        
         # 创建新记录
         new_record = {
             "id": new_id,
             "timestamp": datetime.now().isoformat(),
-            "duration_formatted": "N/A",
+            "duration_formatted": duration_str,
             "success": metrics.get("success", True),
             "metrics": {
                 "mae": metrics.get("last_val_mae", 0.0),

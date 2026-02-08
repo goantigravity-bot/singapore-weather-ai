@@ -74,20 +74,20 @@
   },
   {
     "id": 5,
-    "timestamp": "2026-02-06T22:54:00.288206",
+    "timestamp": "2026-02-07T11:50:28.522785",
     "duration_formatted": "N/A",
     "success": true,
     "metrics": {
-      "mae": 0.04193069800284162,
-      "rmse": 0.2887072109256143,
+      "mae": 0.05107100415938246,
+      "rmse": 0.7405395103395969,
       "accuracy": 0.0
     },
     "data_info": {
-      "date_range": "2025-10-23",
+      "date_range": "2025-10-02",
       "sensor_records": 0
     },
     "training_config": {
-      "epochs": 50
+      "epochs": 1
     }
   }
 ]

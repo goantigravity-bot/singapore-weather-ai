@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEA Weather AI — Problem Statement & KPIs</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0ea5e9;
+            --accent: #06d6a0;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.06);
+            --grad-blue: linear-gradient(135deg, #0ea5e9, #06d6a0);
+            --grad-purple: linear-gradient(135deg, #8b5cf6, #ec4899);
+            --grad-orange: linear-gradient(135deg, #f59e0b, #ef4444);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .slide {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            padding: 48px 64px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -25%;
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.06) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* Title */
+        .title-slide {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .title-slide .logo {
+            font-size: 72px;
+            margin-bottom: 20px;
+        }
+
+        .title-slide h1 {
+            font-size: 52px;
+            font-weight: 800;
+            background: var(--grad-blue);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            line-height: 1.15;
+        }
+
+        .title-slide .subtitle {
+            font-size: 22px;
+            color: var(--text-muted);
+            font-weight: 300;
+            max-width: 700px;
+            line-height: 1.6;
+        }
+
+        .title-slide .org {
+            margin-top: 40px;
+            font-size: 14px;
+            color: var(--text-muted);
+            opacity: 0.5;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Headers */
+        .slide-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+            margin-bottom: 6px;
+        }
+
+        .slide h2 {
+            font-size: 34px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 4px;
+        }
+
+        .slide h2 .hl {
+            background: var(--grad-blue);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .slide h2 .hl-purple {
+            background: var(--grad-purple);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .slide h2 .hl-orange {
+            background: var(--grad-orange);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .slide-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            max-width: 900px;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+        }
+
+        .card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* KPI card with justification */
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .kpi-card .kpi-val {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .kpi-card .kpi-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 3px;
+            line-height: 1.3;
+        }
+
+        .kpi-card .kpi-how {
+            font-size: 10px;
+            color: rgba(148, 163, 184, 0.6);
+            margin-bottom: 8px;
+            font-style: italic;
+            line-height: 1.3;
+        }
+
+        .kpi-card .kpi-why {
+            font-size: 10px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            text-align: left;
+        }
+
+        /* Color gradients for kpi-val */
+        .val-blue {
+            background: var(--grad-blue);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .val-orange {
+            background: var(--grad-orange);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .val-purple {
+            background: var(--grad-purple);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .val-green {
+            background: linear-gradient(135deg, #06d6a0, #0ea5e9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Grids */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+        }
+
+        .grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+
+        .flex-col {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+        }
+
+        /* Problem card */
+        .problem-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            border-left: 4px solid var(--danger);
+        }
+
+        .problem-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--danger);
+            margin-bottom: 10px;
+        }
+
+        .problem-card p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+
+        .problem-card strong {
+            color: var(--text);
+        }
+
+        /* Quote */
+        .quote {
+            background: rgba(14, 165, 233, 0.06);
+            border-left: 3px solid var(--primary);
+            border-radius: 0 10px 10px 0;
+            padding: 16px 20px;
+        }
+
+        .quote p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.7;
+            font-style: italic;
+        }
+
+        .quote strong {
+            color: var(--text);
+            font-style: normal;
+        }
+
+        /* Impact badges */
+        .impact-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-trust {
+            background: rgba(14, 165, 233, 0.12);
+            color: #38bdf8;
+        }
+
+        .badge-safety {
+            background: rgba(239, 68, 68, 0.12);
+            color: #f87171;
+        }
+
+        .badge-ops {
+            background: rgba(139, 92, 246, 0.12);
+            color: #a78bfa;
+        }
+
+        .badge-data {
+            background: rgba(245, 158, 11, 0.12);
+            color: #fbbf24;
+        }
+
+        .badge-econ {
+            background: rgba(6, 214, 160, 0.12);
+            color: #34d399;
+        }
+
+        .badge-smart {
+            background: rgba(236, 72, 153, 0.12);
+            color: #f472b6;
+        }
+
+        /* Border-top accent */
+        .bt-blue {
+            border-top: 3px solid #0ea5e9;
+        }
+
+        .bt-red {
+            border-top: 3px solid #ef4444;
+        }
+
+        .bt-purple {
+            border-top: 3px solid #8b5cf6;
+        }
+
+        .bt-orange {
+            border-top: 3px solid #f59e0b;
+        }
+
+        .bt-green {
+            border-top: 3px solid #06d6a0;
+        }
+
+        .bt-pink {
+            border-top: 3px solid #ec4899;
+        }
+
+        /* Solution box */
+        .solution-box li {
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 5px 0 5px 16px;
+            position: relative;
+            list-style: none;
+            line-height: 1.5;
+        }
+
+        .solution-box li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* Principles */
+        .principle {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 12px 0;
+        }
+
+        .principle-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .principle h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .principle p {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Nav */
+        .nav {
+            position: fixed;
+            bottom: 24px;
+            right: 32px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .nav button {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--bg-card);
+            color: var(--text);
+            font-size: 16px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .nav button:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--grad-blue);
+            transition: width .3s;
+            z-index: 100;
+        }
+
+        .counter {
+            position: fixed;
+            bottom: 30px;
+            left: 32px;
+            font-size: 12px;
+            color: var(--text-muted);
+            z-index: 100;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="progress" id="progress"></div>
+    <div class="counter" id="counter"></div>
+
+    <!-- ========== SLIDE 1: TITLE ========== -->
+    <div class="slide title-slide active">
+        <div class="logo">🌦️</div>
+        <h1>AI-Powered Weather<br>Prediction for Singapore</h1>
+        <p class="subtitle">Problem Statement & Key Performance Indicators</p>
+        <p class="org">National Environment Agency (NEA)</p>
+    </div>
+
+    <!-- ========== SLIDE 2: THE PROBLEM ========== -->
+    <div class="slide">
+        <div class="slide-label">The Challenge</div>
+        <h2>What Problem Are <span class="hl">We Solving?</span></h2>
+        <p class="slide-desc"></p>
+        <div class="flex-col">
+            <div class="problem-card">
+                <h3>⚠️ The Gap</h3>
+                <p>NEA's current weather services provide <strong>broad, city-wide predictions</strong> (e.g.,
+                    <em>"Thunderstorms in the afternoon"</em>) that <strong>lack the spatial and temporal
+                        granularity</strong> needed for the public to make confident, real-time decisions about outdoor
+                    commutes and activities in Singapore's <strong>hyper-local tropical climate</strong>.</p>
+            </div>
+            <div class="grid-3">
+                <div class="card">
+                    <h3>📍 Not Localised</h3>
+                    <p>City-wide forecasts don't tell you if <strong>your street</strong> will get rain</p>
+                </div>
+                <div class="card">
+                    <h3>⏱️ Not Timely</h3>
+                    <p>Updates every few hours — weather changes in <strong>minutes</strong> in the tropics</p>
+                </div>
+                <div class="card">
+                    <h3>🎯 Not Actionable</h3>
+                    <p>No route-aware or activity-specific guidance for <strong>daily decisions</strong></p>
+                </div>
+            </div>
+            <div class="quote">
+                <p><strong>Result:</strong> The public experiences a persistent gap between the forecast they receive
+                    and the weather they actually encounter — leading to <strong>disrupted plans, safety concerns, and
+                        diminished trust</strong> in public weather services.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SLIDE 3: OVERVIEW ========== -->
+    <div class="slide">
+        <div class="slide-label">Business Value</div>
+        <h2>Six Impact Areas <span class="hl">with Measurable KPIs</span></h2>
+        <p class="slide-desc">Each impact area is tied to quantifiable metrics with clear rationale and measurement
+            methods.</p>
+        <div class="grid-3" style="flex:1;">
+            <div class="card bt-blue">
+                <h3>🏛️ Public Trust</h3>
+                <p>Elevate NEA's reputation as a world-class weather authority through AI-driven precision</p>
+                <div style="margin-top:12px;"><span class="impact-badge badge-trust">5 KPIs</span></div>
+            </div>
+            <div class="card bt-red">
+                <h3>🛡️ Public Safety</h3>
+                <p>Reduce weather-related incidents for commuters, outdoor workers, and event-goers</p>
+                <div style="margin-top:12px;"><span class="impact-badge badge-safety">5 KPIs</span></div>
+            </div>
+            <div class="card bt-purple">
+                <h3>⚙️ Operational Efficiency</h3>
+                <p>Automate routine forecasting, freeing officers for severe weather and policy work</p>
+                <div style="margin-top:12px;"><span class="impact-badge badge-ops">5 KPIs</span></div>
+            </div>
+            <div class="card bt-orange">
+                <h3>📊 Data-Driven Governance</h3>
+                <p>Turn usage analytics into insights for urban planning and climate adaptation</p>
+                <div style="margin-top:12px;"><span class="impact-badge badge-data">5 KPIs</span></div>
+            </div>
+            <div class="card bt-green">
+                <h3>💰 Economic Enablement</h3>
+                <p>Unlock downstream value for logistics, tourism, events — reducing S$50–100M in losses</p>
+                <div style="margin-top:12px;"><span class="impact-badge badge-econ">5 KPIs</span></div>
+            </div>
+            <div class="card bt-pink">
+                <h3>🇸🇬 Smart Nation</h3>
+                <p>Demonstrate AI + IoT leadership aligned with Smart Nation & GreenPlan 2030</p>
+                <div style="margin-top:12px;"><span class="impact-badge badge-smart">5 KPIs</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SLIDE 4: PUBLIC TRUST ========== -->
+    <div class="slide">
+        <div class="slide-label">Impact Area 1</div>
+        <h2>🏛️ Public Trust & <span class="hl">Service Excellence</span></h2>
+        <p class="slide-desc">Delivering hyper-local, AI-driven predictions elevates NEA's reputation, increasing public
+            confidence and engagement.</p>
+        <div class="grid-5" style="flex:1; align-content:start;">
+            <div class="kpi-card">
+                <div class="kpi-val val-blue">≥85%</div>
+                <div class="kpi-label">Prediction Accuracy</div>
+                <div class="kpi-how">Model evaluation on test set</div>
+                <div class="kpi-why">MSS 24h forecast is ~80%. AI nowcasting (10 min) targets a realistic incremental
+                    improvement</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-val val-blue">4.2/5</div>
+                <div class="kpi-label">User Satisfaction</div>
+                <div class="kpi-how">In-app survey (5% trigger)</div>
+                <div class="kpi-why">GovTech CSAT benchmark is 3.8–4.0; 4.2 = "above average" for govt digital services
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-val val-blue">50K</div>
+                <div class="kpi-label">MAU (12 mths)</div>
+                <div class="kpi-how">Firebase / App Store data</div>
+                <div class="kpi-why">~0.9% of SG population; conservative vs. myENV download baseline</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-val val-blue">&lt;0.5mm</div>
+                <div class="kpi-label">Forecast Deviation</div>
+                <div class="kpi-how">Predicted vs actual MAE</div>
+                <div class="kpi-why">
+                    < 0.5mm=within "drizzle" margin, imperceptible for daily decisions</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val val-blue">≥60%</div>
+                    <div class="kpi-label">D7 Retention</div>
+                    <div class="kpi-how">App analytics retention rate</div>
+                    <div class="kpi-why">Weather apps have high natural stickiness (daily need); 60% D7 aligns with
+                        mature apps</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SLIDE 5: PUBLIC SAFETY ========== -->
+        <div class="slide">
+            <div class="slide-label">Impact Area 2</div>
+            <h2>🛡️ Public Safety & <span class="hl-orange">Risk Reduction</span></h2>
+            <p class="slide-desc">Precise, real-time alerts reduce weather-related incidents — supporting NEA's mandate
+                to protect public well-being.</p>
+            <div class="grid-5" style="flex:1; align-content:start;">
+                <div class="kpi-card">
+                    <div class="kpi-val val-orange">≥10min</div>
+                    <div class="kpi-label">Alert Lead Time</div>
+                    <div class="kpi-how">Prediction vs rain onset</div>
+                    <div class="kpi-why">Model predicts 10 min ahead — enough time to take shelter or reroute</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val val-orange">↓15%</div>
+                    <div class="kpi-label">Incident Reduction</div>
+                    <div class="kpi-how">SCDF / LTA data, YoY</div>
+                    <div class="kpi-why">~200 storm incidents/year; alerts reduce outdoor exposure, 15% is conservative
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val val-orange">≥90%</div>
+                    <div class="kpi-label">Severe Weather Detection</div>
+                    <div class="kpi-how">Heavy rain (≥20mm/h) recall</div>
+                    <div class="kpi-why">Heavy rain cannot be missed — 90% is the public safety floor for critical
+                        alerts</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val val-orange">≤10%</div>
+                    <div class="kpi-label">False Alert Rate</div>
+                    <div class="kpi-how">false_alarms / total_alerts</div>
+                    <div class="kpi-why">Too many false alerts cause "cry wolf" effect; 10% is industry standard</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val val-orange">≥80%</div>
+                    <div class="kpi-label">Worksite Coverage</div>
+                    <div class="kpi-how">GIS: sites vs sensor radius</div>
+                    <div class="kpi-why">Construction workers = highest-risk group; BCA registry enables validation
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SLIDE 6: OPERATIONAL EFFICIENCY ========== -->
+        <div class="slide">
+            <div class="slide-label">Impact Area 3</div>
+            <h2>⚙️ Operational <span class="hl-purple">Efficiency</span></h2>
+            <p class="slide-desc">Automating the pipeline reduces manual workload, enabling officers to focus on severe
+                weather and policy.</p>
+            <div class="grid-5" style="flex:1; align-content:start;">
+                <div class="kpi-card">
+                    <div class="kpi-val val-purple">≥90%</div>
+                    <div class="kpi-label">Automation Rate</div>
+                    <div class="kpi-how">auto / total forecasts</div>
+                    <div class="kpi-why">Current forecasts are manually written; AI handles routine, humans focus on
+                        severe weather only</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val val-purple">99.5%</div>
+                    <div class="kpi-label">Pipeline Uptime</div>
+                    <div class="kpi-how">Monitoring dashboard</div>
+                    <div class="kpi-why">99.5% = ~1.8 days downtime/year; realistic SLA for non-critical-infra</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val val-purple">Daily</div>
+                    <div class="kpi-label">Retraining Freq</div>
+                    <div class="kpi-how">Scheduler logs + email</div>
+                    <div class="kpi-why">Tropical weather shifts fast; daily updates keep model current with seasonal
+                        changes</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val val-purple">200h</div>
+                    <div class="kpi-label">Hours Saved/Month</div>
+                    <div class="kpi-how">Workload survey + timesheets</div>
+                    <div class="kpi-why">10 officers × 1 hour/day saved from routine work = 200h/month</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val val-purple">&lt;5min</div>
+                    <div class="kpi-label">Alert Response</div>
+                    <div class="kpi-how">anomaly_detected → alert_sent</div>
+                    <div class="kpi-why">API responds in <200ms; residual delay is approval flow — <5 min total is
+                            achievable</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== SLIDE 7: DATA GOVERNANCE ========== -->
+            <div class="slide">
+                <div class="slide-label">Impact Area 4</div>
+                <h2>📊 Data-Driven <span class="hl-orange">Governance</span></h2>
+                <p class="slide-desc">Usage analytics reveal public demand patterns — informing infrastructure planning
+                    and climate adaptation.</p>
+                <div class="grid-5" style="flex:1; align-content:start;">
+                    <div class="kpi-card">
+                        <div class="kpi-val val-orange">📈</div>
+                        <div class="kpi-label">Query Volume Trend</div>
+                        <div class="kpi-how">/popular-searches API</div>
+                        <div class="kpi-why">No fixed target — value is in trend analysis to understand evolving public
+                            demand</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-orange">Top 50</div>
+                        <div class="kpi-label">Searched Locations</div>
+                        <div class="kpi-how">Log aggregation + clustering</div>
+                        <div class="kpi-why">Identifies high-demand zones for sensor placement, shelter planning, and
+                            infra investment</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-orange">≥4/yr</div>
+                        <div class="kpi-label">Insight Reports</div>
+                        <div class="kpi-how">Quarterly publication record</div>
+                        <div class="kpi-why">Quarterly cadence is sustainable and aligns with government planning cycles
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-orange">≥2/yr</div>
+                        <div class="kpi-label">Policy Recs</div>
+                        <div class="kpi-how">Citations in policy docs</div>
+                        <div class="kpi-why">Data-to-policy takes time to validate; 2/year is a pragmatic starting point
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-orange">≥80%</div>
+                        <div class="kpi-label">Sensor Utilisation</div>
+                        <div class="kpi-how">stations_used / total</div>
+                        <div class="kpi-why">NEA operates 60+ stations; ensure most are consumed by model, avoid data
+                            waste</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== SLIDE 8: ECONOMIC ENABLEMENT ========== -->
+            <div class="slide">
+                <div class="slide-label">Impact Area 5</div>
+                <h2>💰 Economic <span class="hl">Enablement</span></h2>
+                <p class="slide-desc">Accurate forecasts unlock downstream value for logistics, tourism, events —
+                    reducing S$50–100M in annual losses.</p>
+                <div class="grid-5" style="flex:1; align-content:start;">
+                    <div class="kpi-card">
+                        <div class="kpi-val val-green">S$10M</div>
+                        <div class="kpi-label">Loss Reduction / Year</div>
+                        <div class="kpi-how">Industry surveys + partners</div>
+                        <div class="kpi-why">10–20% of S$50–100M estimated annual losses; conservative attribution to
+                            Weather AI</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-green">≥10</div>
+                        <div class="kpi-label">API Partners (12m)</div>
+                        <div class="kpi-how">API key registrations</div>
+                        <div class="kpi-why">Grab, Lalamove, Klook, EventBrite are natural early adopters of weather
+                            data</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-green">↓20%</div>
+                        <div class="kpi-label">Event Cancellations</div>
+                        <div class="kpi-how">Pre/post with organisers</div>
+                        <div class="kpi-why">Precise nowcasting gives organisers confidence to proceed; 20% reduction is
+                            realistic</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-green">≥5%</div>
+                        <div class="kpi-label">Delivery Efficiency</div>
+                        <div class="kpi-how">A/B test with/without data</div>
+                        <div class="kpi-why">Riders pre-emptively avoid rain routes, reducing wait times and detours
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-green">↑10%</div>
+                        <div class="kpi-label">Tourist Satisfaction</div>
+                        <div class="kpi-how">STB experience survey</div>
+                        <div class="kpi-why">Unexpected rain is tourists' top complaint; forecasts enable better trip
+                            planning</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== SLIDE 9: SMART NATION ========== -->
+            <div class="slide">
+                <div class="slide-label">Impact Area 6</div>
+                <h2>🇸🇬 Smart Nation <span class="hl-purple">Alignment</span></h2>
+                <p class="slide-desc">Demonstrates Singapore's leadership in applying AI + IoT to public services,
+                    contributing to Smart Nation and GreenPlan 2030.</p>
+                <div class="grid-5" style="flex:1; align-content:start;">
+                    <div class="kpi-card">
+                        <div class="kpi-val val-purple">≥3</div>
+                        <div class="kpi-label">GovTech Integrations</div>
+                        <div class="kpi-how">Signed API MOUs</div>
+                        <div class="kpi-why">myENV, OneService, OneMap are natural targets; Weather API adds immediate
+                            value</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-purple">✓</div>
+                        <div class="kpi-label">Open Data API</div>
+                        <div class="kpi-how">data.gov.sg listing</div>
+                        <div class="kpi-why">SG Open Data policy mandates public sharing; weather predictions are a
+                            natural fit</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-purple">✓</div>
+                        <div class="kpi-label">AI Transparency</div>
+                        <div class="kpi-how">Published Model Card</div>
+                        <div class="kpi-why">FEAT framework requires AI explainability; Model Card is industry standard
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-purple">✓</div>
+                        <div class="kpi-label">GreenPlan Cited</div>
+                        <div class="kpi-how">GreenPlan annual report</div>
+                        <div class="kpi-why">Weather data supports climate adaptation — direct alignment with GreenPlan
+                            2030</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-val val-purple">≥1</div>
+                        <div class="kpi-label">Award / Case Study</div>
+                        <div class="kpi-how">GovTech STACK conference</div>
+                        <div class="kpi-why">An innovative project should produce at least one external showcase per
+                            year</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== SLIDE 10: KPI DESIGN PRINCIPLES ========== -->
+            <div class="slide">
+                <div class="slide-label">Methodology</div>
+                <h2>KPI Design <span class="hl">Principles</span></h2>
+                <p class="slide-desc">All 30 KPIs across 6 impact areas follow four guiding principles to ensure they
+                    are meaningful and actionable.</p>
+                <div class="grid-2" style="flex:1; align-content:start;">
+                    <div class="card bt-blue" style="padding:28px;">
+                        <div class="principle">
+                            <div class="principle-num" style="background:rgba(14,165,233,0.15); color:#38bdf8;">1</div>
+                            <div>
+                                <h4>Quantifiable</h4>
+                                <p>Every KPI has a clear numerical target — not vague "improvements." This enables
+                                    objective tracking and accountability.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card bt-green" style="padding:28px;">
+                        <div class="principle">
+                            <div class="principle-num" style="background:rgba(6,214,160,0.15); color:#34d399;">2</div>
+                            <div>
+                                <h4>Measurable</h4>
+                                <p>Relies on system logs, API data, or existing government surveys — no additional
+                                    measurement infrastructure needed.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card bt-orange" style="padding:28px;">
+                        <div class="principle">
+                            <div class="principle-num" style="background:rgba(245,158,11,0.15); color:#fbbf24;">3</div>
+                            <div>
+                                <h4>Incremental</h4>
+                                <p>Targets are based on industry benchmarks (MSS, GovTech CSAT) or realistic
+                                    improvements over current baselines — not aspirational moonshots.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card bt-purple" style="padding:28px;">
+                        <div class="principle">
+                            <div class="principle-num" style="background:rgba(139,92,246,0.15); color:#a78bfa;">4</div>
+                            <div>
+                                <h4>Attributable</h4>
+                                <p>Each metric can be traced back to Weather AI's direct contribution, not confounded by
+                                    external factors or unrelated initiatives.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="quote" style="margin-top:auto;">
+                    <p><strong>30 KPIs</strong> across <strong>6 Impact Areas</strong> — each with a clear target,
+                        measurement method, and rationale grounded in <strong>industry benchmarks</strong> and
+                        <strong>Singapore government standards</strong>.</p>
+                </div>
+            </div>
+
+            <!-- ========== SLIDE 11: SOLUTION ========== -->
+            <div class="slide">
+                <div class="slide-label">Our Approach</div>
+                <h2>How Does This Solution <span class="hl">Address the Problem?</span></h2>
+                <p class="slide-desc"></p>
+                <div class="grid-2" style="flex:1;">
+                    <div class="flex-col" style="gap:14px;">
+                        <div class="card bt-blue" style="flex:none;">
+                            <h3>🛰️ + 📡 → 🧠 Data Fusion</h3>
+                            <p>Fusing <strong>Himawari-9 satellite imagery</strong> with NEA's <strong>real-time sensor
+                                    network</strong> through a <strong>CNN + LSTM deep learning model</strong>.</p>
+                        </div>
+                        <div class="card" style="flex:none;">
+                            <h3>📍 Hyper-Local Predictions</h3>
+                            <p>Street-level rainfall forecasts powered by <strong>IDW interpolation</strong> across
+                                sensor stations — not just regional averages.</p>
+                        </div>
+                        <div class="card" style="flex:none;">
+                            <h3>⚡ Real-Time (&lt;200ms)</h3>
+                            <p>Predictions updated with the latest <strong>10-minute sensor readings</strong> for true
+                                real-time intelligence.</p>
+                        </div>
+                    </div>
+                    <div class="flex-col" style="gap:14px;">
+                        <div class="card" style="flex:none;">
+                            <h3>🛣️ Route-Aware Intelligence</h3>
+                            <p>Weather along a commuter's <strong>entire path</strong>, sampled every 2km — not just
+                                start/end points.</p>
+                        </div>
+                        <div class="card" style="flex:none;">
+                            <h3>🔄 Self-Improving Accuracy</h3>
+                            <p>Automated <strong>daily retraining</strong> ensures continuous adaptation to
+                                <strong>seasonal patterns</strong>.</p>
+                        </div>
+                        <div class="quote" style="flex:none;">
+                            <p><strong>In essence:</strong> Transforming NEA's existing meteorological infrastructure
+                                into an <strong>AI-powered public intelligence layer</strong> — turning raw data into
+                                actionable insights that <strong>save time, reduce risk, and enable better daily
+                                    decisions</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== SLIDE 12: THANK YOU ========== -->
+            <div class="slide title-slide">
+                <div class="logo">🇸🇬</div>
+                <h1>Building a Weather-Resilient<br>Singapore</h1>
+                <p class="subtitle">From Raw Data to Actionable Intelligence</p>
+                <p class="org">National Environment Agency &nbsp;•&nbsp; Smart Nation Initiative</p>
+            </div>
+
+            <!-- Navigation -->
+            <div class="nav">
+                <button onclick="prev()">←</button>
+                <button onclick="next()">→</button>
+            </div>
+
+            <script>
+                const slides = document.querySelectorAll('.slide');
+                let cur = 0;
+                const show = n => { slides[cur].classList.remove('active'); cur = (n + slides.length) % slides.length; slides[cur].classList.add('active'); update(); };
+                const next = () => show(cur + 1);
+                const prev = () => show(cur - 1);
+                const update = () => { document.getElementById('progress').style.width = ((cur + 1) / slides.length * 100) + '%'; document.getElementById('counter').textContent = (cur + 1) + ' / ' + slides.length; };
+                document.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); } if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); } });
+                update();
+            </script>
+</body>
+
+</html>

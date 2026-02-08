@@ -27,7 +27,7 @@ const AboutPage: React.FC = () => {
                     fontSize: '0.9rem',
                     fontWeight: 'bold',
                 }}>
-                    v0.5
+                    v0.72
                 </div>
 
                 <p style={{ color: '#aaa', lineHeight: '1.6', margin: '0 0 20px 0' }}>
