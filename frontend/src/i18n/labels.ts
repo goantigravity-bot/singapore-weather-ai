@@ -104,5 +104,13 @@ export const LABELS = {
         searches: "searches",
         view: "View",
         footer: "Top 6 most searched locations"
+    },
+    smartResult: {
+        query: "Query",
+        time: "Time",
+        showDetails: "Show Details",
+        hideDetails: "Hide Details",
+        point: "Pt",
+        dry: "Dry"
     }
 };
