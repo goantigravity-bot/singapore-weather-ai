@@ -123,7 +123,7 @@ const SmartResultCard: React.FC<SmartResultProps> = ({ result, onClose }) => {
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span>{pt.icon}</span>
                                     <span style={{ color: pt.is_risky ? '#ff6b6b' : '#69db7c' }}>
-                                        {pt.rainfall > 0 ? `${pt.rainfall}mm` : LABELS.smartResult.dry}
+                                        {pt.rainfall > 0 ? `${pt.rainfall.toFixed(3)}mm` : LABELS.smartResult.dry}
                                     </span>
                                 </span>
                             </div>

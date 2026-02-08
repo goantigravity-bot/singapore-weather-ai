@@ -159,7 +159,7 @@ const MapComponent: React.FC<Props & {
                         >
                             <Popup>
                                 <strong>Path Point {idx + 1}</strong><br />
-                                Rainfall: {pt.forecast.rainfall}mm<br />
+                                Rainfall: {pt.forecast.rainfall.toFixed(3)}mm<br />
                                 {pt.forecast.description}<br />
                                 {pt.forecast.temperature && `Temp: ${pt.forecast.temperature}°C`}
                             </Popup>

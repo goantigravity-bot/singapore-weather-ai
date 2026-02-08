@@ -292,6 +292,17 @@ def predict_weather(
             lat, lon = geocode_location(location)
             if lat is None:
                  raise HTTPException(404, f"Could not locate '{location}'")
+        
+        # 记录搜索历史，用于 Popular Places 统计
+        if location:
+            try:
+                conn = sqlite3.connect('weather.db')
+                c = conn.cursor()
+                c.execute("INSERT INTO search_history (query) VALUES (?)", (location,))
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass  # DB 锁定时不影响主流程
                  
         if lat is None or lon is None:
              raise HTTPException(422, "Must provide 'lat'/'lon' OR 'location'.")

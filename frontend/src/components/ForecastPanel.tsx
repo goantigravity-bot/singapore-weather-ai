@@ -185,7 +185,7 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
                         </div>
                         {data.forecast.rainfall_mm_next_10min > 0 && (
                             <span style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--accent-cyan)' }}>
-                                {data.forecast.rainfall_mm_next_10min} mm
+                                {data.forecast.rainfall_mm_next_10min.toFixed(3)} mm
                             </span>
                         )}
                     </div>
