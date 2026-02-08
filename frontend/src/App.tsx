@@ -12,6 +12,7 @@ import SideMenu from './components/SideMenu';
 import { ConfigProvider } from './context/ConfigContext';
 import './App.css';
 import { API_BASE_URL } from './config';
+import { LABELS } from './i18n/labels';
 
 interface ForecastResult {
   timestamp: string;
@@ -234,7 +235,7 @@ function AppContent() {
               <input
                 type="text"
                 className="search-input"
-                placeholder="Enter location (e.g. Sentosa)..."
+                placeholder={LABELS.app.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ width: '100%' }}
@@ -268,11 +269,11 @@ function AppContent() {
               onClick={() => navigate('/')}
               className="burger-btn"
               style={{ fontSize: '1.2rem' }}
-              title="返回主页"
+              title={LABELS.common.backToHome}
             >
               ←
             </button>
-            <h2 style={{ color: 'white', margin: 0, fontSize: '1.2rem' }}>训练监控</h2>
+            <h2 style={{ color: 'white', margin: 0, fontSize: '1.2rem' }}>{LABELS.app.trainingMonitor}</h2>
           </div>
           <button onClick={() => setIsMenuOpen(true)} className="burger-btn">
             ☰

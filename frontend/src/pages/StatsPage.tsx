@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { LABELS } from '../i18n/labels';
 
 interface PopularLocation {
     name: string;
@@ -39,17 +40,19 @@ const StatsPage: React.FC = () => {
             overflowY: 'auto'
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Popular Places 📊</h2>
-                <Link to="/" className="quick-link-chip" style={{ padding: '8px 12px' }}>❌</Link>
+                <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{LABELS.stats.title} 📊</h2>
+                <Link to="/" className="quick-link-chip" style={{ padding: '8px 12px' }}>
+                    {LABELS.common.close} ❌
+                </Link>
             </div>
 
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
-                    Loading statistics...
+                    {LABELS.stats.loading}
                 </div>
             ) : locations.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
-                    No search history yet.
+                    {LABELS.stats.noHistory}
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -83,7 +86,7 @@ const StatsPage: React.FC = () => {
                                 </div>
                                 <div>
                                     <div style={{ fontWeight: 'bold' }}>{loc.name}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#aaa' }}>{loc.count} searches</div>
+                                    <div style={{ fontSize: '0.8rem', color: '#aaa' }}>{loc.count} {LABELS.stats.searches}</div>
                                 </div>
                             </div>
 
@@ -92,7 +95,7 @@ const StatsPage: React.FC = () => {
                                 className="quick-link-chip"
                                 style={{ padding: '6px 12px', fontSize: '0.8rem' }}
                             >
-                                🗺️ View
+                                🗺️ {LABELS.stats.view}
                             </button>
                         </div>
                     ))}
@@ -100,7 +103,7 @@ const StatsPage: React.FC = () => {
             )}
 
             <div style={{ marginTop: '20px', fontSize: '0.8rem', color: '#666', textAlign: 'center' }}>
-                Top 6 most searched locations
+                {LABELS.stats.footer}
             </div>
         </div>
     );

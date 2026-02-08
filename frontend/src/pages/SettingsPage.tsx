@@ -1,6 +1,7 @@
 import React from 'react';
 import { useConfig, type Metric } from '../context/ConfigContext';
 import { useNavigate } from 'react-router-dom';
+import { LABELS } from '../i18n/labels';
 
 const SettingsPage: React.FC = () => {
     const { metrics, toggleMetric, showTriangle, toggleShowTriangle, showStations, toggleShowStations } = useConfig();
@@ -18,7 +19,7 @@ const SettingsPage: React.FC = () => {
                 <div className="metric-info">
                     <div className="metric-label">{label}</div>
                     <div className="metric-value" style={{ fontSize: '1rem', color: isActive ? 'var(--accent-cyan)' : 'gray' }}>
-                        {isActive ? 'Visible' : 'Hidden'}
+                        {isActive ? LABELS.settings.visible : LABELS.settings.hidden}
                     </div>
                 </div>
                 <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: isActive ? 'var(--accent-green)' : 'gray' }}>
@@ -41,9 +42,9 @@ const SettingsPage: React.FC = () => {
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
                     <button onClick={() => navigate('/')} className="quick-link-chip" style={{ padding: '8px 16px' }}>
-                        ← 返回
+                        ← {LABELS.common.backToHome}
                     </button>
-                    <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.75rem' }}>Configuration</h2>
+                    <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.75rem' }}>{LABELS.settings.title}</h2>
                 </div>
 
                 {/* Content Panel */}
@@ -55,21 +56,21 @@ const SettingsPage: React.FC = () => {
                     border: '1px solid var(--panel-border)'
                 }}>
                     <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '1rem' }}>
-                        Select which weather metrics to display on the forecast panel.
+                        {LABELS.settings.description}
                     </p>
 
                     {/* Metrics Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                        {renderToggle('rain', 'Rainfall Prediction', '🌧️')}
-                        {renderToggle('temp', 'Temperature', '🌡️')}
-                        {renderToggle('hum', 'Humidity', '💧')}
-                        {renderToggle('pm25', 'PM2.5 (Air Quality)', '😷')}
+                        {renderToggle('rain', LABELS.settings.metrics.rain, '🌧️')}
+                        {renderToggle('temp', LABELS.settings.metrics.temp, '🌡️')}
+                        {renderToggle('hum', LABELS.settings.metrics.hum, '💧')}
+                        {renderToggle('pm25', LABELS.settings.metrics.pm25, '😷')}
                     </div>
 
                     <hr style={{ width: '100%', borderColor: 'rgba(255,255,255,0.1)', margin: '1.5rem 0' }} />
 
                     {/* Map Options */}
-                    <h4 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>Map Display Options</h4>
+                    <h4 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>{LABELS.settings.mapOptions}</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {/* Interpolation Triangle Toggle */}
                         <div
@@ -79,9 +80,9 @@ const SettingsPage: React.FC = () => {
                         >
                             <div className="metric-icon">📐</div>
                             <div className="metric-info">
-                                <div className="metric-label">Interpolation Triangle</div>
+                                <div className="metric-label">{LABELS.settings.toggles.triangle}</div>
                                 <div className="metric-value" style={{ fontSize: '1rem', color: showTriangle ? 'var(--accent-orange)' : 'gray' }}>
-                                    {showTriangle ? 'Visible' : 'Hidden'}
+                                    {showTriangle ? LABELS.settings.visible : LABELS.settings.hidden}
                                 </div>
                             </div>
                             <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: showTriangle ? 'var(--accent-green)' : 'gray' }}>
@@ -97,9 +98,9 @@ const SettingsPage: React.FC = () => {
                         >
                             <div className="metric-icon">📍</div>
                             <div className="metric-info">
-                                <div className="metric-label">Weather Station Markers</div>
+                                <div className="metric-label">{LABELS.settings.toggles.stations}</div>
                                 <div className="metric-value" style={{ fontSize: '1rem', color: showStations ? 'var(--accent-purple)' : 'gray' }}>
-                                    {showStations ? 'Visible' : 'Hidden'}
+                                    {showStations ? LABELS.settings.visible : LABELS.settings.hidden}
                                 </div>
                             </div>
                             <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: showStations ? 'var(--accent-green)' : 'gray' }}>

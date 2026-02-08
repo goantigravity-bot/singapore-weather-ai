@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { LABELS } from '../i18n/labels';
 
 interface SideMenuProps {
     isOpen: boolean;
@@ -24,22 +25,22 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '0 20px' }}>
-                    <h2 style={{ margin: '0 0 10px 0', borderBottom: '1px solid var(--panel-border)', paddingBottom: '10px' }}>Menu</h2>
+                    <h2 style={{ margin: '0 0 10px 0', borderBottom: '1px solid var(--panel-border)', paddingBottom: '10px' }}>{LABELS.app.menu}</h2>
 
                     <Link to="/stats" className="menu-item" onClick={onClose}>
-                        <span style={{ fontSize: '1.2rem' }}>📊</span> Popular Places
+                        <span style={{ fontSize: '1.2rem' }}>📊</span> {LABELS.app.popularPlaces}
                     </Link>
 
                     <Link to="/training" className="menu-item" onClick={onClose}>
-                        <span style={{ fontSize: '1.2rem' }}>🚀</span> Training Monitor
+                        <span style={{ fontSize: '1.2rem' }}>🚀</span> {LABELS.app.trainingMonitor}
                     </Link>
 
                     <Link to="/settings" className="menu-item" onClick={onClose}>
-                        <span style={{ fontSize: '1.2rem' }}>⚙️</span> Settings
+                        <span style={{ fontSize: '1.2rem' }}>⚙️</span> {LABELS.app.settings}
                     </Link>
 
                     <Link to="/about" className="menu-item" onClick={onClose}>
-                        <span style={{ fontSize: '1.2rem' }}>ℹ️</span> About
+                        <span style={{ fontSize: '1.2rem' }}>ℹ️</span> {LABELS.app.about}
                     </Link>
                 </div>
 

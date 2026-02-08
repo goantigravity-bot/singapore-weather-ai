@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
+import { LABELS } from '../i18n/labels';
 
 // Types based on /monitor/overview API
 interface DateProgress {
@@ -67,9 +68,9 @@ interface OverviewStatus {
 type TabType = 'download' | 'training' | 'api';
 
 const TABS: { id: TabType; label: string; icon: string }[] = [
-    { id: 'download', label: '文件下载', icon: '📥' },
-    { id: 'training', label: '训练流程', icon: '🧠' },
-    { id: 'api', label: 'API 应用', icon: '🚀' }
+    { id: 'download', label: LABELS.monitor.tabs.download.label, icon: '📥' },
+    { id: 'training', label: LABELS.monitor.tabs.training.label, icon: '🧠' },
+    { id: 'api', label: LABELS.monitor.tabs.api.label, icon: '🚀' }
 ];
 
 // Log 响应接口
@@ -151,7 +152,7 @@ const TrainingMonitor: React.FC = () => {
             <div className="dashboard-overlay" style={{ zIndex: 2000 }}>
                 <div style={{ textAlign: 'center', padding: '2rem' }}>
                     <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-                    Loading Monitor...
+                    {LABELS.common.loading}
                 </div>
             </div>
         );
@@ -162,7 +163,7 @@ const TrainingMonitor: React.FC = () => {
             <div className="dashboard-overlay" style={{ zIndex: 2000 }}>
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--accent-red)' }}>
                     <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>❌</div>
-                    Failed to load: {error}
+                    {LABELS.common.error}: {error}
                 </div>
             </div>
         );
@@ -181,23 +182,23 @@ const TrainingMonitor: React.FC = () => {
                     <div className="metric-card">
                         <div className="metric-icon">📅</div>
                         <div className="metric-info">
-                            <div className="metric-label">已完成天数</div>
+                            <div className="metric-label">{LABELS.monitor.tabs.download.completedDays}</div>
                             <div className="metric-value">{download.completedDays}/{download.totalDays}</div>
                         </div>
                     </div>
                     <div className="metric-card">
                         <div className="metric-icon">📁</div>
                         <div className="metric-info">
-                            <div className="metric-label">总文件数</div>
+                            <div className="metric-label">{LABELS.monitor.tabs.download.totalFiles}</div>
                             <div className="metric-value">{download.filesDownloaded.toLocaleString()}</div>
                         </div>
                     </div>
                     <div className="metric-card">
                         <div className="metric-icon">⏳</div>
                         <div className="metric-info">
-                            <div className="metric-label">当前日期</div>
+                            <div className="metric-label">{LABELS.monitor.tabs.download.currentDate}</div>
                             <div className="metric-value" style={{ fontSize: '1.2rem' }}>
-                                {download.currentDate || '空闲'}
+                                {download.currentDate || 'Idle'}
                             </div>
                         </div>
                     </div>
@@ -206,7 +207,7 @@ const TrainingMonitor: React.FC = () => {
                 {/* 总进度条 */}
                 <div style={{ marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>总体进度</span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{LABELS.monitor.tabs.download.overallProgress}</span>
                         <span style={{ color: 'var(--accent-cyan)', fontWeight: 'bold' }}>{downloadPct}%</span>
                     </div>
                     <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -220,15 +221,15 @@ const TrainingMonitor: React.FC = () => {
                 </div>
 
                 {/* 每日详情表格 */}
-                <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-primary)' }}>每日下载详情</h4>
+                <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-primary)' }}>{LABELS.monitor.tabs.download.dailyDetails}</h4>
                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                     <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', position: 'sticky', top: 0, background: 'var(--bg-card)' }}>
-                                <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>状态</th>
-                                <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>日期</th>
-                                <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>卫星数据</th>
-                                <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>NEA 数据</th>
+                                <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.download.table.status}</th>
+                                <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.download.table.date}</th>
+                                <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.download.table.satelliteData}</th>
+                                <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.download.table.neaData}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -294,38 +295,38 @@ const TrainingMonitor: React.FC = () => {
                 <div className="metric-card">
                     <div className="metric-icon">📅</div>
                     <div className="metric-info">
-                        <div className="metric-label">当前处理日期</div>
-                        <div className="metric-value" style={{ fontSize: '1.2rem' }}>{training.currentDate || '空闲'}</div>
+                        <div className="metric-label">{LABELS.monitor.tabs.training.currentDate}</div>
+                        <div className="metric-value" style={{ fontSize: '1.2rem' }}>{training.currentDate || 'Idle'}</div>
                     </div>
                 </div>
                 <div className="metric-card">
                     <div className="metric-icon">📊</div>
                     <div className="metric-info">
-                        <div className="metric-label">已完成批次</div>
+                        <div className="metric-label">{LABELS.monitor.tabs.training.completedBatches}</div>
                         <div className="metric-value">{training.completedBatches}</div>
                     </div>
                 </div>
                 <div className="metric-card">
                     <div className="metric-icon">🔄</div>
                     <div className="metric-info">
-                        <div className="metric-label">总 Epochs</div>
+                        <div className="metric-label">{LABELS.monitor.tabs.training.totalEpochs}</div>
                         <div className="metric-value">{training.totalEpochs}</div>
                     </div>
                 </div>
             </div>
 
             {/* 训练历史表格 */}
-            <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-primary)' }}>训练历史</h4>
+            <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-primary)' }}>{LABELS.monitor.tabs.training.history}</h4>
             <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
                 <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', position: 'sticky', top: 0, background: 'var(--bg-card)' }}>
-                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>状态</th>
-                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>日期</th>
-                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>数据范围</th>
-                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>时长</th>
-                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>MAE</th>
-                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>RMSE</th>
+                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.training.table.status}</th>
+                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.training.table.date}</th>
+                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.training.table.range}</th>
+                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.training.table.duration}</th>
+                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.training.table.mae}</th>
+                            <th style={{ padding: '0.5rem', textAlign: 'left', color: 'var(--text-secondary)' }}>{LABELS.monitor.tabs.training.table.rmse}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -333,7 +334,7 @@ const TrainingMonitor: React.FC = () => {
                             <tr key={run.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                 <td style={{ padding: '0.5rem' }}>{run.success ? '✅' : '❌'}</td>
                                 <td style={{ padding: '0.5rem', fontFamily: 'monospace' }}>
-                                    {new Date(run.timestamp).toLocaleDateString('zh-CN')}
+                                    {new Date(run.timestamp).toLocaleDateString()}
                                 </td>
                                 <td style={{ padding: '0.5rem', color: 'var(--text-secondary)' }}>{run.dateRange}</td>
                                 <td style={{ padding: '0.5rem' }}>{run.duration}</td>
@@ -359,18 +360,18 @@ const TrainingMonitor: React.FC = () => {
                 <div className="metric-card" style={{ borderColor: sync.modelSynced ? 'var(--accent-green)' : 'transparent' }}>
                     <div className="metric-icon" style={{ fontSize: '2rem' }}>{sync.modelSynced ? '✅' : '⏳'}</div>
                     <div className="metric-info">
-                        <div className="metric-label">模型同步</div>
+                        <div className="metric-label">{LABELS.monitor.tabs.api.modelSynced}</div>
                         <div className="metric-value" style={{ color: sync.modelSynced ? 'var(--accent-green)' : 'var(--accent-orange)' }}>
-                            {sync.modelSynced ? '已同步' : '待同步'}
+                            {sync.modelSynced ? LABELS.monitor.tabs.api.synced : LABELS.monitor.tabs.api.pending}
                         </div>
                     </div>
                 </div>
                 <div className="metric-card" style={{ borderColor: sync.sensorDataSynced ? 'var(--accent-green)' : 'transparent' }}>
                     <div className="metric-icon" style={{ fontSize: '2rem' }}>{sync.sensorDataSynced ? '✅' : '⏳'}</div>
                     <div className="metric-info">
-                        <div className="metric-label">传感器数据</div>
+                        <div className="metric-label">{LABELS.monitor.tabs.api.sensorData}</div>
                         <div className="metric-value" style={{ color: sync.sensorDataSynced ? 'var(--accent-green)' : 'var(--accent-orange)' }}>
-                            {sync.sensorDataSynced ? '已同步' : '待同步'}
+                            {sync.sensorDataSynced ? LABELS.monitor.tabs.api.synced : LABELS.monitor.tabs.api.pending}
                         </div>
                     </div>
                 </div>
@@ -379,16 +380,16 @@ const TrainingMonitor: React.FC = () => {
             {/* 同步详情 */}
             <div className="metric-card" style={{ marginBottom: '1rem' }}>
                 <div className="metric-info" style={{ width: '100%' }}>
-                    <div className="metric-label">最后同步时间</div>
-                    <div className="metric-value" style={{ fontSize: '1.2rem' }}>{sync.lastSyncTime || '从未同步'}</div>
+                    <div className="metric-label">{LABELS.monitor.tabs.api.lastSyncTime}</div>
+                    <div className="metric-value" style={{ fontSize: '1.2rem' }}>{sync.lastSyncTime || 'Never'}</div>
                 </div>
             </div>
 
             <div className="metric-card">
                 <div className="metric-info" style={{ width: '100%' }}>
-                    <div className="metric-label">服务状态</div>
+                    <div className="metric-label">{LABELS.monitor.tabs.api.serviceStatus}</div>
                     <div className="metric-value" style={{ fontSize: '1.2rem', color: sync.status === 'ok' ? 'var(--accent-green)' : 'var(--accent-orange)' }}>
-                        {sync.status === 'ok' ? '🟢 正常运行' : '🟡 ' + sync.status}
+                        {sync.status === 'ok' ? `🟢 ${LABELS.monitor.tabs.api.operational}` : `🟡 ${LABELS.monitor.tabs.api.statusPrefix}${sync.status}`}
                     </div>
                 </div>
             </div>
@@ -408,19 +409,19 @@ const TrainingMonitor: React.FC = () => {
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
                     <button onClick={() => navigate('/')} className="quick-link-chip" style={{ padding: '8px 16px' }}>
-                        ← 返回
+                        ← {LABELS.common.backToHome}
                     </button>
-                    <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.75rem' }}>系统监控仪表盘</h2>
+                    <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.75rem' }}>{LABELS.monitor.title}</h2>
                     <button
                         onClick={handleViewLogs}
                         disabled={logLoading}
                         className="quick-link-chip"
                         style={{ marginLeft: 'auto', padding: '8px 16px' }}
                     >
-                        {logLoading ? '加载中...' : '📋 查看日志'}
+                        {logLoading ? LABELS.common.loading : `📋 ${LABELS.monitor.viewLogs}`}
                     </button>
                     <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                        每5秒自动刷新
+                        {LABELS.monitor.autoRefresh}
                     </span>
                 </div>
 
@@ -453,7 +454,7 @@ const TrainingMonitor: React.FC = () => {
 
                 {/* Last Update */}
                 <div style={{ textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem' }}>
-                    最后更新: {new Date().toLocaleString('zh-CN')}
+                    {LABELS.monitor.lastUpdate}: {new Date().toLocaleString()}
                 </div>
             </div>
 
@@ -491,7 +492,9 @@ const TrainingMonitor: React.FC = () => {
                         {/* Modal Header */}
                         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
                             <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>
-                                📋 {logs.type === 'download' ? '下载日志' : logs.type === 'training' ? '训练日志' : 'API 同步日志'}
+                                📋 {logs.type === 'download' ? LABELS.monitor.logs.title.download :
+                                    logs.type === 'training' ? LABELS.monitor.logs.title.training :
+                                        LABELS.monitor.logs.title.api}
                             </h3>
                             <span style={{ marginLeft: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                 {logs.source} - {logs.path}
@@ -537,13 +540,13 @@ const TrainingMonitor: React.FC = () => {
                                     </div>
                                 ))
                             ) : (
-                                <div style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>暂无日志</div>
+                                <div style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>{LABELS.monitor.logs.noLogs}</div>
                             )}
                         </div>
 
                         {/* Modal Footer */}
                         <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right' }}>
-                            更新时间: {new Date(logs.timestamp).toLocaleString('zh-CN')}
+                            {LABELS.monitor.lastUpdate}: {new Date(logs.timestamp).toLocaleString()}
                         </div>
                     </div>
                 </div>
