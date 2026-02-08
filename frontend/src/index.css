@@ -243,6 +243,18 @@ body {
     }
   }
 
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   /* Adjust Quick Links container if needed (though desktop-only handles it) */
   .quick-links-container.desktop-only {
     display: none !important;

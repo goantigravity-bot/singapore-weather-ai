@@ -137,7 +137,9 @@ deploy_frontend() {
     cd frontend
     
     # 创建生产环境变量
-    echo "VITE_API_URL=http://$EC2_IP:8000" > .env.production
+    # 使用相对路径 /api，此时 CloudFront 和 直接 IP 都能正常工作
+    # 且避免 mixed content 问题 (HTTPS 前端调用 HTTP 后端)
+    echo "VITE_API_URL=/api" > .env.production
     
     npm install
     npm run build
@@ -149,12 +151,21 @@ deploy_frontend() {
     
     echo -e "${GREEN}✅ 前端构建完成${NC}"
     
-    # 2. 上传到S3
+    # 2. 总是上传到EC2 (作为 Fallback)
+    echo "📤 上传到EC2..."
+    cd ..
+    # 确保远程目录存在
+    ssh -i $EC2_KEY $EC2_HOST "mkdir -p $REMOTE_DIR/frontend"
+    scp -i $EC2_KEY -r frontend/dist $EC2_HOST:$REMOTE_DIR/frontend/
+    echo -e "${GREEN}✅ 前端部署到EC2成功！${NC}"
+
+    # 3. 如果配置了S3，也上传到S3
     if [ -n "$S3_BUCKET" ]; then
         echo "📤 上传到S3..."
+        cd frontend # 回到 frontend 目录
         aws s3 sync dist/ s3://$S3_BUCKET/ --delete
         
-        # 3. 清除CloudFront缓存
+        # 4. 清除CloudFront缓存 (只在S3更新时需要)
         if [ -n "$CLOUDFRONT_ID" ]; then
             echo "🔄 清除CDN缓存..."
             aws cloudfront create-invalidation \
@@ -166,14 +177,10 @@ deploy_frontend() {
         if [ -n "$FRONTEND_URL" ]; then
             echo "访问地址: $FRONTEND_URL"
         fi
-    else
-        # 如果没有S3，上传到EC2
-        echo "📤 上传到EC2..."
         cd ..
-        scp -i $EC2_KEY -r frontend/dist $EC2_HOST:$REMOTE_DIR/frontend/
-        
-        echo -e "${GREEN}✅ 前端部署到EC2成功！${NC}"
+    else
         echo "访问地址: http://$EC2_IP (需要配置Nginx)"
+        # cd .. 上面 scp 前已经 cd .. 了，这里不需要
     fi
     
     cd ..

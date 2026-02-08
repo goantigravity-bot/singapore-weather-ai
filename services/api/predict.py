@@ -564,7 +564,20 @@ def get_station_mapping():
         return stations
     except Exception as e:
         print(f"Warning: Could not fetch station metadata: {e}")
-        return []
+        # Fallback for offline/dev
+        return [
+            {'id': 'S50', 'name': 'Clementi', 'location': {'latitude': 1.3337, 'longitude': 103.7768}},
+            {'id': 'S109', 'name': 'Ang Mo Kio', 'location': {'latitude': 1.3764, 'longitude': 103.8492}},
+            {'id': 'S24', 'name': 'Changi', 'location': {'latitude': 1.3678, 'longitude': 103.9826}},
+             {'id': 'S104', 'name': 'Woodlands', 'location': {'latitude': 1.44387, 'longitude': 103.78538}},
+            {'id': 'S100', 'name': 'Woodlands', 'location': {'latitude': 1.4172, 'longitude': 103.74855}}, # S100 is intermediate?
+            {'id': 'S107', 'name': 'East Coast Parkway', 'location': {'latitude': 1.3135, 'longitude': 103.9625}},
+            {'id': 'S115', 'name': 'Tuas South', 'location': {'latitude': 1.2937, 'longitude': 103.6182}},
+            {'id': 'S111', 'name': 'Newton', 'location': {'latitude': 1.31055, 'longitude': 103.8365}},
+             {'id': 'S116', 'name': 'West Coast', 'location': {'latitude': 1.281, 'longitude': 103.754}},
+             {'id': 'S121', 'name': 'Choa Chu Kang', 'location': {'latitude': 1.37288, 'longitude': 103.72244}},
+             {'id': 'S60', 'name': 'Sentosa', 'location': {'latitude': 1.25, 'longitude': 103.8279}}
+        ]
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     """

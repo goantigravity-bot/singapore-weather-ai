@@ -14,6 +14,8 @@ import './App.css';
 import { API_BASE_URL } from './config';
 import { LABELS } from './i18n/labels';
 
+import SmartResultCard from './components/SmartResultCard';
+
 interface ForecastResult {
   timestamp: string;
   location_query: string;
@@ -39,6 +41,7 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [forecast, setForecast] = useState<ForecastResult | null>(null);
   const [pathForecast, setPathForecast] = useState<any>(null);
+  const [smartResult, setSmartResult] = useState<any>(null); // New state for Smart Query
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<{ lat: number, lon: number } | null>(null);
@@ -113,8 +116,48 @@ function AppContent() {
     setLoading(true);
     setError(null);
     setPathForecast(null);
+    setSmartResult(null); // Clear previous smart result
 
     try {
+
+      // 0. SMART QUERY CHECK (Heuristic: > 3 words or contains key activity words)
+      // If searching by name (not clicking map)
+      if (params.location && !params.lat) {
+        const q = params.location.toLowerCase();
+        const keywords = ['can i', 'ride', 'cycle', 'run', 'jog', 'walk', 'picnic', 'at ', 'in ', 'today', 'tomorrow'];
+        const isSmart = keywords.some(k => q.includes(k)) || q.split(' ').length > 3;
+
+        if (isSmart) {
+          console.log("⚡ Triggering Smart Query for:", params.location);
+          try {
+            const smartRes = await axios.get(`${API_BASE_URL}/smart-query`, { params: { q: params.location } });
+            if (smartRes.data && !smartRes.data.error) {
+              setSmartResult(smartRes.data);
+              console.log("Smart Result:", smartRes.data);
+
+              // Also try to visualize the path if points exist
+              if (smartRes.data.points_analyzed > 0 && smartRes.data.details) {
+                const points = smartRes.data.details;
+                setPathForecast({
+                  path: points.map((p: any) => [p.lat, p.lon]),
+                  points: points.map((p: any) => ({
+                    lat: p.lat,
+                    lon: p.lon,
+                    forecast: { rainfall: p.rainfall, description: p.status }
+                  }))
+                });
+                // Fly to start
+                if (points[0]) setFlyTo({ lat: points[0].lat, lon: points[0].lon });
+              }
+
+              setLoading(false);
+              return; // Stop here, don't do standard forecast
+            }
+          } catch (e) {
+            console.warn("Smart Query failed, falling back to standard.", e);
+          }
+        }
+      }
 
       // 1. If searching by string, try Path Prediction FIRST
       if (params.location && !params.lat) {
@@ -227,6 +270,14 @@ function AppContent() {
       {/* 只在主页显示地图等组件 */}
       {!isStandalonePage && (
         <>
+          {/* Smart Result Card Overlay */}
+          {smartResult && (
+            <SmartResultCard
+              result={smartResult}
+              onClose={() => setSmartResult(null)}
+            />
+          )}
+
           <div className="search-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 10px', background: 'transparent' }}>
             <button onClick={() => setIsMenuOpen(true)} className="burger-btn">
               ☰

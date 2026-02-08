@@ -7,9 +7,23 @@ import sys
 import re
 from datetime import datetime, timedelta
 import pandas as pd
+import numpy as np
 from predict import fetch_osm_path, process_and_sample_path, predict_ensemble, load_system, get_station_mapping
 
 # --- Configuration ---
+def convert_numpy(obj):
+    if isinstance(obj, (int, float, str, bool, type(None))):
+        return obj
+    if isinstance(obj, dict):
+        return {k: convert_numpy(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [convert_numpy(i) for i in obj]
+    if hasattr(obj, 'item'):
+        return obj.item()
+    if hasattr(obj, 'tolist'):
+        return obj.tolist()
+    return obj
+
 ACTIVITY_RULES = {
     'bicycle': {'rain_tolerance': 0.5, 'name': 'Cycling'},
     'ride': {'rain_tolerance': 0.5, 'name': 'Cycling'},
@@ -107,10 +121,9 @@ def parse_query(query):
 
 def analyze_path_weather(location, start_hour, end_hour, tolerance, model, df, stations_meta):
     """
-    Analyze weather along a path for a duration
+    Analyze weather along a path for a duration.
+    Returns a dictionary with analysis results.
     """
-    print(f"\n🔍 Analyzing '{location}' for {start_hour}:00 - {end_hour}:00...")
-    
     # 1. Get Path Points
     points = []
     # Check if it looks like a path
@@ -118,30 +131,18 @@ def analyze_path_weather(location, start_hour, end_hour, tolerance, model, df, s
     
     if osm_data:
         points = process_and_sample_path(osm_data, sample_dist_km=2.0)
-        print(f"📍 Found {len(points)} key points along the route.")
     else:
         # Fallback: Geocode single point
-        # We need geocode logic from predict.py but it's not exposed as `geocode_location` easily?
-        # Actually it is `geocode_location` inside predict.py
         from predict import geocode_location
         lat, lon = geocode_location(location)
         if lat and lon:
             points = [[lat, lon]]
-            print(f"📍 Analysis for single point ({lat}, {lon})")
         else:
-            print("❌ Could not locate.")
-            return
+            return {"error": "Could not locate location"}
 
     # 2. Iterate Time and Space
-    # Since our "Simulation" DB only has data up to valid_timestamp, we can't really predict "Future 5pm" 
-    # if our DB ends at "2pm".
-    # For this DEMO, we will assume the request is regarding the LATEST AVAILABLE DATA 
-    # but we simulate "Forecast" for the requested duration by just using the current prediction logic.
-    # In a real system, we'd roll the model forward. Here we effectively check "Current Outlook".
-    
     # Reference Time
     ref_time = df['timestamp'].max()
-    print(f"🕒 Forecast Reference Time: {ref_time}")
     
     # Analyze
     risk_points = 0
@@ -162,41 +163,57 @@ def analyze_path_weather(location, start_hour, end_hour, tolerance, model, df, s
             status_icon = "☁️" if res['status'] == 'Cloudy' else ("🌧️" if 'Rain' in res['status'] else "☀️")
             
             # Risk Check
-            if rain > tolerance:
+            is_risky = rain > tolerance
+            if is_risky:
                 risk_points += 1
-                details.append(f"Pt {i+1}: ⚠️ {res['status']} ({rain:.2f}mm)")
-            else:
-                 details.append(f"Pt {i+1}: {status_icon} OK")
+                
+            details.append({
+                "point_index": i + 1,
+                "lat": float(lat),
+                "lon": float(lon),
+                "status": res['status'],
+                "rainfall": float(f"{rain:.2f}"),
+                "icon": status_icon,
+                "is_risky": bool(is_risky)
+            })
     
     # Summary
-    risk_ratio = risk_points / total_points
+    risk_ratio = risk_points / total_points if total_points > 0 else 0
     
-    print("\n" + "="*40)
-    print(f"📢 ADVICE REPORT for {location.upper()}")
-    print("="*40)
+    recommendation = ""
+    reason = ""
+    status_color = "green" # green, orange, red
+    
+    activity_name = ACTIVITY_RULES.get(location, {}).get('name', 'Outdoor Activity') # This might be wrong key usage, fix in main
     
     if risk_ratio > 0.3:
-        print(f"❌ NOT RECOMMENDED for {ACTIVITY_RULES.get(location, {}).get('name', 'Outdoor Activity')}")
-        print(f"Reason: Rain detected at {risk_ratio*100:.0f}% of the route.")
-        print(f"Max Rainfall: {max_rain:.2f}mm")
+        recommendation = "NOT RECOMMENDED"
+        reason = f"Rain detected at {risk_ratio*100:.0f}% of the route."
+        status_color = "red"
     elif max_rain > 0.5: # Some rain but < 30% area
-        print(f"⚠️ CAUTION ADVISED")
-        print(f"Reason: Patchy rain detected. You might get wet.")
+        recommendation = "CAUTION ADVISED"
+        reason = "Patchy rain detected. You might get wet."
+        status_color = "orange"
     elif max_rain > 0.0:
-        print(f"✅ GO AHEAD (Likely Safe)")
-        print("Reason: Mostly clear, slight chance of drizzle.")
+        recommendation = "GO AHEAD"
+        reason = "Mostly clear, slight chance of drizzle."
+        status_color = "green"
     else:
-        print(f"⭐ PERFECT CONDITIONS")
-        print("Reason: No rain detected along the route.")
+        recommendation = "PERFECT CONDITIONS"
+        reason = "No rain detected along the route."
+        status_color = "green"
 
-    print("\nDetails:")
-    # Print simplified details (first 5 and last 5 if too many)
-    if len(details) > 10:
-        for d in details[:5]: print(d)
-        print("...")
-        for d in details[-5:]: print(d)
-    else:
-        for d in details: print(d)
+    final_result = {
+        "location": location,
+        "recommendation": recommendation,
+        "reason": reason,
+        "status_color": status_color,
+        "max_rainfall": max_rain,
+        "points_analyzed": total_points,
+        "details": details
+    }
+    
+    return convert_numpy(final_result)
 
 def main():
     if len(sys.argv) < 2:
@@ -215,13 +232,30 @@ def main():
     model, df = load_system()
     stations_meta = get_station_mapping()
     
-    analyze_path_weather(
+    result = analyze_path_weather(
         parsed['location'], 
         parsed['start_hour'], 
         parsed['end_hour'],
         parsed['tolerance'],
         model, df, stations_meta
     )
+    
+    if "error" in result:
+        print(f"❌ {result['error']}")
+        return
+
+    print("\n" + "="*40)
+    print(f"📢 ADVICE REPORT for {result['location'].upper()}")
+    print("="*40)
+    
+    print(f"Result: {result['recommendation']}")
+    print(f"Reason: {result['reason']}")
+    
+    print("\nDetails:")
+    for d in result['details'][:5]:
+        print(f"Pt {d['point_index']}: {d['icon']} {d['status']} ({d['rainfall']}mm)")
+    if len(result['details']) > 5:
+        print("...")
 
 if __name__ == "__main__":
     main()

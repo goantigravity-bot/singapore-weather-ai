@@ -1,0 +1,84 @@
+services:
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    restart: always
+
+  download:
+    build:
+      context: services/download
+    image: weather-ai-download
+    restart: always
+    env_file: .env
+    depends_on:
+      - minio
+    environment:
+      - PYTHONUNBUFFERED=1
+      # S3 Config (Local MinIO)
+      - S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_DEFAULT_REGION=us-east-1
+      - S3_BUCKET=weather-ai-models-de08370c
+      # Download Manager Config
+      - CHECK_INTERVAL_REALTIME=300
+      - CHECK_INTERVAL_BACKFILL=14400
+
+  training:
+    build:
+      context: services/training
+    image: weather-ai-training
+    restart: always
+    env_file: .env
+    depends_on:
+      - minio
+    environment:
+      - PYTHONUNBUFFERED=1
+      # S3 Config (Local MinIO)
+      - S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_DEFAULT_REGION=us-east-1
+      - S3_BUCKET=weather-ai-models-de08370c
+      # Training Service Config
+      - TRAINING_MODE=DAILY # or BACKFILL
+      - WORK_DIR=/app/data
+    volumes:
+      # Persist local data if needed (optional since S3 is source of truth)
+      - weather_training_data:/app/data
+
+  api:
+    build:
+      context: services/api
+    image: weather-ai-api
+    restart: always
+    env_file: .env
+    depends_on:
+      - minio
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      # S3 Config (Local MinIO)
+      - S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_DEFAULT_REGION=us-east-1
+      - S3_BUCKET=weather-ai-models-de08370c
+      # Point to where we mount/copy frontend
+      - FRONTEND_DIR=/app/frontend_dist
+    volumes:
+      # Mount built frontend
+      - ./frontend/dist:/app/frontend_dist
+
+volumes:
+  weather_training_data:
+  minio_data:

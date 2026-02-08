@@ -42,11 +42,22 @@ print(f"Using device: {DEVICE}")
 # --- Paths ---
 # CSV_PATH = "dummy_data/sensor_readings.csv"
 # SAT_DIR = "dummy_data/satellite"
+# --- Paths ---
+# Docker environment uses /app/data
 HOME_DIR = os.path.expanduser("~")
-WORK_DIR = os.path.join(HOME_DIR, "weather-ai")
+WORK_DIR = os.environ.get("WORK_DIR", os.path.join(HOME_DIR, "weather-ai"))
+
+# Docker Path Overrides
+if os.path.exists("/app/data"):
+    WORK_DIR = "/app/data"
+    
 CSV_PATH = os.path.join(WORK_DIR, "real_sensor_data.csv")
 SAT_DIR = os.path.join(WORK_DIR, "satellite_data")
-MODEL_SAVE_PATH = os.path.join(WORK_DIR, "weather_fusion_model.pth")
+# Model is saved to /app/models or root?
+# training_service.py expects to upload from somewhere.
+# Let's save to current dir or specific output dir.
+MODEL_SAVE_PATH = "weather_fusion_model.pth" 
+
 
 def train_model():
     train_start_time = time.time()
