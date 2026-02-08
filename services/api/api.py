@@ -654,30 +654,47 @@ def monitor_overview():
 
 @api_router.get("/monitor/logs/{log_type}")
 def monitor_logs(log_type: str, lines: int = 100):
-    """返回指定类型的日志内容"""
-    log_paths = {
-        "download": "download.log",
-        "training": "training.log",
-        "sync": "api.log",
+    """返回指定类型的日志内容，优先从 S3 读取（各服务通过 crontab 推送日志到 S3）"""
+    import boto3
+    
+    # S3 日志路径映射（由各实例的 push_log 脚本上传）
+    s3_log_keys = {
+        "download": "logs/download.log",
+        "training": "logs/training.log",
+        "sync": "logs/api.log",
     }
     
-    log_file = log_paths.get(log_type)
+    s3_key = s3_log_keys.get(log_type)
     log_lines = []
+    source = "unknown"
+    path = ""
     
-    if log_file and os.path.exists(log_file):
+    # 优先从 S3 读取
+    if S3_BUCKET and s3_key:
         try:
-            with open(log_file, 'r') as f:
-                all_lines = f.readlines()
-                log_lines = [l.rstrip() for l in all_lines[-lines:]]
+            s3 = boto3.client('s3', endpoint_url=S3_ENDPOINT_URL)
+            obj = s3.get_object(Bucket=S3_BUCKET, Key=s3_key)
+            content = obj['Body'].read().decode('utf-8', errors='replace')
+            all_lines = content.splitlines()
+            log_lines = all_lines[-lines:]
+            source = f"S3 ({S3_BUCKET})"
+            path = s3_key
+            logger.info(f"Logs: Loaded {len(log_lines)} lines from S3 {s3_key}")
         except Exception as e:
-            log_lines = [f"Error reading log: {e}"]
+            logger.warning(f"Logs: Failed to read from S3 {s3_key}: {e}")
+            log_lines = [f"Failed to load logs from S3: {e}"]
+            source = "error"
+            path = s3_key
     else:
-        log_lines = [f"Log file '{log_file or log_type}' not found. Service may not be running locally."]
+        log_lines = [f"S3 not configured or unknown log type: {log_type}"]
+        source = "none"
     
     return {
         "type": log_type,
         "lines": log_lines,
-        "timestamp": datetime.now().isoformat(),
+        "source": source,
+        "path": path,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
 # Register Router (Match both /api prefix and root for dev convenience)
