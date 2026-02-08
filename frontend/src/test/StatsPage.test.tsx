@@ -6,7 +6,7 @@ import StatsPage from '../pages/StatsPage';
 
 // Mock axios
 vi.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedAxios = axios as ReturnType<typeof vi.mocked<typeof axios>>;
 
 const renderWithRouter = (component: React.ReactElement) => {
     return render(

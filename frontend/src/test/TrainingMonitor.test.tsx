@@ -5,7 +5,7 @@ import TrainingMonitor from '../pages/TrainingMonitor';
 
 // Mock fetch API
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+globalThis.fetch = mockFetch as any;
 
 const renderWithRouter = (component: React.ReactElement) => {
     return render(
