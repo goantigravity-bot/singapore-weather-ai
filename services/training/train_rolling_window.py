@@ -258,6 +258,8 @@ def train_model():
 
 if __name__ == "__main__":
     if not os.path.exists(CSV_PATH):
-        print("Error: Dummy data not found. Please run 'create_dummy_data.py' first.")
+        print("Error: Sensor data not found at", CSV_PATH)
+        import sys
+        sys.exit(1)
     else:
         train_model()

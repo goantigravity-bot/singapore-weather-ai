@@ -30,6 +30,7 @@ from smart_query import parse_query, analyze_path_weather, convert_numpy
 import numpy as np
 
 import sqlite3
+import json
 from collections import Counter
 import logging
 from monitor_api import router as monitor_router
@@ -67,7 +68,9 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             query TEXT NOT NULL,
             ip_address TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            response_time_ms REAL,
+            response_result TEXT
         )
     ''')
     conn.commit()
@@ -273,6 +276,7 @@ def get_stations():
 
 @api_router.get("/predict")
 def predict_weather(
+    request: Request,
     lat: Optional[float] = Query(None, description="Latitude"),
     lon: Optional[float] = Query(None, description="Longitude"),
     location: Optional[str] = Query(None, description="Location Name")
@@ -293,16 +297,7 @@ def predict_weather(
             if lat is None:
                  raise HTTPException(404, f"Could not locate '{location}'")
         
-        # 记录搜索历史，用于 Popular Places 统计
-        if location:
-            try:
-                conn = sqlite3.connect('weather.db')
-                c = conn.cursor()
-                c.execute("INSERT INTO search_history (query) VALUES (?)", (location,))
-                conn.commit()
-                conn.close()
-            except Exception:
-                pass  # DB 锁定时不影响主流程
+        _predict_start = time.time()
                  
         if lat is None or lon is None:
              raise HTTPException(422, "Must provide 'lat'/'lon' OR 'location'.")
@@ -376,6 +371,29 @@ def predict_weather(
             "debug": raw.get('debug', ''),
         }
         
+        # 记录搜索历史：地点、预测结果、响应时间、IP
+        if location:
+            try:
+                elapsed_ms = (time.time() - _predict_start) * 1000
+                result_summary = json.dumps({
+                    'rainfall': rain,
+                    'description': raw.get('status', ''),
+                    'temperature': current_temp,
+                    'humidity': current_humidity,
+                    'recommendation': recommendation
+                }, ensure_ascii=False)
+                client_ip = request.client.host if request.client else None
+                conn = sqlite3.connect('weather.db')
+                c = conn.cursor()
+                c.execute(
+                    "INSERT INTO search_history (query, ip_address, response_time_ms, response_result) VALUES (?, ?, ?, ?)",
+                    (location, client_ip, round(elapsed_ms, 1), result_summary)
+                )
+                conn.commit()
+                conn.close()
+            except Exception as db_err:
+                logger.warning(f"DB log failed: {db_err}")
+        
         return response
         
     except HTTPException as he:
@@ -425,20 +443,12 @@ def predict_path(query: str):
         raise HTTPException(500, f"Path Analysis failed: {e}")
 
 @api_router.get("/smart-query")
-def smart_query_endpoint(q: str):
+def smart_query_endpoint(q: str, request: Request):
     """Process natural language query."""
     global model, df, stations_meta
     
     try:
-        # 1. Log query
-        try:
-            conn = sqlite3.connect('weather.db')
-            c = conn.cursor()
-            c.execute("INSERT INTO search_history (query) VALUES (?)", (q,))
-            conn.commit()
-            conn.close()
-        except:
-            pass # Don't fail if DB locked
+        _sq_start = time.time()
         
         # 2. Parse
         parsed = parse_query(q)
@@ -459,6 +469,26 @@ def smart_query_endpoint(q: str):
         
         # Inject parsed metadata for Frontend
         result['parsed'] = parsed
+        
+        # 记录搜索历史：查询、结果摘要、响应时间、IP
+        try:
+            elapsed_ms = (time.time() - _sq_start) * 1000
+            result_summary = json.dumps({
+                'location': parsed.get('location', ''),
+                'advice': result.get('advice', ''),
+                'overall_risk': result.get('overall_risk', '')
+            }, ensure_ascii=False)
+            client_ip = request.client.host if request.client else None
+            conn = sqlite3.connect('weather.db')
+            c = conn.cursor()
+            c.execute(
+                "INSERT INTO search_history (query, ip_address, response_time_ms, response_result) VALUES (?, ?, ?, ?)",
+                (q, client_ip, round(elapsed_ms, 1), result_summary)
+            )
+            conn.commit()
+            conn.close()
+        except Exception as db_err:
+            logger.warning(f"DB log failed: {db_err}")
         
         return result
     except Exception as e:

@@ -247,7 +247,7 @@ def get_training_history() -> List[TrainingHistoryItem]:
         data = json.loads(obj['Body'].read().decode('utf-8'))
         
         history = []
-        for item in data[-10:]:  # 只返回最近10条
+        for item in data:  # 返回全部历史
             history.append(TrainingHistoryItem(
                 id=item.get("id", 0),
                 timestamp=item.get("timestamp", ""),

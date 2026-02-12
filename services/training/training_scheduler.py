@@ -150,9 +150,7 @@ def upload_history_to_s3(date_str, metrics):
         
         history.append(new_record)
         
-        # 只保留最近 50 条
-        if len(history) > 50:
-            history = history[-50:]
+        # 保留全部历史记录
         
         # 上传
         s3.put_object(
@@ -348,6 +346,32 @@ def preprocess_data():
     
     return True
 
+
+
+
+def process_gov_data(date_str):
+    """将下载的政府数据 JSON 转换为训练用 CSV (real_sensor_data.csv)"""
+    logger.info(f'📊 处理政府数据: {date_str}')
+    
+    result = subprocess.run(
+        ['python', 'process_gov_data_from_s3.py', '--date', date_str],
+        cwd=str(WORK_DIR),
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode != 0:
+        logger.error(f'政府数据处理失败: {result.stderr}')
+        return False
+    
+    # 验证 CSV 已生成
+    csv_path = WORK_DIR / 'real_sensor_data.csv'
+    if not csv_path.exists():
+        logger.error('real_sensor_data.csv 未生成')
+        return False
+    
+    logger.info(f'✅ 政府数据处理完成')
+    return True
 
 def cleanup_raw_data():
     """清理本地原始数据（卫星 .nc 和预处理 .npy），S3 数据保留不动"""
@@ -562,6 +586,12 @@ def run_scheduler(max_batches=None, wait_for_data=True):
                 if not preprocess_data():
                     raise Exception("预处理失败")
                 logger.info(f"⏱️ 预处理耗时: {time.time() - start_time:.1f}s")
+            
+            # 2.5 处理政府数据 JSON -> CSV
+            start_time = time.time()
+            if not process_gov_data(next_date):
+                raise Exception('政府数据处理失败')
+            logger.info(f'⏱️ 政府数据处理耗时: {time.time() - start_time:.1f}s')
             
             # 3. 训练 (传入日期参数)
             start_time = time.time()

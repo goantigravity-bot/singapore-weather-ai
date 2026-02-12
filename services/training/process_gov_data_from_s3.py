@@ -47,7 +47,7 @@ def list_json_files(date_str=None):
     
     prefix = f"{GOVDATA_PREFIX}/"
     if date_str:
-        prefix = f"{GOVDATA_PREFIX}/{date_str}/" # Assumes YYYY-MM-DD folder structure in S3?
+        prefix = f"{GOVDATA_PREFIX}/" # Assumes YYYY-MM-DD folder structure in S3?
         # Verify if download_manager uses YYYY-MM-DD or YYYYMMDD?
         # bulk_download script usually uses YYYYMMDD. 
         # API usually returns YYYY-MM-DD in json.
@@ -63,7 +63,7 @@ def list_json_files(date_str=None):
         for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=prefix):
             for obj in page.get('Contents', []):
                 key = obj['Key']
-                if key.endswith('.json'):
+                if key.endswith(".json") and (date_str is None or date_str in key):
                     files.append(key)
     except Exception as e:
         logger.warning(f"Error listing files: {e}")
@@ -223,6 +223,11 @@ def main():
     target_key = f"{PROCESSED_PREFIX}/{OUTPUT_FILENAME}"
     logger.info(f"Uploading {len(combined_df)} rows to s3://{S3_BUCKET}/{target_key}...")
     s3.put_object(Bucket=S3_BUCKET, Key=target_key, Body=csv_buffer.getvalue())
+    # Save locally for train_rolling_window.py
+    local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), OUTPUT_FILENAME)
+    combined_df.to_csv(local_path, index=False)
+    logger.info(f"Local CSV saved: {local_path} ({len(combined_df)} rows)")
+
     logger.info("✅ Done.")
 
 if __name__ == "__main__":
