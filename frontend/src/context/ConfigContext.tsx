@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 export type Metric = 'rain' | 'temp' | 'hum' | 'pm25';
+export type GeocodingProvider = 'nominatim' | 'onemap';
 
 interface ConfigState {
     metrics: Set<Metric>;
@@ -9,13 +10,16 @@ interface ConfigState {
     toggleShowTriangle: () => void;
     showStations: boolean;
     toggleShowStations: () => void;
+    geocodingProvider: GeocodingProvider;
+    setGeocodingProvider: (p: GeocodingProvider) => void;
 }
 
 const ConfigContext = createContext<ConfigState | undefined>(undefined);
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [metrics, setMetrics] = useState<Set<Metric>>(() => {
-        // Load from local storage or default to rain only for clarity
         const saved = localStorage.getItem('forecast_metrics');
         if (saved) {
             try {
@@ -25,7 +29,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 console.error("Failed to parse metrics", e);
             }
         }
-        return new Set<Metric>(['rain', 'temp', 'hum', 'pm25']); // Default all on
+        return new Set<Metric>(['rain', 'temp', 'hum', 'pm25']);
     });
 
     const [showTriangle, setShowTriangle] = useState<boolean>(() => {
@@ -35,8 +39,26 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const [showStations, setShowStations] = useState<boolean>(() => {
         const saved = localStorage.getItem('show_stations');
-        return saved ? JSON.parse(saved) : true; // Default to showing stations
+        return saved ? JSON.parse(saved) : true;
     });
+
+    const [geocodingProvider, setGeocodingProviderState] = useState<GeocodingProvider>(() => {
+        const saved = localStorage.getItem('geocoding_provider');
+        return (saved === 'onemap' ? 'onemap' : 'nominatim') as GeocodingProvider;
+    });
+
+    // 启动时从后端同步当前 provider 配置
+    useEffect(() => {
+        fetch(`${API_BASE}/api/config/geocoding`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.provider) {
+                    setGeocodingProviderState(data.provider as GeocodingProvider);
+                    localStorage.setItem('geocoding_provider', data.provider);
+                }
+            })
+            .catch(() => { /* 静默失败，使用 localStorage 缓存值 */ });
+    }, []);
 
     useEffect(() => {
         localStorage.setItem('forecast_metrics', JSON.stringify(Array.from(metrics)));
@@ -70,8 +92,24 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setShowStations(prev => !prev);
     };
 
+    // 切换 provider 时同步到后端
+    const setGeocodingProvider = useCallback((p: GeocodingProvider) => {
+        setGeocodingProviderState(p);
+        localStorage.setItem('geocoding_provider', p);
+        fetch(`${API_BASE}/api/config/geocoding`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: p }),
+        }).catch(err => console.error('Failed to sync geocoding provider:', err));
+    }, []);
+
     return (
-        <ConfigContext.Provider value={{ metrics, toggleMetric, showTriangle, toggleShowTriangle, showStations, toggleShowStations }}>
+        <ConfigContext.Provider value={{
+            metrics, toggleMetric,
+            showTriangle, toggleShowTriangle,
+            showStations, toggleShowStations,
+            geocodingProvider, setGeocodingProvider,
+        }}>
             {children}
         </ConfigContext.Provider>
     );

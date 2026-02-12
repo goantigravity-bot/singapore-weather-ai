@@ -259,9 +259,26 @@ def startup_event():
 
 # --- Endpoints ---
 
+import geocoding
+
+@api_router.get("/config/geocoding")
+def get_geocoding_config():
+    """返回当前 geocoding provider 配置"""
+    return {"provider": geocoding.get_provider()}
+
+@api_router.post("/config/geocoding")
+def set_geocoding_config(body: dict):
+    """运行时切换 geocoding provider（nominatim | onemap）"""
+    provider = body.get("provider", "")
+    try:
+        result = geocoding.set_provider(provider)
+        return {"provider": result, "status": "ok"}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
 @api_router.get("/health")
 def health():
-    return {"status": "ok", "version": "0.7.0", "service": "api"}
+    return {"status": "ok", "version": "0.7.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
 
 @api_router.get("/stations")
 def get_stations():

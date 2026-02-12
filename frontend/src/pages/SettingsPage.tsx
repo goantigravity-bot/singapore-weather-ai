@@ -1,10 +1,10 @@
 import React from 'react';
-import { useConfig, type Metric } from '../context/ConfigContext';
+import { useConfig, type Metric, type GeocodingProvider } from '../context/ConfigContext';
 import { useNavigate } from 'react-router-dom';
 import { LABELS } from '../i18n/labels';
 
 const SettingsPage: React.FC = () => {
-    const { metrics, toggleMetric, showTriangle, toggleShowTriangle, showStations, toggleShowStations } = useConfig();
+    const { metrics, toggleMetric, showTriangle, toggleShowTriangle, showStations, toggleShowStations, geocodingProvider, setGeocodingProvider } = useConfig();
     const navigate = useNavigate();
 
     const renderToggle = (metric: Metric, label: string, icon: string) => {
@@ -24,6 +24,33 @@ const SettingsPage: React.FC = () => {
                 </div>
                 <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: isActive ? 'var(--accent-green)' : 'gray' }}>
                     {isActive ? '☑' : '☐'}
+                </div>
+            </div>
+        );
+    };
+
+    const renderProviderCard = (provider: GeocodingProvider, label: string, desc: string, icon: string) => {
+        const isActive = geocodingProvider === provider;
+        return (
+            <div
+                className="metric-card"
+                style={{
+                    cursor: 'pointer',
+                    borderColor: isActive ? 'var(--accent-cyan)' : 'transparent',
+                    opacity: isActive ? 1 : 0.6,
+                    flex: 1,
+                }}
+                onClick={() => setGeocodingProvider(provider)}
+            >
+                <div className="metric-icon">{icon}</div>
+                <div className="metric-info">
+                    <div className="metric-label">{label}</div>
+                    <div className="metric-value" style={{ fontSize: '0.85rem', color: isActive ? 'var(--accent-cyan)' : 'gray' }}>
+                        {desc}
+                    </div>
+                </div>
+                <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: isActive ? 'var(--accent-green)' : 'gray' }}>
+                    {isActive ? '●' : '○'}
                 </div>
             </div>
         );
@@ -108,6 +135,18 @@ const SettingsPage: React.FC = () => {
                             </div>
                         </div>
                     </div>
+
+                    <hr style={{ width: '100%', borderColor: 'rgba(255,255,255,0.1)', margin: '1.5rem 0' }} />
+
+                    {/* Integration — Geocoding Provider */}
+                    <h4 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>🔌 {LABELS.settings.integration.title}</h4>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                        {LABELS.settings.integration.geocodingProvider}
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                        {renderProviderCard('nominatim', LABELS.settings.integration.nominatim, LABELS.settings.integration.nominatimDesc, '🗺️')}
+                        {renderProviderCard('onemap', LABELS.settings.integration.onemap, LABELS.settings.integration.onemapDesc, '🇸🇬')}
+                    </div>
                 </div>
             </div>
         </div>
@@ -115,3 +154,4 @@ const SettingsPage: React.FC = () => {
 };
 
 export default SettingsPage;
+

@@ -347,8 +347,9 @@ _geocode_cache: dict[str, tuple[float, float]] = {}
 
 def geocode_location(address):
     """
-    Convert address string to (lat, lon) using OpenStreetMap Nominatim API.
-    Two-tier cache: L1 in-memory dict → L2 SQLite table → Nominatim API.
+    Convert address string to (lat, lon).
+    Two-tier cache: L1 in-memory dict → L2 SQLite table → Provider API.
+    Provider 由 geocoding 模块管理（运行时可切换 Nominatim / OneMap）。
     Only successful results are cached; failures trigger retry on next call.
     """
     # L1: 进程内命中
@@ -365,42 +366,20 @@ def geocode_location(address):
     except Exception:
         pass
 
-    # L3: 调用 Nominatim API
-    headers = {'User-Agent': 'SingaporeWeatherAI/0.3'}
-    url = "https://nominatim.openstreetmap.org/search"
-    
-    search_addr = address
-    if "singapore" not in address.lower():
-        search_addr = address + ", Singapore"
-        
-    params = {
-        'q': search_addr,
-        'format': 'json',
-        'limit': 1
-    }
-    
-    try:
-        resp = requests.get(url, params=params, headers=headers, timeout=5)
-        data = resp.json()
-        
-        if data:
-            lat = float(data[0]['lat'])
-            lon = float(data[0]['lon'])
-            print(f"Geocoded '{search_addr}': ({lat:.4f}, {lon:.4f})")
-            _geocode_cache[address] = (lat, lon)
-            # 写入 L2 供其他 worker 和重启后使用
-            try:
-                set_geocode_cache(address, lat, lon)
-            except Exception:
-                pass
-            return lat, lon
-        else:
-            print(f"Geocoding failed: No results for '{search_addr}'")
-            return None, None
-            
-    except Exception as e:
-        print(f"Geocoding error: {e}")
-        return None, None
+    # L3: 调用 Provider API（Nominatim 或 OneMap）
+    import geocoding
+    lat, lon = geocoding.geocode(address)
+
+    if lat is not None and lon is not None:
+        _geocode_cache[address] = (lat, lon)
+        # 写入 L2 供其他 worker 和重启后使用
+        try:
+            set_geocode_cache(address, lat, lon)
+        except Exception:
+            pass
+        return lat, lon
+
+    return None, None
 
 def reverse_geocode(lat, lon):
     """

@@ -95,6 +95,14 @@ export const LABELS = {
         toggles: {
             triangle: "Interpolation Triangle",
             stations: "Weather Station Markers"
+        },
+        integration: {
+            title: "Integration",
+            geocodingProvider: "Geocoding Provider",
+            nominatim: "Nominatim",
+            nominatimDesc: "OSM Global",
+            onemap: "OneMap",
+            onemapDesc: "SLA Singapore"
         }
     },
     stats: {

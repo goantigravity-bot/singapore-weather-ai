@@ -38,8 +38,18 @@ describe('SettingsPage', () => {
         expect(screen.getByText('Weather Station Markers')).toBeInTheDocument();
     });
 
+    it('renders integration section with geocoding providers', () => {
+        renderWithProviders(<SettingsPage />);
+
+        expect(screen.getByText(/Integration/)).toBeInTheDocument();
+        expect(screen.getByText('Geocoding Provider')).toBeInTheDocument();
+        expect(screen.getByText('Nominatim')).toBeInTheDocument();
+        expect(screen.getByText('OneMap')).toBeInTheDocument();
+    });
+
     it('renders back button', () => {
         renderWithProviders(<SettingsPage />);
-        expect(screen.getByText('← 返回')).toBeInTheDocument();
+        expect(screen.getByText('← Back to Home')).toBeInTheDocument();
     });
 });
+
