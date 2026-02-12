@@ -294,6 +294,26 @@ python test_api.py
 | [NEA Data.gov.sg](https://data.gov.sg) | REST API | Real-time | Temperature, humidity, rainfall, PM2.5 from 50+ stations |
 | [OpenStreetMap](https://www.openstreetmap.org) | REST API | On-demand | Geocoding and route geometry for path predictions |
 
+### ⚠️ Rate Limits & Caching
+
+External APIs enforce rate limits that can cause failures under load:
+
+| API | Rate Limit | Consequence | Mitigation |
+|:---|:---|:---|:---|
+| [Nominatim](https://operations.osmfoundation.org/policies/nominatim/) | 1 req/sec (absolute) | HTTP 429 / empty response → 404 errors | SQLite L2 cache (`geocode_cache`), L1 in-memory dict |
+| [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) | ~10K/day (shared pool) | Empty JSON response → parse failures | SQLite L2 cache (`overpass_cache`), L1 in-memory dict |
+| [NEA Data.gov.sg](https://api.data.gov.sg) | ~500 req/min | Throttled responses | 60-sec in-memory cache in `predict.py` |
+
+**Cache Architecture** (since v0.7):
+
+```
+Request → L1 (in-memory dict, per-worker) → L2 (SQLite, cross-worker) → External API
+```
+
+- Only **successful** responses are cached — failures trigger retries on next request
+- L2 persists across service restarts
+- See [ER Diagram](docs/data-storage-er-diagram.html) for cache table schema
+
 ---
 
 ## 🗺️ Roadmap
