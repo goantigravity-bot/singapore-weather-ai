@@ -273,9 +273,11 @@ python test_api.py
 |:---|:---|:---|
 | `JAXA_USER` / `JAXA_PASS` | Yes | JAXA FTP credentials for satellite data |
 | `GEMINI_API_KEY` | Yes | Google Gemini API key for NLU smart queries |
-| `SENDER_EMAIL` / `SENDER_PASSWORD` | Optional | Gmail SMTP for training notifications |
+| `GEOCODING_PROVIDER` | No | `nominatim` (default) or `onemap` |
+| `ONEMAP_EMAIL` / `ONEMAP_PASSWORD` | Conditional | Required when `GEOCODING_PROVIDER=onemap` ([register](https://www.onemap.gov.sg/apidocs/register)) |
+| `SENDER_EMAIL` / `SENDER_PASSWORD` | No | Gmail SMTP for training notifications |
 | `S3_BUCKET` | Yes (prod) | AWS S3 bucket name |
-| `S3_ENDPOINT_URL` | Optional | Custom S3 endpoint (MinIO for local dev) |
+| `S3_ENDPOINT_URL` | No | Custom S3 endpoint (MinIO for local dev) |
 
 ### Converting Docs to HTML
 
