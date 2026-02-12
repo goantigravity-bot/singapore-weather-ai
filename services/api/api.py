@@ -32,6 +32,7 @@ import numpy as np
 import sqlite3
 import json
 from collections import Counter
+import db as weather_db
 import logging
 from monitor_api import router as monitor_router
 
@@ -75,6 +76,8 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+    # 创建新的结构化表
+    weather_db.create_tables()
 
 init_db()
 
@@ -258,7 +261,7 @@ def startup_event():
 
 @api_router.get("/health")
 def health():
-    return {"status": "ok", "version": "0.5.0", "service": "api"}
+    return {"status": "ok", "version": "0.7.0", "service": "api"}
 
 @api_router.get("/stations")
 def get_stations():
@@ -371,10 +374,13 @@ def predict_weather(
             "debug": raw.get('debug', ''),
         }
         
-        # 记录搜索历史：地点、预测结果、响应时间、IP
+        # 记录搜索历史与结构化预测结果
         if location:
+            elapsed_ms = (time.time() - _predict_start) * 1000
+            client_ip = request.client.host if request.client else None
+
+            # 旧表：保留兼容
             try:
-                elapsed_ms = (time.time() - _predict_start) * 1000
                 result_summary = json.dumps({
                     'rainfall': rain,
                     'description': raw.get('status', ''),
@@ -382,7 +388,6 @@ def predict_weather(
                     'humidity': current_humidity,
                     'recommendation': recommendation
                 }, ensure_ascii=False)
-                client_ip = request.client.host if request.client else None
                 conn = sqlite3.connect('weather.db')
                 c = conn.cursor()
                 c.execute(
@@ -392,7 +397,32 @@ def predict_weather(
                 conn.commit()
                 conn.close()
             except Exception as db_err:
-                logger.warning(f"DB log failed: {db_err}")
+                logger.warning(f"search_history write failed: {db_err}")
+
+            # 新表：结构化存储（独立 try，不受旧表影响）
+            try:
+                query_id = weather_db.save_user_activity(
+                    query=location,
+                    response_time_ms=round(elapsed_ms, 1),
+                    forecast_outcome=recommendation,
+                    ip_address=client_ip
+                )
+                place_id = weather_db.get_or_create_place(
+                    place_name=location, place_type="point",
+                    center_lat=lat, center_lon=lon
+                )
+                loc_ids = weather_db.save_locations_for_place(place_id, [(lat, lon)])
+                weather_db.save_forecast_results(query_id, [{
+                    "loc_id": loc_ids[0],
+                    "rainfall_mm": rain,
+                    "status": raw.get('status', 'Unknown'),
+                    "confidence": raw.get('confidence', 0.5),
+                    "is_risky": rain >= 2.0,
+                    "response_time_ms": round(elapsed_ms, 1),
+                    "forecast_time": target_time.isoformat(),
+                }])
+            except Exception as db_err:
+                logger.warning(f"Structured DB write failed: {db_err}")
         
         return response
         
@@ -470,15 +500,17 @@ def smart_query_endpoint(q: str, request: Request):
         # Inject parsed metadata for Frontend
         result['parsed'] = parsed
         
-        # 记录搜索历史：查询、结果摘要、响应时间、IP
+        # 记录搜索历史 + 结构化存储
+        elapsed_ms = (time.time() - _sq_start) * 1000
+        client_ip = request.client.host if request.client else None
+
+        # 旧表：保留兼容
         try:
-            elapsed_ms = (time.time() - _sq_start) * 1000
             result_summary = json.dumps({
                 'location': parsed.get('location', ''),
                 'advice': result.get('advice', ''),
                 'overall_risk': result.get('overall_risk', '')
             }, ensure_ascii=False)
-            client_ip = request.client.host if request.client else None
             conn = sqlite3.connect('weather.db')
             c = conn.cursor()
             c.execute(
@@ -488,7 +520,58 @@ def smart_query_endpoint(q: str, request: Request):
             conn.commit()
             conn.close()
         except Exception as db_err:
-            logger.warning(f"DB log failed: {db_err}")
+            logger.warning(f"search_history write failed: {db_err}")
+
+        # 新表：结构化存储（独立 try）
+        try:
+            forecast_outcome = result.get('recommendation', 'Unknown')
+            query_id = weather_db.save_user_activity(
+                query=q,
+                response_time_ms=round(elapsed_ms, 1),
+                forecast_outcome=forecast_outcome,
+                ip_address=client_ip
+            )
+
+            # 保存活动
+            weather_db.save_activity(
+                query_id=query_id,
+                activity_name=parsed.get('activity', 'General Activity'),
+                rain_tolerance=parsed.get('tolerance')
+            )
+
+            # 保存地点和坐标
+            location_name = parsed.get('location', 'Singapore')
+            details = result.get('details', [])
+            place_type = 'path' if len(details) > 1 else 'point'
+            center_lat = details[0]['lat'] if details else None
+            center_lon = details[0]['lon'] if details else None
+            place_id = weather_db.get_or_create_place(
+                place_name=location_name, place_type=place_type,
+                center_lat=center_lat, center_lon=center_lon
+            )
+
+            # 保存各点坐标
+            if details:
+                points = [{"lat": d['lat'], "lon": d['lon'], "point_index": d.get('point_index', i+1)}
+                          for i, d in enumerate(details)]
+                loc_ids = weather_db.save_locations_for_place(place_id, points)
+
+                # 保存各点的预测结果
+                forecast_records = []
+                for i, d in enumerate(details):
+                    forecast_records.append({
+                        "loc_id": loc_ids[i],
+                        "rainfall_mm": d.get('rainfall', 0),
+                        "status": d.get('status', 'Unknown'),
+                        "confidence": None,
+                        "is_risky": d.get('is_risky', False),
+                        "response_time_ms": round(elapsed_ms / max(len(details), 1), 1),
+                        "forecast_time": datetime.now().isoformat(),
+                    })
+                weather_db.save_forecast_results(query_id, forecast_records)
+
+        except Exception as db_err:
+            logger.warning(f"Structured DB write failed: {db_err}")
         
         return result
     except Exception as e:
@@ -782,4 +865,10 @@ else:
     logger.warning(f"Frontend directory not found at {FRONTEND_DIR}. Skipping static file serving.")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import sys
+    # 默认 2 workers 以利用双核 vCPU，可通过 --workers N 覆盖
+    workers = 2
+    for i, arg in enumerate(sys.argv):
+        if arg == "--workers" and i + 1 < len(sys.argv):
+            workers = int(sys.argv[i + 1])
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, workers=workers)

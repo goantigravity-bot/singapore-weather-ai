@@ -4,6 +4,7 @@ import xarray as xr
 import os
 import glob
 import numpy as np
+
 from scipy.spatial import Delaunay
 from datetime import datetime, timedelta
 from weather_fusion_model import WeatherFusionNet
@@ -115,8 +116,12 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
     # (Assuming sat_ts is Local Time from CSV, which is usually UTC+8)
     utc_str = (sat_ts - timedelta(hours=8)).strftime('%Y%m%d_%H%M')
     
-    npy_pattern = f"NC_H09_{utc_str}_*.npy"
-    npy_files = glob.glob(os.path.join(processed_dir, npy_pattern))
+    # 兼容 Himawari-8 (H08) 和 Himawari-9 (H09) 两种卫星命名
+    npy_files = []
+    nc_files = []
+    for sat_prefix in ["NC_H08_", "NC_H09_"]:
+        npy_pattern = f"{sat_prefix}{utc_str}_*.npy"
+        npy_files.extend(glob.glob(os.path.join(processed_dir, npy_pattern)))
     
     files = []
     use_npy = False
@@ -126,9 +131,10 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
         use_npy = True
     else:
         # 2. Try Raw (.nc)
-        # Use UTC string pattern
-        pattern = f"NC_H09_{utc_str}_*.nc"
-        files = glob.glob(os.path.join(SAT_DIR, pattern))
+        for sat_prefix in ["NC_H08_", "NC_H09_"]:
+            pattern = f"{sat_prefix}{utc_str}_*.nc"
+            nc_files.extend(glob.glob(os.path.join(SAT_DIR, pattern)))
+        files = nc_files
     
     if not files:
         # Fallback to dummy name
@@ -336,20 +342,39 @@ import numpy as np
 import pandas as pd
 
 # --- Helper: Geocoding ---
+# L1: 进程内字典（避免每次查库），L2: SQLite 表（跨 worker 共享 + 重启持久化）
+_geocode_cache: dict[str, tuple[float, float]] = {}
+
 def geocode_location(address):
     """
     Convert address string to (lat, lon) using OpenStreetMap Nominatim API.
+    Two-tier cache: L1 in-memory dict → L2 SQLite table → Nominatim API.
+    Only successful results are cached; failures trigger retry on next call.
     """
-    # Nominatim requires a User-Agent
+    # L1: 进程内命中
+    if address in _geocode_cache:
+        return _geocode_cache[address]
+
+    # L2: SQLite 共享缓存（另一个 worker 可能已写入）
+    try:
+        from db import get_geocode_cache, set_geocode_cache
+        cached = get_geocode_cache(address)
+        if cached:
+            _geocode_cache[address] = cached
+            return cached
+    except Exception:
+        pass
+
+    # L3: 调用 Nominatim API
     headers = {'User-Agent': 'SingaporeWeatherAI/0.3'}
     url = "https://nominatim.openstreetmap.org/search"
     
-    # Append ", Singapore" to ensure we search locally
+    search_addr = address
     if "singapore" not in address.lower():
-        address += ", Singapore"
+        search_addr = address + ", Singapore"
         
     params = {
-        'q': address,
+        'q': search_addr,
         'format': 'json',
         'limit': 1
     }
@@ -361,10 +386,16 @@ def geocode_location(address):
         if data:
             lat = float(data[0]['lat'])
             lon = float(data[0]['lon'])
-            print(f"Geocoded '{address}': ({lat:.4f}, {lon:.4f})")
+            print(f"Geocoded '{search_addr}': ({lat:.4f}, {lon:.4f})")
+            _geocode_cache[address] = (lat, lon)
+            # 写入 L2 供其他 worker 和重启后使用
+            try:
+                set_geocode_cache(address, lat, lon)
+            except Exception:
+                pass
             return lat, lon
         else:
-            print(f"Geocoding failed: No results for '{address}'")
+            print(f"Geocoding failed: No results for '{search_addr}'")
             return None, None
             
     except Exception as e:
@@ -432,14 +463,32 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
     return R * c
 
+# Overpass API 缓存：L1 进程内字典 + L2 SQLite 持久化
+_osm_cache: dict[str, dict] = {}
+
 def fetch_osm_path(query):
-    print(f"Querying Overpass API for: {query}")
+    # L1: 进程内命中
+    if query in _osm_cache:
+        print(f"Overpass API L1 cache hit for: {query}")
+        return _osm_cache[query]
+
+    # L2: SQLite 共享缓存
+    try:
+        from db import get_overpass_cache, set_overpass_cache
+        cached = get_overpass_cache(query)
+        if cached:
+            print(f"Overpass API L2 cache hit for: {query}")
+            _osm_cache[query] = cached
+            return cached
+    except Exception:
+        pass
+
+    # L3: 调用 Overpass API
+    print(f"Querying Overpass API for: {query} (cache miss)")
     overpass_url = "http://overpass-api.de/api/interpreter"
     
-    # Singapore Bounding Box
     bbox = "1.15,103.55,1.48,104.1"
     
-    # Ask for tags so we can filter
     overpass_query = f"""
     [out:json][timeout:45];
     (
@@ -457,10 +506,8 @@ def fetch_osm_path(query):
             return None
 
         # --- INTELLIGENT FILTERING ---
-        # Only accept if it looks like a hiking/cycling path
         valid_path_elements = []
         
-        # Keywords that FORCE path mode (override tag checks)
         path_keywords = ["corridor", "trail", "connector", "pcn", "track", "walk", "greenway"]
         force_path = any(k in query.lower() for k in path_keywords)
         
@@ -472,22 +519,14 @@ def fetch_osm_path(query):
             leisure = tags.get('leisure', '')
             route = tags.get('route', '')
             
-            # Acceptance Criteria
             is_cycleway = highway in ['cycleway', 'path', 'footway', 'pedestrian', 'track', 'steps']
             is_route = route in ['hiking', 'foot', 'bicycle']
             is_leisure_track = leisure == 'track'
-            
-            # Rejection Criteria (Vehicle Roads)
-            # e.g. Commonwealth Ave is primary/residential
             is_vehicle = highway in ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential', 'service', 'unclassified']
             
             if force_path:
-                # If user typed "Rail Corridor", accept it even if some segments are weird, 
-                # but assume Overpass returned mostly correct things.
-                # Just avoid obvious huge roads if possible, or accept if it's the only match.
                  valid_path_elements.append(el)
             else:
-                # Strict Mode for generic queries like "Sentosa"
                 if (is_cycleway or is_route or is_leisure_track) and not is_vehicle:
                     valid_path_elements.append(el)
                     
@@ -496,8 +535,14 @@ def fetch_osm_path(query):
             return None
             
         print(f"Path Filtering: Found {len(valid_path_elements)} valid path segments.")
-        # Return filtered data structure
-        return {'elements': valid_path_elements}
+        result = {'elements': valid_path_elements}
+        _osm_cache[query] = result
+        # 写入 L2 供其他 worker 和重启后使用
+        try:
+            set_overpass_cache(query, result)
+        except Exception:
+            pass
+        return result
         
     except Exception as e:
         print(f"Overpass Error: {e}")

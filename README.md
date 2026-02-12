@@ -1,6 +1,6 @@
 # 🌦️ Singapore Weather AI
 
-[![Version](https://img.shields.io/badge/version-0.5-blue.svg)](./docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.7-blue.svg)](./docs/CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-≥3.10-green.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
 

@@ -5,10 +5,14 @@ Handles Natural Language Processing (Regex/Keywords) and Activity Advice.
 """
 import sys
 import re
+import logging
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import numpy as np
 from predict import fetch_osm_path, process_and_sample_path, predict_ensemble, load_system, get_station_mapping
+
+logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 def convert_numpy(obj):
@@ -131,8 +135,9 @@ def analyze_path_weather(location, start_hour, end_hour, tolerance, model, df, s
     
     if osm_data:
         points = process_and_sample_path(osm_data, sample_dist_km=2.0)
-    else:
-        # Fallback: Geocode single point
+
+    # Overpass 无数据 或 路径采样返回空列表 → 降级为 geocoding 单点
+    if not points:
         from predict import geocode_location
         lat, lon = geocode_location(location)
         if lat and lon:
@@ -141,20 +146,40 @@ def analyze_path_weather(location, start_hour, end_hour, tolerance, model, df, s
             return {"error": "Could not locate location"}
 
     # 2. Iterate Time and Space
-    # Reference Time
     ref_time = df['timestamp'].max()
     
-    # Analyze
     risk_points = 0
     total_points = len(points)
     max_rain = 0.0
-    
     details = []
-    
-    for i, pt in enumerate(points):
+
+    def _predict_point(args):
+        """单点推理 worker，返回 (index, lat, lon, result)"""
+        i, pt = args
         lat, lon = pt
-        res = predict_ensemble(lat, lon, ref_time, model, df, stations_meta)
-        
+        try:
+            res = predict_ensemble(lat, lon, ref_time, model, df, stations_meta)
+        except Exception as e:
+            # 单点失败不影响其他点，返回 None 让汇总阶段跳过
+            logger.warning(f"predict_ensemble failed for point {i} ({lat},{lon}): {e}")
+            res = None
+        return i, float(lat), float(lon), res
+
+    # 单点不走线程池（避免额外开销），多点并行推理
+    # max_workers=3 匹配 t3.small 2 vCPU，避免过度线程竞争
+    if total_points <= 1:
+        raw_results = [_predict_point((0, points[0]))]
+    else:
+        try:
+            with ThreadPoolExecutor(max_workers=3) as pool:
+                raw_results = list(pool.map(_predict_point, enumerate(points)))
+        except Exception as e:
+            # 线程池失败时降级为串行执行
+            logger.warning(f"ThreadPool failed, falling back to serial: {e}")
+            raw_results = [_predict_point((i, pt)) for i, pt in enumerate(points)]
+
+    # 按 point_index 顺序组装结果
+    for i, lat, lon, res in sorted(raw_results, key=lambda x: x[0]):
         if res:
             rain = res['rainfall']
             if rain > max_rain:
@@ -162,15 +187,14 @@ def analyze_path_weather(location, start_hour, end_hour, tolerance, model, df, s
                 
             status_icon = "☁️" if res['status'] == 'Cloudy' else ("🌧️" if 'Rain' in res['status'] else "☀️")
             
-            # Risk Check
             is_risky = rain > tolerance
             if is_risky:
                 risk_points += 1
                 
             details.append({
                 "point_index": i + 1,
-                "lat": float(lat),
-                "lon": float(lon),
+                "lat": lat,
+                "lon": lon,
                 "status": res['status'],
                 "rainfall": float(f"{rain:.2f}"),
                 "icon": status_icon,

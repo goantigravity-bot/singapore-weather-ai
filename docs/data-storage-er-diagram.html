@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather AI — Data Storage ER Diagram</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--success);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            margin-left: 0.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card h2 .icon {
+            font-size: 1.3rem;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            padding: 1rem 0;
+            overflow-x: auto;
+        }
+
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            color: var(--text-muted);
+        }
+
+        td:first-child {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        tr:hover td {
+            background: rgba(56, 189, 248, 0.04);
+        }
+
+        /* Stats bar */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-item {
+            background: rgba(56, 189, 248, 0.06);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            text-align: center;
+        }
+
+        .stat-item .value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-item .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Index pills */
+        .index-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 0.6rem;
+        }
+
+        .index-item {
+            background: rgba(167, 139, 250, 0.06);
+            border: 1px solid rgba(167, 139, 250, 0.15);
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+        }
+
+        .index-item .idx-name {
+            font-family: 'SF Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent2);
+        }
+
+        .index-item .idx-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Weather AI — Data Storage Schema</h1>
+        <p class="subtitle">
+            Entity-Relationship Diagram & Table Reference — Generated 2026-02-13
+            <span class="badge">✓ 11 tests passed</span>
+        </p>
+
+        <!-- Stats Overview -->
+        <div class="stats">
+            <div class="stat-item">
+                <div class="value">9</div>
+                <div class="label">Tables</div>
+            </div>
+            <div class="stat-item">
+                <div class="value">5</div>
+                <div class="label">Indexes</div>
+            </div>
+            <div class="stat-item">
+                <div class="value">5</div>
+                <div class="label">Foreign Keys</div>
+            </div>
+            <div class="stat-item">
+                <div class="value">SQLite</div>
+                <div class="label">Database Engine</div>
+            </div>
+        </div>
+
+        <!-- ER Diagram -->
+        <div class="card">
+            <h2><span class="icon">🗂️</span> Entity-Relationship Diagram</h2>
+            <div class="mermaid">
+                erDiagram
+                search_history {
+                INTEGER id PK "Auto increment"
+                TEXT query "Location or NL query"
+                TEXT ip_address "Client IP"
+                DATETIME timestamp "Search time"
+                REAL response_time_ms "API latency"
+                TEXT response_result "JSON summary"
+                }
+
+                user_activity {
+                INTEGER query_id PK "Auto increment"
+                TEXT query "Natural language query"
+                REAL response_time_ms "API latency"
+                TEXT forecast_outcome "GO CAUTION NOT_RECOMMENDED"
+                TEXT ip_address "Client IP"
+                DATETIME created_at "Auto timestamp"
+                }
+
+                place {
+                INTEGER place_id PK "Auto increment"
+                TEXT place_name UK "Unique constraint"
+                TEXT place_type "point path area"
+                REAL center_lat "Center latitude"
+                REAL center_lon "Center longitude"
+                DATETIME created_at "Auto timestamp"
+                }
+
+                location {
+                INTEGER loc_id PK "Auto increment"
+                INTEGER place_id FK "References place"
+                REAL lat "Latitude"
+                REAL lon "Longitude"
+                INTEGER point_index "Order in path"
+                TEXT label "Optional label"
+                }
+
+                activity {
+                INTEGER activity_id PK "Auto increment"
+                INTEGER query_id FK "References user_activity"
+                TEXT activity_name "Cycling Walking etc"
+                REAL rain_tolerance "mm threshold"
+                }
+
+                forecast_result {
+                INTEGER forecast_id PK "Auto increment"
+                INTEGER query_id FK "References user_activity"
+                INTEGER loc_id FK "References location"
+                REAL rainfall_mm "Predicted rainfall"
+                TEXT status "Clear Light_Rain Heavy_Rain"
+                REAL confidence "0 to 1"
+                INTEGER is_risky "Boolean 0 or 1"
+                REAL response_time_ms "Per-point latency"
+                DATETIME forecast_time "Prediction target"
+                DATETIME created_at "Auto timestamp"
+                }
+
+                actual_result {
+                INTEGER actual_id PK "Auto increment"
+                INTEGER loc_id FK "References location"
+                REAL actual_rainfall_mm "Observed rainfall"
+                TEXT source "DEFAULT NEA"
+                DATETIME observation_time "Observation time"
+                DATETIME created_at "Auto timestamp"
+                }
+
+                geocode_cache {
+                TEXT address PK "Location name"
+                REAL lat "Cached latitude"
+                REAL lon "Cached longitude"
+                DATETIME created_at "Auto timestamp"
+                }
+
+                overpass_cache {
+                TEXT query PK "OSM query string"
+                TEXT data_json "JSON path data"
+                DATETIME created_at "Auto timestamp"
+                }
+
+                user_activity ||--o{ activity : "has activities"
+                user_activity ||--o{ forecast_result : "produces forecasts"
+                place ||--o{ location : "contains points"
+                location ||--o{ forecast_result : "predicted at"
+                location ||--o{ actual_result : "observed at"
+            </div>
+        </div>
+
+        <!-- Data Flow -->
+        <div class="card">
+            <h2><span class="icon">🔄</span> Data Flow — Smart Query Pipeline</h2>
+            <div class="mermaid">
+                flowchart LR
+                subgraph UserInput["User Input"]
+                Q["Natural Language Query"]
+                end
+
+                subgraph Parse["Query Parsing"]
+                PA["parse_query\nExtract activity, location, time"]
+                end
+
+                subgraph Predict["AI Prediction"]
+                PE["predict_ensemble\nForecast at each point"]
+                end
+
+                subgraph Storage["SQLite Storage"]
+                UA["user_activity"]
+                ACT["activity"]
+                PL["place"]
+                LOC["location"]
+                FR["forecast_result"]
+                end
+
+                subgraph Accuracy["Accuracy Tracking"]
+                AR["actual_result\nNEA observations"]
+                end
+
+                Q --> PA --> UA
+                PA --> ACT
+                PA --> PL --> LOC
+                PE --> FR
+                LOC --> FR
+                LOC --> AR
+
+                subgraph Cache["L2 Cache Layer"]
+                GC["geocode_cache"]
+                OC["overpass_cache"]
+                end
+
+                PA -.->|"location lookup"| GC
+                PA -.->|"path lookup"| OC
+                GC -.-> LOC
+                OC -.-> LOC
+
+                style Storage fill:#1e293b,stroke:#38bdf8,stroke-width:2px
+                style Accuracy fill:#1e293b,stroke:#a78bfa,stroke-width:2px
+                style Cache fill:#1e293b,stroke:#4ade80,stroke-width:2px
+            </div>
+        </div>
+
+        <!-- Table Descriptions -->
+        <div class="card">
+            <h2><span class="icon">📋</span> Table Descriptions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Table</th>
+                        <th>Purpose</th>
+                        <th>Relationships</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>search_history</td>
+                        <td>Legacy search logging — powers Popular Searches aggregation</td>
+                        <td>Standalone</td>
+                    </tr>
+                    <tr>
+                        <td>user_activity</td>
+                        <td>Structured query record with response time and forecast outcome</td>
+                        <td>→ activity, → forecast_result</td>
+                    </tr>
+                    <tr>
+                        <td>place</td>
+                        <td>Named geographic entity (point, path, or area) — deduplicated by name</td>
+                        <td>→ location</td>
+                    </tr>
+                    <tr>
+                        <td>location</td>
+                        <td>Individual lat/lon coordinate point belonging to a place</td>
+                        <td>→ forecast_result, → actual_result</td>
+                    </tr>
+                    <tr>
+                        <td>activity</td>
+                        <td>Detected outdoor activity with rain tolerance threshold</td>
+                        <td>← user_activity</td>
+                    </tr>
+                    <tr>
+                        <td>forecast_result</td>
+                        <td>AI prediction per query per location point with confidence score</td>
+                        <td>← user_activity, ← location</td>
+                    </tr>
+                    <tr>
+                        <td>actual_result</td>
+                        <td>Real-world observed rainfall from NEA for forecast accuracy tracking</td>
+                        <td>← location</td>
+                    </tr>
+                    <tr>
+                        <td>geocode_cache</td>
+                        <td>L2 shared cache — Nominatim geocoding results (cross-worker, persistent)</td>
+                        <td>Standalone</td>
+                    </tr>
+                    <tr>
+                        <td>overpass_cache</td>
+                        <td>L2 shared cache — OSM path data as JSON (cross-worker, persistent)</td>
+                        <td>Standalone</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Indexes -->
+        <div class="card">
+            <h2><span class="icon">⚡</span> Query Optimization Indexes</h2>
+            <div class="index-grid">
+                <div class="index-item">
+                    <div class="idx-name">idx_location_place</div>
+                    <div class="idx-desc">location(place_id) — Fast lookup of points within a place</div>
+                </div>
+                <div class="index-item">
+                    <div class="idx-name">idx_forecast_query</div>
+                    <div class="idx-desc">forecast_result(query_id) — All forecasts for a query</div>
+                </div>
+                <div class="index-item">
+                    <div class="idx-name">idx_forecast_loc</div>
+                    <div class="idx-desc">forecast_result(loc_id) — Forecasts at a location</div>
+                </div>
+                <div class="index-item">
+                    <div class="idx-name">idx_actual_loc</div>
+                    <div class="idx-desc">actual_result(loc_id) — Actuals at a location</div>
+                </div>
+                <div class="index-item">
+                    <div class="idx-name">idx_actual_time</div>
+                    <div class="idx-desc">actual_result(observation_time) — Time-range queries</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            Weather AI — Data Storage Schema v1.1 &mdash; SQLite &mdash; Module: services/api/db.py
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+
+</html>
