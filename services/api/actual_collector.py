@@ -148,6 +148,7 @@ def run_backtest_cycle(predict_fn, model, df, stations_meta_model):
                 continue
 
             # 保存为 place + location + forecast_result
+            # forecast_time 用当前时间（而非训练数据时间），确保 actual 匹配窗口正确
             place_name = f"backtest:{loc['name']}"
             place_id = weather_db.get_or_create_place(
                 place_name=place_name, place_type="point",
@@ -165,7 +166,7 @@ def run_backtest_cycle(predict_fn, model, df, stations_meta_model):
                     "confidence": raw.get("confidence", 0.5),
                     "is_risky": raw.get("rainfall", 0) >= 2.0,
                     "response_time_ms": None,
-                    "forecast_time": target_time.isoformat(),
+                    "forecast_time": datetime.now().isoformat(),
                 }],
                 source="backtest"
             )

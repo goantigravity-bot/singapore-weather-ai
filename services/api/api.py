@@ -257,16 +257,21 @@ def startup_event():
     except Exception as e:
         logger.error(f"API Startup Failed: {e}")
 
-    # Forecast vs Actual 闭环：启动后台采集线程
+    # Forecast vs Actual 闭环：仅一个 worker 启动采集线程（文件锁去重）
     try:
+        import fcntl
         import actual_collector
+        _collector_lock = open("/tmp/weather-collector.lock", "w")
+        fcntl.flock(_collector_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         actual_collector.start_collector(
             predict_fn=predict_ensemble,
             get_model_fn=lambda: model,
             get_df_fn=lambda: df,
             get_stations_fn=lambda: stations_meta,
         )
-        logger.info("Actual collector thread started")
+        logger.info("Actual collector thread started (this worker owns the lock)")
+    except BlockingIOError:
+        logger.info("Collector already running in another worker, skipping")
     except Exception as e:
         logger.warning(f"Actual collector start failed: {e}")
 
