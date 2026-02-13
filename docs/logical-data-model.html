@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logical Data Model — Weather AI</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --muted: #8b949e;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --orange: #d29922;
+            --red: #f85149;
+            --purple: #bc8cff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.3rem;
+            color: var(--accent);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            margin: 1.5rem 0 0.7rem;
+            color: var(--purple);
+        }
+
+        .meta {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .meta span {
+            margin-right: 1.5rem;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            color: var(--muted);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: var(--surface);
+            color: var(--accent);
+            text-align: left;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--border);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 0.5rem 0.8rem;
+            border: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: rgba(88, 166, 255, 0.05);
+        }
+
+        td:first-child {
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .check {
+            color: var(--green);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--border);
+        }
+
+        .mermaid-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 0.3rem;
+        }
+
+        .badge-fact {
+            background: rgba(248, 81, 73, 0.15);
+            color: var(--red);
+        }
+
+        .badge-dim {
+            background: rgba(88, 166, 255, 0.15);
+            color: var(--accent);
+        }
+
+        .badge-measure {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--green);
+        }
+
+        .badge-master {
+            background: rgba(210, 153, 34, 0.15);
+            color: var(--orange);
+        }
+
+        .badge-tx {
+            background: rgba(188, 140, 255, 0.15);
+            color: var(--purple);
+        }
+
+        .badge-cache {
+            background: rgba(139, 148, 158, 0.15);
+            color: var(--muted);
+        }
+
+        .star-schema {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            white-space: pre;
+            overflow-x: auto;
+            line-height: 1.5;
+            color: var(--muted);
+        }
+
+        .section-intro {
+            max-width: 800px;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            td,
+            th {
+                padding: 0.3rem 0.5rem;
+            }
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                color: #000;
+            }
+
+            th {
+                background: #f0f0f0;
+                color: #000;
+            }
+
+            td {
+                border-color: #ccc;
+            }
+
+            .mermaid-container {
+                border-color: #ccc;
+                background: #fafafa;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>📐 Logical Data Model — Weather AI</h1>
+    <div class="meta">
+        <span>📅 2026-02-13</span>
+        <span>🗄️ Source: data-storage-er-diagram (9 tables)</span>
+        <span>🎯 Target: Databricks / Snowflake</span>
+    </div>
+
+    <!-- ============================================ -->
+    <h2>1. Fact, Dimension & Measurement</h2>
+
+    <h3>1.1 Fact Tables <span class="badge badge-fact">FACT</span></h3>
+    <p class="section-intro">Each row represents a business event that occurred at a specific point in time.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Fact Table</th>
+                <th>Grain (每行代表)</th>
+                <th>Source Entity</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>fact_forecast</td>
+                <td>One prediction at one location at one time</td>
+                <td>forecast_result</td>
+                <td>Transactional</td>
+            </tr>
+            <tr>
+                <td>fact_observation</td>
+                <td>One actual weather reading at one location</td>
+                <td>actual_result</td>
+                <td>Transactional</td>
+            </tr>
+            <tr>
+                <td>fact_user_query</td>
+                <td>One user search / smart-query request</td>
+                <td>user_activity + search_history</td>
+                <td>Transactional</td>
+            </tr>
+            <tr>
+                <td>fact_training_run</td>
+                <td>One model training batch completion</td>
+                <td>TrainingHistoryItem</td>
+                <td>Periodic Snapshot</td>
+            </tr>
+            <tr>
+                <td>fact_sensor_reading</td>
+                <td>One sensor metric at one station at one time</td>
+                <td>SensorData</td>
+                <td>Periodic Snapshot</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>1.2 Dimension Tables <span class="badge badge-dim">DIM</span></h3>
+    <p class="section-intro">Provide descriptive context for slicing, filtering, and grouping facts.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Dimension</th>
+                <th>Source</th>
+                <th>Role</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>dim_time</td>
+                <td>Derived</td>
+                <td>When (role-playing: forecast_time, observation_time, query_time)</td>
+                <td>Role-playing</td>
+            </tr>
+            <tr>
+                <td>dim_date</td>
+                <td>Derived</td>
+                <td>Date-level aggregation</td>
+                <td>Conformed</td>
+            </tr>
+            <tr>
+                <td>dim_location</td>
+                <td>location + geocode_cache</td>
+                <td>Where (lat, lon, label)</td>
+                <td>Conformed</td>
+            </tr>
+            <tr>
+                <td>dim_place</td>
+                <td>place</td>
+                <td>Named geographic entity grouping locations</td>
+                <td>Outrigger</td>
+            </tr>
+            <tr>
+                <td>dim_station</td>
+                <td>Station</td>
+                <td>Weather station metadata</td>
+                <td>Conformed</td>
+            </tr>
+            <tr>
+                <td>dim_metric_type</td>
+                <td>Derived</td>
+                <td>Metric category (rainfall, temperature, humidity, pm25)</td>
+                <td>Static</td>
+            </tr>
+            <tr>
+                <td>dim_model_version</td>
+                <td>ModelArtifact + MLflow</td>
+                <td>Model version, training date, performance</td>
+                <td>SCD Type 2</td>
+            </tr>
+            <tr>
+                <td>dim_activity</td>
+                <td>activity</td>
+                <td>Outdoor activity type + rain tolerance</td>
+                <td>Static</td>
+            </tr>
+            <tr>
+                <td>dim_geocoding_provider</td>
+                <td>Runtime config</td>
+                <td>Nominatim / OneMap</td>
+                <td>Junk</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>1.3 Measurements <span class="badge badge-measure">MEASURE</span></h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Measure</th>
+                <th>Type</th>
+                <th>Fact Table</th>
+                <th>Aggregation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>rainfall_mm</td>
+                <td>FLOAT</td>
+                <td>fact_forecast</td>
+                <td>AVG, SUM, MAX</td>
+            </tr>
+            <tr>
+                <td>confidence</td>
+                <td>FLOAT</td>
+                <td>fact_forecast</td>
+                <td>AVG</td>
+            </tr>
+            <tr>
+                <td>is_risky</td>
+                <td>BOOLEAN</td>
+                <td>fact_forecast</td>
+                <td>COUNT, SUM</td>
+            </tr>
+            <tr>
+                <td>response_time_ms</td>
+                <td>FLOAT</td>
+                <td>fact_forecast, fact_user_query</td>
+                <td>AVG, P95, MAX</td>
+            </tr>
+            <tr>
+                <td>actual_rainfall_mm</td>
+                <td>FLOAT</td>
+                <td>fact_observation</td>
+                <td>AVG, SUM, MAX</td>
+            </tr>
+            <tr>
+                <td>abs_error</td>
+                <td>FLOAT</td>
+                <td>Derived (forecast − actual)</td>
+                <td>AVG (= MAE)</td>
+            </tr>
+            <tr>
+                <td>query_count</td>
+                <td>INT</td>
+                <td>fact_user_query</td>
+                <td>COUNT</td>
+            </tr>
+            <tr>
+                <td>mae</td>
+                <td>FLOAT</td>
+                <td>fact_training_run</td>
+                <td>AVG, MIN</td>
+            </tr>
+            <tr>
+                <td>rmse</td>
+                <td>FLOAT</td>
+                <td>fact_training_run</td>
+                <td>AVG, MIN</td>
+            </tr>
+            <tr>
+                <td>temperature</td>
+                <td>FLOAT</td>
+                <td>fact_sensor_reading</td>
+                <td>AVG, MIN, MAX</td>
+            </tr>
+            <tr>
+                <td>humidity</td>
+                <td>FLOAT</td>
+                <td>fact_sensor_reading</td>
+                <td>AVG, MIN, MAX</td>
+            </tr>
+            <tr>
+                <td>pm25</td>
+                <td>FLOAT</td>
+                <td>fact_sensor_reading</td>
+                <td>AVG, MAX</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ============================================ -->
+    <h2>2. Dimension–Measurement Matrix (Bus Matrix)</h2>
+
+    <h3>2.1 Dimension × Fact</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Dimension \ Fact</th>
+                <th>fact_forecast</th>
+                <th>fact_observation</th>
+                <th>fact_user_query</th>
+                <th>fact_training_run</th>
+                <th>fact_sensor_reading</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>dim_time</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+            </tr>
+            <tr>
+                <td>dim_date</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+            </tr>
+            <tr>
+                <td>dim_location</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>dim_place</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>dim_station</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+            </tr>
+            <tr>
+                <td>dim_metric_type</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+            </tr>
+            <tr>
+                <td>dim_model_version</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>dim_activity</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>dim_geocoding_provider</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>2.2 Measure × Fact</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Measure \ Fact</th>
+                <th>fact_forecast</th>
+                <th>fact_observation</th>
+                <th>fact_user_query</th>
+                <th>fact_training_run</th>
+                <th>fact_sensor_reading</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>rainfall_mm</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+            </tr>
+            <tr>
+                <td>actual_rainfall_mm</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>abs_error (derived)</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>confidence</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>is_risky</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>response_time_ms</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>query_count</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>mae / rmse</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+                <td class="empty">—</td>
+            </tr>
+            <tr>
+                <td>temperature</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+            </tr>
+            <tr>
+                <td>humidity</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+            </tr>
+            <tr>
+                <td>pm25</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="empty">—</td>
+                <td class="check">✅</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ============================================ -->
+    <h2>3. Entity Types & Relationships</h2>
+
+    <h3>3.1 Entity Classification</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Entity</th>
+                <th>Type</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>user_activity</td>
+                <td><span class="badge badge-tx">Transaction</span></td>
+                <td>Initiated by user, immutable once created</td>
+            </tr>
+            <tr>
+                <td>forecast_result</td>
+                <td><span class="badge badge-tx">Transaction</span></td>
+                <td>Generated per prediction, immutable</td>
+            </tr>
+            <tr>
+                <td>actual_result</td>
+                <td><span class="badge badge-tx">Transaction</span></td>
+                <td>External observation, immutable</td>
+            </tr>
+            <tr>
+                <td>search_history</td>
+                <td><span class="badge badge-tx">Transaction</span></td>
+                <td>Legacy log, append-only</td>
+            </tr>
+            <tr>
+                <td>place</td>
+                <td><span class="badge badge-master">Master</span></td>
+                <td>Deduplicated reference, slowly grows</td>
+            </tr>
+            <tr>
+                <td>location</td>
+                <td><span class="badge badge-master">Master</span></td>
+                <td>Coordinate points, reference data</td>
+            </tr>
+            <tr>
+                <td>activity</td>
+                <td><span class="badge badge-dim">Reference</span></td>
+                <td>Lookup table for activity types</td>
+            </tr>
+            <tr>
+                <td>Station</td>
+                <td><span class="badge badge-dim">Reference</span></td>
+                <td>Weather station registry, rarely changes</td>
+            </tr>
+            <tr>
+                <td>geocode_cache</td>
+                <td><span class="badge badge-cache">Cache</span></td>
+                <td>Derived, regenerable, no business meaning</td>
+            </tr>
+            <tr>
+                <td>overpass_cache</td>
+                <td><span class="badge badge-cache">Cache</span></td>
+                <td>Derived, regenerable, no business meaning</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>3.2 Entity Relationship Diagram (Star Schema)</h3>
+
+    <div class="mermaid-container">
+        <pre class="mermaid">
+erDiagram
+    dim_place ||--o{ dim_location : "contains"
+    dim_location ||--o{ fact_forecast : "predicted at"
+    dim_location ||--o{ fact_observation : "observed at"
+    dim_station ||--o{ fact_sensor_reading : "measured by"
+    dim_station ||--o{ fact_observation : "source"
+    fact_user_query ||--o{ fact_forecast : "produces"
+    fact_user_query ||--o{ dim_activity : "has"
+    dim_time ||--o{ fact_forecast : "when"
+    dim_time ||--o{ fact_observation : "when"
+    dim_time ||--o{ fact_user_query : "when"
+    dim_time ||--o{ fact_training_run : "when"
+    dim_time ||--o{ fact_sensor_reading : "when"
+    dim_model_version ||--o{ fact_forecast : "used by"
+    dim_model_version ||--o{ fact_training_run : "produced"
+    dim_metric_type ||--o{ fact_sensor_reading : "classifies"
+    dim_geocoding_provider ||--o{ fact_forecast : "resolved by"
+
+    dim_place {
+        INT place_id PK
+        TEXT place_name UK
+        TEXT place_type
+        FLOAT center_lat
+        FLOAT center_lon
+    }
+
+    dim_location {
+        INT loc_id PK
+        INT place_id FK
+        FLOAT lat
+        FLOAT lon
+        INT point_index
+        TEXT label
+    }
+
+    dim_station {
+        TEXT station_id PK
+        TEXT station_name
+        FLOAT lat
+        FLOAT lon
+    }
+
+    dim_time {
+        BIGINT time_key PK
+        TIMESTAMP full_timestamp
+        INT hour
+        INT minute
+        TEXT time_of_day
+    }
+
+    dim_model_version {
+        INT version_id PK
+        TEXT model_path
+        DATE training_date
+        FLOAT best_mae
+        TEXT status
+    }
+
+    dim_metric_type {
+        INT metric_id PK
+        TEXT metric_name
+        TEXT unit
+    }
+
+    dim_activity {
+        INT activity_id PK
+        TEXT activity_name
+        FLOAT rain_tolerance
+    }
+
+    dim_geocoding_provider {
+        INT provider_id PK
+        TEXT provider_name
+        TEXT description
+    }
+
+    fact_forecast {
+        INT forecast_id PK
+        INT query_id FK
+        INT loc_id FK
+        BIGINT time_key FK
+        INT version_id FK
+        INT provider_id FK
+        FLOAT rainfall_mm
+        TEXT status
+        FLOAT confidence
+        BOOLEAN is_risky
+        FLOAT response_time_ms
+    }
+
+    fact_observation {
+        INT actual_id PK
+        INT loc_id FK
+        TEXT station_id FK
+        BIGINT time_key FK
+        FLOAT actual_rainfall_mm
+        TEXT source
+    }
+
+    fact_user_query {
+        INT query_id PK
+        INT loc_id FK
+        BIGINT time_key FK
+        INT provider_id FK
+        TEXT query_text
+        TEXT forecast_outcome
+        FLOAT response_time_ms
+        TEXT ip_address
+    }
+
+    fact_training_run {
+        INT run_id PK
+        INT version_id FK
+        BIGINT time_key FK
+        TEXT date_range
+        INT epochs
+        FLOAT mae
+        FLOAT rmse
+        TEXT duration
+        BOOLEAN success
+    }
+
+    fact_sensor_reading {
+        INT reading_id PK
+        TEXT station_id FK
+        INT metric_id FK
+        BIGINT time_key FK
+        FLOAT value
+    }
+  </pre>
+    </div>
+
+    <h3>3.3 Cardinality & Optionality</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Relationship</th>
+                <th>Cardinality</th>
+                <th>Optionality</th>
+                <th>Notation</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>place → location</td>
+                <td>1 : N</td>
+                <td>Mandatory → Mandatory</td>
+                <td>||--o{</td>
+                <td>Every place MUST have ≥1 location</td>
+            </tr>
+            <tr>
+                <td>location → forecast_result</td>
+                <td>1 : N</td>
+                <td>Mandatory → Optional</td>
+                <td>||--o{</td>
+                <td>A location MAY have 0 or many forecasts</td>
+            </tr>
+            <tr>
+                <td>location → actual_result</td>
+                <td>1 : N</td>
+                <td>Mandatory → Optional</td>
+                <td>||--o{</td>
+                <td>A location MAY have 0 or many observations</td>
+            </tr>
+            <tr>
+                <td>user_query → forecast</td>
+                <td>1 : N</td>
+                <td>Mandatory → Mandatory</td>
+                <td>||--o{</td>
+                <td>Every query produces ≥1 forecast</td>
+            </tr>
+            <tr>
+                <td>user_query → activity</td>
+                <td>1 : N</td>
+                <td>Mandatory → Optional</td>
+                <td>||--o{</td>
+                <td>A query MAY have 0 or many activities</td>
+            </tr>
+            <tr>
+                <td>station → sensor_reading</td>
+                <td>1 : N</td>
+                <td>Mandatory → Mandatory</td>
+                <td>||--o{</td>
+                <td>Every station reports readings</td>
+            </tr>
+            <tr>
+                <td>station → actual_result</td>
+                <td>1 : N</td>
+                <td>Mandatory → Optional</td>
+                <td>||--o{</td>
+                <td>A station MAY be observation source</td>
+            </tr>
+            <tr>
+                <td>model_version → forecast</td>
+                <td>1 : N</td>
+                <td>Mandatory → Mandatory</td>
+                <td>||--o{</td>
+                <td>Every forecast uses one model version</td>
+            </tr>
+            <tr>
+                <td>model_version → training_run</td>
+                <td>1 : 1</td>
+                <td>Mandatory → Mandatory</td>
+                <td>||--||</td>
+                <td>Each run produces one version</td>
+            </tr>
+            <tr>
+                <td>metric_type → sensor_reading</td>
+                <td>1 : N</td>
+                <td>Mandatory → Mandatory</td>
+                <td>||--o{</td>
+                <td>Every reading has a metric type</td>
+            </tr>
+            <tr>
+                <td>time → all facts</td>
+                <td>1 : N</td>
+                <td>Mandatory → Mandatory</td>
+                <td>||--o{</td>
+                <td>Every fact has a time dimension</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>3.4 Star Schema (Conceptual)</h3>
+
+    <div class="star-schema">
+        ┌──────────────┐
+        │ dim_time │
+        └──────┬───────┘
+        │
+        ┌──────────────┐ ┌──────┴─────────┐ ┌────────────────────┐
+        │ dim_place │ │ │ │ dim_model_version │
+        │ └ dim_loc │───▶│ fact_forecast │◀───│ │
+        │ │ │ │ └────────────────────┘
+        └──────────────┘ └──────┬─────────┘
+        │
+        ┌────────────┴────────────┐
+        │ dim_geocoding_provider │
+        └─────────────────────────┘
+
+
+        ┌──────────────┐
+        │ dim_time │
+        └──────┬───────┘
+        │
+        ┌──────────────┐ ┌──────┴───────────────┐ ┌──────────────────┐
+        │ dim_station │───▶│ fact_sensor_reading │◀───│ dim_metric_type │
+        └──────────────┘ └──────────────────────┘ └──────────────────┘
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1f6feb',
+                primaryBorderColor: '#58a6ff',
+                primaryTextColor: '#e6edf3',
+                lineColor: '#58a6ff',
+                secondaryColor: '#161b22',
+                tertiaryColor: '#21262d',
+            },
+            er: { useMaxWidth: true, fontSize: 13 }
+        });
+    </script>
+
+</body>
+
+</html>
