@@ -61,6 +61,7 @@ erDiagram
         INTEGER is_risky "Boolean: 0 or 1"
         REAL response_time_ms "Per-point latency"
         DATETIME forecast_time "Prediction target time"
+        TEXT source "user | backtest"
         DATETIME created_at "DEFAULT CURRENT_TIMESTAMP"
     }
 
@@ -69,6 +70,8 @@ erDiagram
         INTEGER loc_id FK "References location"
         REAL actual_rainfall_mm "Observed rainfall"
         TEXT source "DEFAULT NEA"
+        TEXT station_id "NEA station ID"
+        REAL match_distance_km "Distance to matched station"
         DATETIME observation_time "Observation timestamp"
         DATETIME created_at "DEFAULT CURRENT_TIMESTAMP"
     }
@@ -102,8 +105,8 @@ erDiagram
 | `place` | Geographic entity — a named point, path, or area (deduplicated) | → location |
 | `location` | Individual coordinate point belonging to a place | → forecast_result, → actual_result |
 | `activity` | Detected outdoor activity with rain tolerance threshold | ← user_activity |
-| `forecast_result` | AI prediction result per query per location point | ← user_activity, ← location |
-| `actual_result` | Real-world observed rainfall from NEA for accuracy tracking | ← location |
+| `forecast_result` | AI prediction result per query per location point. `source` distinguishes user queries from backtest | ← user_activity, ← location |
+| `actual_result` | Real-world observed rainfall from NEA, with `station_id` and `match_distance_km` for traceability | ← location |
 | `geocode_cache` | L2 shared cache — Nominatim geocoding results (cross-worker, persistent) | Standalone |
 | `overpass_cache` | L2 shared cache — OSM path data as JSON (cross-worker, persistent) | Standalone |
 
@@ -116,6 +119,7 @@ erDiagram
 | `idx_forecast_loc` | forecast_result | loc_id | Forecasts at a specific location |
 | `idx_actual_loc` | actual_result | loc_id | Actuals at a specific location |
 | `idx_actual_time` | actual_result | observation_time | Time-range queries on observations |
+| `idx_forecast_time` | forecast_result | forecast_time | Unmatched forecast lookup for actual collection |
 
 ## Data Flow
 
@@ -155,4 +159,15 @@ flowchart LR
     P -.->|"/smart-query"| OC
     GC -.-> LOC
     OC -.-> LOC
+
+    subgraph ClosedLoop["Forecast vs Actual (Background)"]
+        BT["Backtest: 10 locations x 10min"]
+        AC["Actual Collector: NEA API"]
+        AA["/accuracy/* Analysis"]
+    end
+
+    BT -->|"source=backtest"| FR
+    AC -->|"station_id + distance"| AR
+    FR -.->|"unmatched forecasts"| AC
+    FR & AR -.->|"MAE / bias"| AA
 ```

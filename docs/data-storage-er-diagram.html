@@ -208,7 +208,7 @@
                 <div class="label">Tables</div>
             </div>
             <div class="stat-item">
-                <div class="value">5</div>
+                <div class="value">6</div>
                 <div class="label">Indexes</div>
             </div>
             <div class="stat-item">
@@ -279,6 +279,7 @@
                 INTEGER is_risky "Boolean 0 or 1"
                 REAL response_time_ms "Per-point latency"
                 DATETIME forecast_time "Prediction target"
+                TEXT source "user or backtest"
                 DATETIME created_at "Auto timestamp"
                 }
 
@@ -287,6 +288,8 @@
                 INTEGER loc_id FK "References location"
                 REAL actual_rainfall_mm "Observed rainfall"
                 TEXT source "DEFAULT NEA"
+                TEXT station_id "NEA station ID"
+                REAL match_distance_km "Distance to station"
                 DATETIME observation_time "Observation time"
                 DATETIME created_at "Auto timestamp"
                 }
@@ -314,7 +317,7 @@
 
         <!-- Data Flow -->
         <div class="card">
-            <h2><span class="icon">🔄</span> Data Flow — Smart Query Pipeline</h2>
+            <h2><span class="icon">🔄</span> Data Flow — Smart Query Pipeline + Closed Loop</h2>
             <div class="mermaid">
                 flowchart LR
                 subgraph UserInput["User Input"]
@@ -337,8 +340,11 @@
                 FR["forecast_result"]
                 end
 
-                subgraph Accuracy["Accuracy Tracking"]
-                AR["actual_result\nNEA observations"]
+                subgraph ClosedLoop["Forecast vs Actual Loop"]
+                BT["Backtest\n10 locations x 10min"]
+                AC["Actual Collector\nNEA API"]
+                AR["actual_result"]
+                AA["/accuracy/* API"]
                 end
 
                 Q --> PA --> UA
@@ -346,6 +352,10 @@
                 PA --> PL --> LOC
                 PE --> FR
                 LOC --> FR
+                BT -->|"source=backtest"| FR
+                AC -->|"station_id + distance"| AR
+                FR -.->|"unmatched forecasts"| AC
+                FR & AR -.->|"MAE / bias"| AA
                 LOC --> AR
 
                 subgraph Cache["L2 Cache Layer"]
@@ -359,7 +369,7 @@
                 OC -.-> LOC
 
                 style Storage fill:#1e293b,stroke:#38bdf8,stroke-width:2px
-                style Accuracy fill:#1e293b,stroke:#a78bfa,stroke-width:2px
+                style ClosedLoop fill:#1e293b,stroke:#a78bfa,stroke-width:2px
                 style Cache fill:#1e293b,stroke:#4ade80,stroke-width:2px
             </div>
         </div>
@@ -403,12 +413,14 @@
                     </tr>
                     <tr>
                         <td>forecast_result</td>
-                        <td>AI prediction per query per location point with confidence score</td>
+                        <td>AI prediction per query per location point. <code>source</code> distinguishes user queries
+                            from backtest</td>
                         <td>← user_activity, ← location</td>
                     </tr>
                     <tr>
                         <td>actual_result</td>
-                        <td>Real-world observed rainfall from NEA for forecast accuracy tracking</td>
+                        <td>Real-world observed rainfall from NEA, with <code>station_id</code> and
+                            <code>match_distance_km</code> for traceability</td>
                         <td>← location</td>
                     </tr>
                     <tr>
@@ -449,11 +461,16 @@
                     <div class="idx-name">idx_actual_time</div>
                     <div class="idx-desc">actual_result(observation_time) — Time-range queries</div>
                 </div>
+                <div class="index-item">
+                    <div class="idx-name">idx_forecast_time</div>
+                    <div class="idx-desc">forecast_result(forecast_time) — Unmatched forecast lookup</div>
+                </div>
             </div>
         </div>
 
         <footer>
-            Weather AI — Data Storage Schema v1.1 &mdash; SQLite &mdash; Module: services/api/db.py
+            Weather AI — Data Storage Schema v1.2 &mdash; SQLite &mdash; Module: services/api/db.py &mdash; Updated
+            2026-02-13
         </footer>
     </div>
 
