@@ -69,15 +69,16 @@ Singapore has **60+ rainfall stations** across ~730 km². Typical nearest-statio
 | West / North (suburban) | 2–5 km |
 | Offshore islands (Pulau Ubin) | 5–8 km |
 
-### 3.3 Chosen Threshold: 5 km
+### 3.3 Chosen Threshold: 2 km
 
-**Decision**: `MAX_MATCH_DISTANCE_KM = 5.0`
+**Decision**: `MAX_MATCH_DISTANCE_KM = 2.0`
 
 | Option | Coverage | Accuracy Risk | Verdict |
 |---|---|---|---|
 | 100 m | < 5% of forecasts matched | None | ❌ Too restrictive, almost no data |
 | 1 km | ~40% | Low | ❌ Suburban areas excluded |
-| **5 km** | **~95%** | **Moderate for convective** | **✅ Best balance** |
+| **2 km** | **~70%** | **Low** | **✅ Chosen — prioritize accuracy over coverage** |
+| 5 km | ~95% | Moderate for convective | ❌ Convective rain cell boundary risk |
 | No limit | 100% | High for offshore | ❌ Unreliable data for islands |
 
 ### 3.4 Mitigation: Distance-Aware Quality
