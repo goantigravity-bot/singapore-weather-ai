@@ -6,7 +6,25 @@
 
 ## 1. Objective
 
-Build a closed-loop system that automatically collects actual rainfall observations after each forecast, enabling error analysis to identify model weaknesses and drive targeted improvements.
+Build a closed-loop system that continuously measures forecast accuracy, so that every future model improvement is **data-driven, not guesswork**.
+
+### Step 1 — Know Where the Model is Wrong (Closed-Loop Collection)
+- Run automatic predictions on 10 fixed benchmark locations every 10 minutes
+- Collect actual NEA rainfall readings for the same locations
+- Each record produces a pair: `predicted_rainfall` vs `actual_rainfall`
+
+### Step 2 — Find Error Patterns (Error Analysis)
+- Which **time of day** has the highest error? (afternoon convective rain? early morning?)
+- Which **area** has the highest error? (coastal? inland?)
+- Which **rainfall level** is poorly predicted? (heavy rain underestimated? false positives?)
+- Does error increase with station distance? (validate the 2 km threshold)
+
+### Step 3 — Guide Targeted Improvements (Future Actions)
+- Afternoon bias detected → add time-cyclical features to training
+- Heavy rain underestimated → adjust loss function weights
+- Specific area systematically off → investigate sensor coverage or spatial interpolation logic
+
+> **In one sentence**: We are not changing the model — we are building a system to **continuously measure model performance**, so that every subsequent improvement has data to back it up.
 
 ## 2. Functional Requirements
 
