@@ -257,6 +257,19 @@ def startup_event():
     except Exception as e:
         logger.error(f"API Startup Failed: {e}")
 
+    # Forecast vs Actual 闭环：启动后台采集线程
+    try:
+        import actual_collector
+        actual_collector.start_collector(
+            predict_fn=predict_ensemble,
+            get_model_fn=lambda: model,
+            get_df_fn=lambda: df,
+            get_stations_fn=lambda: stations_meta,
+        )
+        logger.info("Actual collector thread started")
+    except Exception as e:
+        logger.warning(f"Actual collector start failed: {e}")
+
 # --- Endpoints ---
 
 import geocoding
@@ -858,6 +871,38 @@ def monitor_logs(log_type: str, lines: int = 100):
         "path": path,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
+
+# ── Forecast vs Actual 闭环：误差分析 API ──
+
+@api_router.get("/accuracy/summary")
+def accuracy_summary():
+    """总体准确度概览"""
+    return weather_db.get_accuracy_summary()
+
+
+@api_router.get("/accuracy/by-hour")
+def accuracy_by_hour():
+    """按小时聚合的 MAE 和 bias"""
+    return weather_db.get_accuracy_by_hour()
+
+
+@api_router.get("/accuracy/by-location")
+def accuracy_by_location():
+    """按地点聚合的 MAE"""
+    return weather_db.get_accuracy_by_location()
+
+
+@api_router.get("/accuracy/by-rain-level")
+def accuracy_by_rain_level():
+    """按降雨量级聚合的 MAE 和 bias"""
+    return weather_db.get_accuracy_by_rain_level()
+
+
+@api_router.get("/accuracy/by-distance")
+def accuracy_by_distance():
+    """按匹配距离分桶的 MAE — 验证 2km 阈值"""
+    return weather_db.get_accuracy_by_distance()
+
 
 # Register Router (Match both /api prefix and root for dev convenience)
 app.include_router(api_router)

@@ -92,6 +92,7 @@ def create_tables():
                 is_risky INTEGER DEFAULT 0,
                 response_time_ms REAL,
                 forecast_time DATETIME,
+                source TEXT DEFAULT 'user',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (query_id) REFERENCES user_activity(query_id),
                 FOREIGN KEY (loc_id) REFERENCES location(loc_id)
@@ -104,6 +105,8 @@ def create_tables():
                 loc_id INTEGER NOT NULL,
                 actual_rainfall_mm REAL,
                 source TEXT DEFAULT 'NEA',
+                station_id TEXT,
+                match_distance_km REAL,
                 observation_time DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (loc_id) REFERENCES location(loc_id)
@@ -135,6 +138,18 @@ def create_tables():
         c.execute("CREATE INDEX IF NOT EXISTS idx_forecast_loc ON forecast_result(loc_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_actual_loc ON actual_result(loc_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_actual_time ON actual_result(observation_time)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_forecast_time ON forecast_result(forecast_time)")
+
+        # 迁移：为已存在的表添加新列（ALTER TABLE 是幂等安全的，列已存在会忽略）
+        for stmt in [
+            "ALTER TABLE forecast_result ADD COLUMN source TEXT DEFAULT 'user'",
+            "ALTER TABLE actual_result ADD COLUMN station_id TEXT",
+            "ALTER TABLE actual_result ADD COLUMN match_distance_km REAL",
+        ]:
+            try:
+                c.execute(stmt)
+            except sqlite3.OperationalError:
+                pass  # 列已存在，忽略
 
     logger.info("Database tables initialized")
 
@@ -217,18 +232,19 @@ def save_activity(query_id, activity_name, rain_tolerance=None):
         return c.lastrowid
 
 
-def save_forecast_results(query_id, results):
+def save_forecast_results(query_id, results, source="user"):
     """
     批量保存预测结果。
     results: list of dict with loc_id, rainfall_mm, status, confidence, is_risky, response_time_ms, forecast_time
+    source: 'user' (用户查询) 或 'backtest' (主动巡检)
     """
     with get_db() as conn:
         c = conn.cursor()
         for r in results:
             c.execute(
                 """INSERT INTO forecast_result
-                   (query_id, loc_id, rainfall_mm, status, confidence, is_risky, response_time_ms, forecast_time)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (query_id, loc_id, rainfall_mm, status, confidence, is_risky, response_time_ms, forecast_time, source)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     query_id,
                     r.get("loc_id"),
@@ -238,20 +254,148 @@ def save_forecast_results(query_id, results):
                     1 if r.get("is_risky") else 0,
                     r.get("response_time_ms"),
                     r.get("forecast_time"),
+                    source,
                 )
             )
 
 
-def save_actual_result(loc_id, actual_rainfall_mm, observation_time, source="NEA"):
-    """保存实际观测结果"""
+def save_actual_result(loc_id, actual_rainfall_mm, observation_time,
+                       source="NEA", station_id=None, match_distance_km=None):
+    """保存实际观测结果，附带匹配站点信息以追溯数据质量"""
     with get_db() as conn:
         c = conn.cursor()
         c.execute(
-            """INSERT INTO actual_result (loc_id, actual_rainfall_mm, source, observation_time)
-               VALUES (?, ?, ?, ?)""",
-            (loc_id, actual_rainfall_mm, source, observation_time)
+            """INSERT INTO actual_result
+               (loc_id, actual_rainfall_mm, source, station_id, match_distance_km, observation_time)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (loc_id, actual_rainfall_mm, source, station_id, match_distance_km, observation_time)
         )
         return c.lastrowid
+
+
+# ── Forecast vs Actual 闭环查询 ──
+
+def get_unmatched_forecasts(hours=2):
+    """获取最近 N 小时内尚未配对 actual 的 forecast 记录"""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT f.forecast_id, f.loc_id, f.rainfall_mm, f.forecast_time,
+                   f.confidence, f.source,
+                   l.lat, l.lon
+            FROM forecast_result f
+            JOIN location l ON f.loc_id = l.loc_id
+            LEFT JOIN actual_result a ON f.loc_id = a.loc_id
+                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+            WHERE a.actual_id IS NULL
+              AND f.forecast_time >= datetime('now', ? || ' hours')
+              AND f.forecast_time <= datetime('now')
+        """, (f"-{hours}",)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_accuracy_summary():
+    """总体准确度概览：MAE、bias、样本数、匹配率"""
+    with get_db() as conn:
+        row = conn.execute("""
+            SELECT
+                COUNT(*) AS sample_count,
+                AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
+                AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias,
+                AVG(a.match_distance_km) AS avg_match_distance_km
+            FROM forecast_result f
+            JOIN actual_result a ON f.loc_id = a.loc_id
+                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+        """).fetchone()
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM forecast_result").fetchone()
+        result = dict(row)
+        result["total_forecasts"] = total["cnt"]
+        result["match_rate"] = round(result["sample_count"] / max(total["cnt"], 1), 4)
+        return result
+
+
+def get_accuracy_by_hour():
+    """按小时聚合的 MAE 和 bias — 发现哪个时段预测最不准"""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT
+                CAST(strftime('%H', f.forecast_time) AS INTEGER) AS hour,
+                COUNT(*) AS count,
+                AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
+                AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias
+            FROM forecast_result f
+            JOIN actual_result a ON f.loc_id = a.loc_id
+                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+            GROUP BY hour
+            ORDER BY hour
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_accuracy_by_location():
+    """按地点聚合的 MAE — 发现哪个区域预测最不准"""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT
+                p.place_name,
+                COUNT(*) AS count,
+                AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
+                AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias
+            FROM forecast_result f
+            JOIN actual_result a ON f.loc_id = a.loc_id
+                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+            JOIN location l ON f.loc_id = l.loc_id
+            JOIN place p ON l.place_id = p.place_id
+            GROUP BY p.place_name
+            ORDER BY mae DESC
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_accuracy_by_rain_level():
+    """按降雨量级聚合 — 发现模型对哪种雨量预测偏差最大"""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT
+                CASE
+                    WHEN a.actual_rainfall_mm < 0.5 THEN 'No Rain'
+                    WHEN a.actual_rainfall_mm < 2.0 THEN 'Light'
+                    WHEN a.actual_rainfall_mm < 10.0 THEN 'Moderate'
+                    ELSE 'Heavy'
+                END AS rain_level,
+                COUNT(*) AS count,
+                AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
+                AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias
+            FROM forecast_result f
+            JOIN actual_result a ON f.loc_id = a.loc_id
+                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+            GROUP BY rain_level
+            ORDER BY mae DESC
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_accuracy_by_distance():
+    """按匹配距离分桶 — 验证 2km 阈值是否合理"""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT
+                CASE
+                    WHEN a.match_distance_km < 0.5 THEN '0-0.5km'
+                    WHEN a.match_distance_km < 1.0 THEN '0.5-1km'
+                    WHEN a.match_distance_km < 1.5 THEN '1-1.5km'
+                    ELSE '1.5-2km'
+                END AS distance_bin,
+                COUNT(*) AS count,
+                AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
+                AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias
+            FROM forecast_result f
+            JOIN actual_result a ON f.loc_id = a.loc_id
+                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+            WHERE a.match_distance_km IS NOT NULL
+            GROUP BY distance_bin
+            ORDER BY distance_bin
+        """).fetchall()
+        return [dict(r) for r in rows]
 
 
 # ── Geocode Cache（跨 worker 共享） ──
