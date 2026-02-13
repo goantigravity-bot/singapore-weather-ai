@@ -29,6 +29,39 @@ Build a closed-loop system that automatically collects actual rainfall observati
 | FR-2.3 | System SHALL provide MAE and bias aggregated by **rain level** (None / Light / Moderate / Heavy) |
 | FR-2.4 | System SHALL expose analysis results via REST API endpoints (`/accuracy/*`) |
 
+### FR-3: Proactive Backtesting (Seed Data)
+
+> Without user queries, no `forecast_result` is generated, and the closed loop produces no data. A proactive backtesting mechanism ensures continuous error data regardless of user activity.
+
+| ID | Requirement |
+|---|---|
+| FR-3.1 | System SHALL maintain a fixed list of **10 benchmark locations** near NEA stations (≤ 2 km) |
+| FR-3.2 | System SHALL run predictions on all benchmark locations **every 10 minutes** |
+| FR-3.3 | System SHALL store benchmark forecasts in `forecast_result` with `source='backtest'` to distinguish from user queries |
+| FR-3.4 | System SHALL generate ~1,440 forecast records per day (10 points × 144 intervals) |
+
+#### Benchmark Locations
+
+| # | Area | Test Location | NEA Station | Approx Distance |
+|---|---|---|---|---|
+| 1 | Central | Newton | S111 | ~0.5 km |
+| 2 | East | Changi Airport | S24 | ~0.3 km |
+| 3 | West | West Coast | S116 | ~0.8 km |
+| 4 | North | Woodlands | S104 | ~0.5 km |
+| 5 | NE | Ang Mo Kio | S109 | ~0.4 km |
+| 6 | SW | Tuas South | S115 | ~0.6 km |
+| 7 | South | Sentosa | S60 | ~0.3 km |
+| 8 | NW | Choa Chu Kang | S121 | ~0.5 km |
+| 9 | SE | East Coast Park | S107 | ~0.4 km |
+| 10 | West | Clementi | S50 | ~0.3 km |
+
+**Selection criteria**:
+- All within 2 km of an NEA station (guaranteed actual data match)
+- Geographically distributed across Singapore (cover all microclimates)
+- Mix of coastal (sea breeze effect) and inland (convective hotspots)
+
+**Daily data volume**: 10 points × 144 cycles × 365 days = **~525K records/year** — sufficient for statistical analysis across time, location, and rain level dimensions.
+
 ---
 
 ## 3. Station Matching Distance — Design Rationale
@@ -134,6 +167,8 @@ To address the inaccuracy risk for convective events at 3–5 km distance:
 
 | # | Question | Current Decision | To Validate |
 |---|---|---|---|
-| 1 | 5 km threshold appropriate? | Yes (collect now, validate later) | Compare MAE across distance bins after 1 week of data |
+| ~~1~~ | ~~Distance threshold?~~ | **2 km (decided)** | Compare MAE across distance bins after 1 week |
 | 2 | Time window for matching? | ≤ 30 min between forecast_time and observation_time | Check NEA data freshness (typically 5-min intervals) |
 | 3 | Multiple stations within range? | Use nearest only | Consider weighted average of 2-3 nearest stations |
+| 4 | Backtest interval? | Every 10 minutes | May adjust based on server load and data volume |
+| 5 | `forecast_result` schema change? | Add `source` column (`user` / `backtest`) | Needed to separate backtest data from user queries in analysis |
