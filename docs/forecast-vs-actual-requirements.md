@@ -39,6 +39,42 @@ Build a closed-loop system that automatically collects actual rainfall observati
 | FR-3.2 | System SHALL run predictions on all benchmark locations **every 10 minutes** |
 | FR-3.3 | System SHALL store benchmark forecasts in `forecast_result` with `source='backtest'` to distinguish from user queries |
 | FR-3.4 | System SHALL generate ~1,440 forecast records per day (10 points × 144 intervals) |
+| FR-3.5 | Each backtest cycle SHALL apply a **random offset (0–2 km)** in a random bearing from the base location to vary station-matching distance |
+
+#### Random Offset Strategy
+
+Each backtest round picks a random distance and direction from the base location, simulating real-world user queries that don't land exactly on a station:
+
+```
+          NEA Station (S111)
+               ●
+              /|\
+             / | \
+            /  |  \
+  0.3km ●  0.8km ●  1.7km ●    ← random offsets per cycle
+           \  |  /
+            \ | /
+             \|/
+    Base: Newton (1.3106, 103.8365)
+```
+
+**Implementation**:
+```python
+import random, math
+
+def random_offset(lat, lon, max_km=2.0):
+    """Generate a random point within max_km of (lat, lon)."""
+    # Random distance (uniform within circle)
+    dist_km = max_km * math.sqrt(random.random())
+    # Random bearing (0-360°)
+    bearing = random.uniform(0, 2 * math.pi)
+    # 1° lat ≈ 111 km, 1° lon ≈ 111 km × cos(lat)
+    dlat = (dist_km * math.cos(bearing)) / 111.0
+    dlon = (dist_km * math.sin(bearing)) / (111.0 * math.cos(math.radians(lat)))
+    return lat + dlat, lon + dlon
+```
+
+**Purpose**: validate that the station-matching algorithm produces accurate results across varying distances (0–2 km). After collecting data, we can plot **MAE vs match_distance_km** to verify the 2 km threshold.
 
 #### Benchmark Locations
 
@@ -59,6 +95,7 @@ Build a closed-loop system that automatically collects actual rainfall observati
 - All within 2 km of an NEA station (guaranteed actual data match)
 - Geographically distributed across Singapore (cover all microclimates)
 - Mix of coastal (sea breeze effect) and inland (convective hotspots)
+- Random offset ensures station-matching algorithm is tested at **all distances within 0–2 km**
 
 **Daily data volume**: 10 points × 144 cycles × 365 days = **~525K records/year** — sufficient for statistical analysis across time, location, and rain level dimensions.
 
