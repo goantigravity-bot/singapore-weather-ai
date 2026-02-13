@@ -258,11 +258,13 @@ def startup_event():
         logger.error(f"API Startup Failed: {e}")
 
     # Forecast vs Actual 闭环：仅一个 worker 启动采集线程（文件锁去重）
+    # _collector_lock_file 必须是全局变量，防止 GC 关闭文件句柄释放锁
+    global _collector_lock_file
     try:
         import fcntl
         import actual_collector
-        _collector_lock = open("/tmp/weather-collector.lock", "w")
-        fcntl.flock(_collector_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _collector_lock_file = open("/tmp/weather-collector.lock", "w")
+        fcntl.flock(_collector_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
         actual_collector.start_collector(
             predict_fn=predict_ensemble,
             get_model_fn=lambda: model,
