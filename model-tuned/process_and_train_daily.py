@@ -78,6 +78,32 @@ def save_state(state):
 # process_nc_to_npy 已迁移到 satellite_preprocessor.crop_nc_to_npy
 
 
+def _build_rain_sampler(subset, rain_threshold=0.1):
+    """构建 WeightedRandomSampler，平衡降雨/干燥样本在每个 batch 中的比例。"""
+    from torch.utils.data import WeightedRandomSampler
+
+    rain_flags = []
+    dataset = subset.dataset
+    for idx in subset.indices:
+        _, _, target = dataset[idx]
+        rain_flags.append(target.item() > rain_threshold)
+
+    n_rain = sum(rain_flags)
+    n_dry = len(rain_flags) - n_rain
+
+    if n_rain == 0 or n_dry == 0:
+        return None
+
+    w_rain = 1.0 / n_rain
+    w_dry = 1.0 / n_dry
+    weights = [w_rain if r else w_dry for r in rain_flags]
+
+    logger.info(
+        f"  ⚖️  Sampler: {n_rain} rain ({n_rain/len(rain_flags)*100:.1f}%) "
+        f"/ {n_dry} dry → balanced batches"
+    )
+    return WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
+
 def process_single_day(s3, day_info):
     """处理单日：下载 raw .nc → 裁剪 → 上传 .npy → 清理 .nc。"""
     date_compact = day_info['date_compact']
@@ -208,7 +234,12 @@ def train_on_accumulated_data(day_info):
         train_ds = torch.utils.data.Subset(dataset, range(split))
         val_ds = torch.utils.data.Subset(dataset, range(split, len(dataset)))
 
-        train_loader = torch.utils.data.DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
+        # 加权采样：平衡降雨/干燥样本在每个 batch 中的比例
+        sampler = _build_rain_sampler(train_ds)
+        train_loader = torch.utils.data.DataLoader(
+            train_ds, batch_size=BATCH_SIZE,
+            sampler=sampler, shuffle=(sampler is None)
+        )
         val_loader = torch.utils.data.DataLoader(val_ds, batch_size=BATCH_SIZE)
 
         # 加载或初始化模型

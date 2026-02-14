@@ -218,6 +218,42 @@ class WeatherDataset(Dataset):
         
         return sat_tensor, sensor_tensor, target_tensor
 
+def _build_weighted_sampler(subset, rain_threshold=0.1):
+    """
+    为训练集构建 WeightedRandomSampler，平衡降雨/干燥样本。
+
+    原理：降雨样本被抽中的概率提高到与干燥样本相当，
+    使每个 batch 中雨/干比例接近 50:50，而非原始的 2:98。
+    """
+    from torch.utils.data import WeightedRandomSampler
+
+    # 遍历 subset 拿到每个样本的 target（降雨量）
+    rain_flags = []
+    dataset = subset.dataset
+    for idx in subset.indices:
+        _, _, target = dataset[idx]
+        rain_flags.append(target.item() > rain_threshold)
+
+    n_rain = sum(rain_flags)
+    n_dry = len(rain_flags) - n_rain
+
+    if n_rain == 0 or n_dry == 0:
+        # 全雨或全干，无法平衡，回退到普通 shuffle
+        return None
+
+    # 权重 = 1/该类数量，让两类总权重相等
+    w_rain = 1.0 / n_rain
+    w_dry = 1.0 / n_dry
+    weights = [w_rain if is_rain else w_dry for is_rain in rain_flags]
+
+    logger.info(
+        f"⚖️  WeightedRandomSampler: {n_rain} rain ({n_rain/len(rain_flags)*100:.1f}%) "
+        f"/ {n_dry} dry ({n_dry/len(rain_flags)*100:.1f}%) → balanced batches"
+    )
+
+    return WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
+
+
 def get_dataloaders(csv_path, sat_dir, batch_size=4, split=0.8):
     dataset = WeatherDataset(csv_path, sat_dir)
 
@@ -237,12 +273,17 @@ def get_dataloaders(csv_path, sat_dir, batch_size=4, split=0.8):
         val_size = len(dataset) - 1
 
     train_ds, val_ds = torch.utils.data.random_split(dataset, [train_size, val_size])
-    
+
+    # 加权采样：平衡降雨/干燥样本在每个 batch 中的比例
+    sampler = _build_weighted_sampler(train_ds)
+
     # 多线程数据预取：4 个子进程并行准备下一批数据
     # pin_memory 加速 CPU→GPU 传输，persistent_workers 避免每 epoch 重建进程
     use_workers = 4 if batch_size > 1 else 0
     train_loader = DataLoader(
-        train_ds, batch_size=batch_size, shuffle=True,
+        train_ds, batch_size=batch_size,
+        sampler=sampler,             # sampler 和 shuffle 互斥
+        shuffle=(sampler is None),   # 仅 sampler 不可用时 fallback
         num_workers=use_workers, pin_memory=True,
         persistent_workers=(use_workers > 0)
     )
