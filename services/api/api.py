@@ -130,7 +130,9 @@ import threading
 import time
 import shutil
 import glob
-from datetime import datetime, timedelta
+import requests as http_requests
+from datetime import datetime, timedelta, timezone
+from climatology import get_climatology
 
 # --- S3 Config ---
 S3_BUCKET = os.environ.get("S3_BUCKET", "weather-ai-models-de08370c") # Default fallback
@@ -138,6 +140,108 @@ S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 MODEL_KEY = "models/latest.pth"
 DATA_KEY = "govdata/real_sensor_data.csv"
 SYNC_INTERVAL = 300 # 5 minutes
+SGT = timezone(timedelta(hours=8))
+
+# 上次成功拉取实时数据的时间，用于标注数据新鲜度
+_last_realtime_fetch: datetime | None = None
+
+
+def fetch_realtime_sensor_data():
+    """从 data.gov.sg API 拉取实时传感器数据，追加到 CSV 和内存 DataFrame。
+
+    每 5 分钟由后台线程调用，用户请求路径不会触发此函数。
+    四个 API 按站点 merge 后生成一行完整的传感器记录。
+    """
+    global df, _last_realtime_fetch
+    SGT_TZ = timezone(timedelta(hours=8))
+    TIMEOUT = 10  # 单个 API 最长等待
+
+    apis = {
+        "temperature": "https://api.data.gov.sg/v1/environment/air-temperature",
+        "rainfall":    "https://api.data.gov.sg/v1/environment/rainfall",
+        "humidity":    "https://api.data.gov.sg/v1/environment/relative-humidity",
+    }
+
+    raw: dict[str, dict[str, float]] = {}  # station_id -> {field: value}
+    timestamp_str = None
+
+    for field, url in apis.items():
+        try:
+            resp = http_requests.get(url, timeout=TIMEOUT)
+            data = resp.json()
+            items = data.get("items", [])
+            if not items:
+                continue
+            item = items[0]  # 最新一条
+            if timestamp_str is None:
+                timestamp_str = item.get("timestamp")
+            for reading in item.get("readings", []):
+                sid = reading.get("station_id", "")
+                val = reading.get("value")
+                if sid and val is not None:
+                    raw.setdefault(sid, {})[field] = float(val)
+        except Exception as e:
+            logger.warning(f"Realtime fetch {field} failed: {e}")
+
+    if not raw or not timestamp_str:
+        logger.warning("No realtime data fetched")
+        return
+
+    # PM2.5 用 v2 API，结构不同
+    try:
+        pm_resp = http_requests.get(
+            "https://api.data.gov.sg/v2/real-time/api/pm25", timeout=TIMEOUT
+        )
+        pm_data = pm_resp.json()
+        pm_items = pm_data.get("data", {}).get("items", [])
+        if pm_items:
+            pm_readings = pm_items[0].get("readings", {})
+            # PM2.5 按区域返回，取全国平均作为各站 fallback
+            pm_vals = [v for v in pm_readings.values() if isinstance(v, (int, float))]
+            avg_pm25 = sum(pm_vals) / len(pm_vals) if pm_vals else 15.0
+            for sid in raw:
+                raw[sid].setdefault("pm25", avg_pm25)
+    except Exception as e:
+        logger.warning(f"Realtime fetch PM2.5 failed: {e}")
+
+    # 转换为 DataFrame 行并追加
+    import pandas as pd
+    ts = pd.Timestamp(timestamp_str)
+    if ts.tzinfo is None:
+        ts = ts.tz_localize(SGT_TZ)
+
+    rows = []
+    for sid, vals in raw.items():
+        rows.append({
+            "timestamp": ts,
+            "sensor_id": sid,
+            "humidity": vals.get("humidity", 80.0),
+            "pm25": vals.get("pm25", 15.0),
+            "rainfall": vals.get("rainfall", 0.0),
+            "temperature": vals.get("temperature", 28.0),
+        })
+
+    new_df = pd.DataFrame(rows)
+
+    # 追加到内存 DataFrame（去重：同一 timestamp+station 只保留一条）
+    if df is not None and not df.empty:
+        df = pd.concat([df, new_df], ignore_index=True)
+        df = df.drop_duplicates(subset=["timestamp", "sensor_id"], keep="last")
+        # 只保留最近 7 天数据，避免内存无限增长
+        cutoff = ts - timedelta(days=7)
+        df = df[df["timestamp"] >= cutoff]
+    else:
+        df = new_df
+
+    # 追加到 CSV（持久化，重启后可恢复）
+    try:
+        csv_path = "real_sensor_data.csv"
+        new_df.to_csv(csv_path, mode="a", header=not os.path.exists(csv_path), index=False)
+    except Exception as e:
+        logger.warning(f"CSV append failed: {e}")
+
+    _last_realtime_fetch = datetime.now(SGT_TZ)
+    logger.info(f"📡 Realtime data fetched: {len(rows)} stations @ {ts}")
 
 def sync_satellite_data(s3, bucket):
     """Sync preprocessed satellite .npy from S3 (instead of raw .nc).
@@ -248,6 +352,12 @@ def sync_assets_thread():
             else:
                  logger.warning("Reload returned empty model/df. Keeping old state.")
 
+            # 4. 拉取实时传感器数据（追加到内存 df + CSV）
+            try:
+                fetch_realtime_sensor_data()
+            except Exception as e:
+                logger.warning(f"Realtime sensor fetch failed: {e}")
+
         except Exception as e:
              logger.error(f"Sync thread fatal error: {e}")
         
@@ -335,7 +445,8 @@ def predict_weather(
     request: Request,
     lat: Optional[float] = Query(None, description="Latitude"),
     lon: Optional[float] = Query(None, description="Longitude"),
-    location: Optional[str] = Query(None, description="Location Name")
+    location: Optional[str] = Query(None, description="Location Name"),
+    target_time: Optional[str] = Query(None, alias="time", description="Target time (ISO 8601). Omit for current time.")
 ):
     """Predict weather at specific coordinates or location name"""
     global model, df
@@ -357,15 +468,55 @@ def predict_weather(
                  
         if lat is None or lon is None:
              raise HTTPException(422, "Must provide 'lat'/'lon' OR 'location'.")
-             
-        # Determine target time (Latest usually)
-        target_time = df['timestamp'].max()
+
+        # 判定目标时间和数据来源
+        import pandas as pd
+        now_sgt = datetime.now(SGT)
+        data_latest = df['timestamp'].max() if df is not None and not df.empty else None
+
+        if target_time:
+            # 用户指定时间
+            req_time = pd.Timestamp(target_time)
+            if req_time.tzinfo is None:
+                req_time = req_time.tz_localize(SGT)
+            # 如果在传感器数据范围内 → actual；否则 → forecast
+            if data_latest and req_time <= data_latest:
+                data_source = "actual"
+            else:
+                data_source = "forecast"
+        else:
+            # 默认当前时间
+            req_time = now_sgt
+            # 数据是否足够新（15 分钟内）→ actual，否则用气候均值
+            if data_latest and (now_sgt - data_latest.to_pydatetime().astimezone(SGT)).total_seconds() < 900:
+                data_source = "actual"
+            elif data_latest:
+                data_source = "forecast"
+            else:
+                data_source = "climatology"
+
+        # 模型推理用的 target_time：如果有传感器数据就用数据最新时间，
+        # 否则用气候均值填充后仍用 CSV 最后时间
+        model_target_time = data_latest if data_latest else req_time
         
         # Use Ensemble Prediction
         raw = predict_ensemble(
-            lat, lon, target_time, model, df, stations_meta, ensemble_size=3
+            lat, lon, model_target_time, model, df, stations_meta, ensemble_size=3
         )
-        
+
+        # 如果模型预测失败（无传感器数据），尝试用气候均值构造输入
+        if not raw and data_source != "actual":
+            climate = get_climatology(req_time.month, req_time.hour)
+            raw = {
+                'rainfall': 0.0,
+                'status': 'Unknown (Climatology Fallback)',
+                'confidence': 0.3,
+                'cloud_cover': False,
+                'contributing_sensors': [],
+                'debug': 'Fallback: climatology data used (no sensor data available)',
+            }
+            data_source = "climatology"
+
         if not raw:
              raise HTTPException(404, "Prediction failed (No sensors nearby or data missing)")
         
@@ -389,6 +540,13 @@ def predict_weather(
                 current_temp = float(latest.get('temperature', 0)) if 'temperature' in latest else None
                 current_humidity = float(latest.get('humidity', 0)) if 'humidity' in latest else None
                 current_pm25 = float(latest.get('pm25', 0)) if 'pm25' in latest else None
+
+        # 如果是气候均值 fallback，用气候数据填充 current_weather
+        if data_source == "climatology" and current_temp is None:
+            climate = get_climatology(req_time.month, req_time.hour)
+            current_temp = climate["temperature"]
+            current_humidity = climate["humidity"]
+            current_pm25 = climate["pm25"]
         
         # 生成建议文本
         rain = raw.get('rainfall', 0.0)
@@ -403,8 +561,17 @@ def predict_weather(
             status_color = "red"
         
         # 适配前端 ForecastResult 接口结构
+        # 前端显示的时间 = 用户请求的时间（非传感器数据时间）
+        display_time = req_time
+
+        # 数据新鲜度提示
+        freshness = None
+        if _last_realtime_fetch:
+            age_min = (datetime.now(SGT) - _last_realtime_fetch).total_seconds() / 60
+            freshness = f"{int(age_min)} min ago" if age_min < 60 else f"{int(age_min/60)}h ago"
+
         response = {
-            "timestamp": target_time.isoformat(),
+            "timestamp": display_time.isoformat(),
             "location_query": location or f"{lat},{lon}",
             "nearest_station": {
                 "id": nearest or "unknown",
@@ -420,6 +587,8 @@ def predict_weather(
                 "humidity": current_humidity,
                 "pm25": current_pm25,
             },
+            "data_source": data_source,
+            "data_freshness": freshness,
             "confidence": raw.get('confidence', 0.5),
             "cloud_cover": raw.get('cloud_cover', False),
             "recommendation": recommendation,

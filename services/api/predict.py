@@ -85,8 +85,15 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
     recent_data = recent_resampled.tail(seq_len)
     
     if len(recent_data) < seq_len:
-        print(f"Warning: Not enough history (after resampling) for {sensor_id}. Found {len(recent_data)} steps (Need {seq_len}).")
-        return None, None
+        # 不足 seq_len 步时，用最早一行向前填充（pad），而非直接失败
+        # 这样在实时数据初始拉取阶段也能出预测结果
+        if len(recent_data) == 0:
+            print(f"Warning: No resampled data for {sensor_id}")
+            return None, None
+        deficit = seq_len - len(recent_data)
+        pad_row = recent_data.iloc[[0]]
+        padding = pd.concat([pad_row] * deficit, ignore_index=False)
+        recent_data = pd.concat([padding, recent_data])
 
     features = recent_data[['temperature', 'rainfall', 'humidity', 'pm25']].values.astype(np.float32)
     
