@@ -1112,7 +1112,7 @@
 
     <h2>How to Reproduce</h2>
     <pre><code># Deploy test files
-scp perf-test/perf-test.py perf-test/perf-test-locations.json ubuntu@3.0.28.161:~/
+scp api-perf-test/perf-test.py api-perf-test/perf-test-locations.json ubuntu@3.0.28.161:~/
 
 # Run 30-min test (10 concurrency)
 ssh ubuntu@3.0.28.161 "cd ~ && python3 perf-test.py \
@@ -1123,7 +1123,7 @@ ssh ubuntu@3.0.28.161 "cd ~ && python3 perf-test.py \
   --output perf-report-30min.json"
 
 # Pull report
-scp ubuntu@3.0.28.161:~/perf-report-30min.json docs/perf-test/</code></pre>
+scp ubuntu@3.0.28.161:~/perf-report-30min.json docs/api-perf-test/</code></pre>
 
     <div style="text-align:center; color:var(--text-muted); margin-top:2rem; font-size:0.8rem;">
         Generated on 2026-02-12 · Singapore Weather AI Performance Testing Suite

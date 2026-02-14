@@ -2,7 +2,7 @@
 
 **Date**: 2026-02-14  
 **Duration**: 5 minutes  
-**Test Data**: [perf-report-5min.json](file:///Users/jinhui/development/tools/claude-skill/docs/perf-test/perf-report-5min.json)
+**Test Data**: [perf-report-5min.json](file:///Users/jinhui/development/tools/claude-skill/docs/api-perf-test/perf-report-5min.json)
 
 ---
 
@@ -307,8 +307,8 @@ System metrics sampled every 15 seconds via `/proc` during the test:
 
 ```bash
 # Deploy test files to API server
-scp -i ~/.ssh/id_rsa perf-test/perf-test.py \
-    perf-test/perf-test-locations.json \
+scp -i ~/.ssh/id_rsa api-perf-test/perf-test.py \
+    api-perf-test/perf-test-locations.json \
     ubuntu@3.0.28.161:/tmp/
 
 # Run 5-min test (5 concurrency, includes accuracy endpoints)
@@ -319,5 +319,5 @@ ssh -i ~/.ssh/id_rsa ubuntu@3.0.28.161 \
 
 # Pull report
 scp -i ~/.ssh/id_rsa ubuntu@3.0.28.161:/tmp/perf-report-5min.json \
-    docs/perf-test/
+    docs/api-perf-test/
 ```

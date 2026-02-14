@@ -2,7 +2,7 @@
 
 **Date**: 2026-02-12  
 **Duration**: 30 minutes  
-**Test Data**: [perf-report-30min.json](file:///Users/jinhui/development/tools/claude-skill/docs/perf-test/perf-report-30min.json)
+**Test Data**: [perf-report-30min.json](file:///Users/jinhui/development/tools/claude-skill/docs/api-perf-test/perf-report-30min.json)
 
 ---
 
@@ -96,7 +96,7 @@ Data sampled every 1 minute during the 30-minute test run (14:50 – 15:20 SGT):
 
 ## System Resource Utilization
 
-System metrics sampled every 15 seconds via `/proc` during a follow-up 3-min validation test (5 concurrency, [report](file:///Users/jinhui/development/tools/claude-skill/docs/perf-test/perf-report-3min-with-sysmetrics.json)):
+System metrics sampled every 15 seconds via `/proc` during a follow-up 3-min validation test (5 concurrency, [report](file:///Users/jinhui/development/tools/claude-skill/docs/api-perf-test/perf-report-3min-with-sysmetrics.json)):
 
 ### Summary
 
@@ -240,7 +240,7 @@ Three optimizations were applied incrementally, each validated with identical 20
 
 ```bash
 # Deploy test files
-scp perf-test/perf-test.py perf-test/perf-test-locations.json ubuntu@3.0.28.161:~/
+scp api-perf-test/perf-test.py api-perf-test/perf-test-locations.json ubuntu@3.0.28.161:~/
 
 # Run 30-min test (10 concurrency)
 ssh ubuntu@3.0.28.161 "cd ~ && python3 perf-test.py \
@@ -251,5 +251,5 @@ ssh ubuntu@3.0.28.161 "cd ~ && python3 perf-test.py \
   --output perf-report-30min.json"
 
 # Pull report
-scp ubuntu@3.0.28.161:~/perf-report-30min.json docs/perf-test/
+scp ubuntu@3.0.28.161:~/perf-report-30min.json docs/api-perf-test/
 ```

@@ -920,8 +920,8 @@
 
     <h2>How to Reproduce</h2>
     <pre># Deploy test files to API server
-scp -i ~/.ssh/id_rsa perf-test/perf-test.py \
-    perf-test/perf-test-locations.json \
+scp -i ~/.ssh/id_rsa api-perf-test/perf-test.py \
+    api-perf-test/perf-test-locations.json \
     ubuntu@3.0.28.161:/tmp/
 
 # Run 5-min test (includes accuracy endpoints)
@@ -932,7 +932,7 @@ ssh -i ~/.ssh/id_rsa ubuntu@3.0.28.161 \
 
 # Pull report
 scp -i ~/.ssh/id_rsa ubuntu@3.0.28.161:/tmp/perf-report-5min.json \
-    docs/perf-test/</pre>
+    docs/api-perf-test/</pre>
 
 </body>
 

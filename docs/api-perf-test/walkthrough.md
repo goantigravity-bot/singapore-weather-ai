@@ -4,9 +4,9 @@
 
 | File | Purpose |
 |------|---------|
-| [perf-test.py](file:///Users/jinhui/development/tools/claude-skill/perf-test/perf-test.py) | Test script (`--duration` / `--requests` modes) |
-| [perf-test-locations.json](file:///Users/jinhui/development/tools/claude-skill/perf-test/perf-test-locations.json) | Reusable: 25 outdoor activity locations, 10 query templates, 8 time slots |
-| [perf-report.json](file:///Users/jinhui/development/tools/claude-skill/perf-test/perf-report.json) | Test report (5-concurrency run) |
+| [perf-test.py](file:///Users/jinhui/development/tools/claude-skill/api-perf-test/perf-test.py) | Test script (`--duration` / `--requests` modes) |
+| [perf-test-locations.json](file:///Users/jinhui/development/tools/claude-skill/api-perf-test/perf-test-locations.json) | Reusable: 25 outdoor activity locations, 10 query templates, 8 time slots |
+| [perf-report.json](file:///Users/jinhui/development/tools/claude-skill/api-perf-test/perf-report.json) | Test report (5-concurrency run) |
 
 ---
 
@@ -68,7 +68,7 @@ API runs as `python3 api.py` → single uvicorn worker (PID 43852). A single wor
 
 ```bash
 # Deploy to server
-scp perf-test/perf-test.py perf-test/perf-test-locations.json ubuntu@3.0.28.161:~/
+scp api-perf-test/perf-test.py api-perf-test/perf-test-locations.json ubuntu@3.0.28.161:~/
 
 # Standard load (5 workers, 10 min)
 ssh ubuntu@3.0.28.161 "python3 perf-test.py --duration 10"
