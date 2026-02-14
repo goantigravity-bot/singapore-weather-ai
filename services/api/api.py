@@ -145,6 +145,38 @@ SGT = timezone(timedelta(hours=8))
 # 上次成功拉取实时数据的时间，用于标注数据新鲜度
 _last_realtime_fetch: datetime | None = None
 
+# PSI 缓存 — 按区域存储，后台线程每 5 分钟更新
+_psi_readings: dict[str, int] = {}
+
+# PSI 区域中心坐标（来源: data.gov.sg PSI API regionMetadata）
+PSI_REGION_CENTERS = {
+    "west":    (1.35735, 103.700),
+    "east":    (1.35735, 103.940),
+    "central": (1.35735, 103.820),
+    "south":   (1.29587, 103.820),
+    "north":   (1.41803, 103.820),
+}
+
+
+def get_psi_for_location(lat: float, lon: float) -> int | None:
+    """根据坐标找最近的 PSI 区域，返回该区域的 24 小时 PSI 读数"""
+    if not _psi_readings:
+        return None
+    best_region = min(
+        PSI_REGION_CENTERS,
+        key=lambda r: (lat - PSI_REGION_CENTERS[r][0])**2 + (lon - PSI_REGION_CENTERS[r][1])**2
+    )
+    return _psi_readings.get(best_region)
+
+
+def get_psi_for_path(points: list) -> int | None:
+    """路径查询：检查所经区域，返回最高 PSI 值"""
+    if not _psi_readings or not points:
+        return None
+    psi_values = [get_psi_for_location(pt[0], pt[1]) for pt in points]
+    valid = [v for v in psi_values if v is not None]
+    return max(valid) if valid else None
+
 
 def fetch_realtime_sensor_data():
     """从 data.gov.sg API 拉取实时传感器数据，追加到 CSV 和内存 DataFrame。
@@ -193,7 +225,7 @@ def fetch_realtime_sensor_data():
             "https://api.data.gov.sg/v2/real-time/api/pm25", timeout=TIMEOUT
         )
         pm_data = pm_resp.json()
-        pm_items = pm_data.get("data", {}).get("items", [])
+        pm_items = (pm_data.get("data") or {}).get("items", [])
         if pm_items:
             pm_readings = pm_items[0].get("readings", {})
             # PM2.5 按区域返回，取全国平均作为各站 fallback
@@ -203,6 +235,22 @@ def fetch_realtime_sensor_data():
                 raw[sid].setdefault("pm25", avg_pm25)
     except Exception as e:
         logger.warning(f"Realtime fetch PM2.5 failed: {e}")
+
+    # PSI — 按区域缓存（不绑定站点，全局共用）
+    global _psi_readings
+    try:
+        psi_resp = http_requests.get(
+            "https://api-open.data.gov.sg/v2/real-time/api/psi", timeout=TIMEOUT
+        )
+        psi_data = psi_resp.json()
+        psi_items = (psi_data.get("data") or {}).get("items", [])
+        if psi_items:
+            psi_24h = psi_items[0].get("readings", {}).get("psi_twenty_four_hourly", {})
+            if psi_24h:
+                _psi_readings.update(psi_24h)
+                logger.info(f"🌫️ PSI updated: {psi_24h}")
+    except Exception as e:
+        logger.warning(f"Realtime fetch PSI failed: {e}")
 
     # 转换为 DataFrame 行并追加
     import pandas as pd
@@ -328,7 +376,7 @@ def sync_assets_thread():
                 s3.download_file(S3_BUCKET, DATA_KEY, local_csv + ".tmp")
                 os.replace(local_csv + ".tmp", local_csv)
                 logger.info("✅ CSV Data synced from S3")
-            except ClientError as e:
+            except Exception as e:
                  # Check 'govdata/real_sensor_data.csv' fallback?
                  try:
                      s3.download_file(S3_BUCKET, "govdata/real_sensor_data.csv", local_csv + ".tmp")
@@ -424,7 +472,7 @@ def set_geocoding_config(body: dict):
 
 @api_router.get("/health")
 def health():
-    return {"status": "ok", "version": "0.8.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
+    return {"status": "ok", "version": "0.9.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
 
 @api_router.get("/stations")
 def get_stations():
@@ -586,6 +634,7 @@ def predict_weather(
                 "temperature": current_temp,
                 "humidity": current_humidity,
                 "pm25": current_pm25,
+                "psi": get_psi_for_location(lat, lon),
             },
             "data_source": data_source,
             "data_freshness": freshness,
@@ -687,6 +736,10 @@ def predict_path(query: str):
         
         # Inject parsed metadata for Frontend
         result['parsed'] = parsed
+
+        # PSI：路径各点取最高区域值
+        path_points = [(d['lat'], d['lon']) for d in result.get('details', [])]
+        result['psi'] = get_psi_for_path(path_points)
         
         return result
         
@@ -794,6 +847,10 @@ def smart_query_endpoint(q: str, request: Request):
 
         except Exception as db_err:
             logger.warning(f"Structured DB write failed: {db_err}")
+
+        # PSI：路径各点取最高区域值
+        path_points = [(d['lat'], d['lon']) for d in result.get('details', [])]
+        result['psi'] = get_psi_for_path(path_points)
         
         return result
     except Exception as e:

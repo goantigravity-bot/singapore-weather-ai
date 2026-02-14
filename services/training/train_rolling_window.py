@@ -164,6 +164,7 @@ def train_model():
     logger.info("Starting Training...")
     best_loss = float('inf')
     actual_epochs = 0
+    total_train_samples = 0
     
     history = {'train_loss': [], 'val_loss': [], 'train_mae': [], 'val_mae': []}
     
@@ -172,6 +173,7 @@ def train_model():
         model.train()
         running_loss = 0.0
         running_mae = 0.0
+        epoch_samples = 0
         
         for batch_idx, (sat, sensor, target) in enumerate(train_loader):
             sat, sensor, target = sat.to(DEVICE), sensor.to(DEVICE), target.to(DEVICE)
@@ -192,14 +194,20 @@ def train_model():
             
             running_loss += loss.item()
             running_mae += mae.item()
+            epoch_samples += target.size(0)
         
         avg_train_loss = running_loss / len(train_loader)
         avg_train_mae = running_mae / len(train_loader)
+        total_train_samples += epoch_samples
         
         # Validation
         model.eval()
         val_loss = 0.0
         val_mae = 0.0
+        # 降雨二分类准确率：预测值和实际值是否同时 > 阈值（有雨）或同时 <= 阈值（无雨）
+        rain_correct = 0
+        rain_total = 0
+        RAIN_THRESHOLD = 0.1
         with torch.no_grad():
             for sat, sensor, target in val_loader:
                 sat, sensor, target = sat.to(DEVICE), sensor.to(DEVICE), target.to(DEVICE)
@@ -209,9 +217,15 @@ def train_model():
                 mae = torch.mean(torch.abs(outputs - target))
                 val_loss += loss.item()
                 val_mae += mae.item()
+                # 二分类准确率统计
+                pred_rain = (outputs > RAIN_THRESHOLD).float()
+                actual_rain = (target > RAIN_THRESHOLD).float()
+                rain_correct += (pred_rain == actual_rain).sum().item()
+                rain_total += target.numel()
         
         avg_val_loss = val_loss / len(val_loader)
         avg_val_mae = val_mae / len(val_loader)
+        rain_accuracy = rain_correct / rain_total if rain_total > 0 else 0.0
         actual_epochs = epoch + 1
         
         history['train_loss'].append(avg_train_loss)
@@ -256,6 +270,8 @@ def train_model():
         "last_train_mae": avg_train_mae,
         "last_val_mae": avg_val_mae,
         "rmse": best_loss ** 0.5,
+        "rain_accuracy": rain_accuracy,
+        "total_train_samples": total_train_samples,
         "training_time_seconds": round(total_time, 1),
         "early_stopped": no_improve_count >= EARLY_STOPPING_PATIENCE,
         "device": str(DEVICE),

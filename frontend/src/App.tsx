@@ -32,6 +32,7 @@ interface ForecastResult {
     temperature: number | null;
     humidity: number | null;
     pm25: number | null;
+    psi: number | null;
   };
 }
 
@@ -187,7 +188,8 @@ function AppContent() {
               current_weather: {
                 temperature: first.forecast.temperature,
                 humidity: null,
-                pm25: null
+                pm25: null,
+                psi: null
               }
             });
             // 保存路径搜索的位置（使用起点坐标）

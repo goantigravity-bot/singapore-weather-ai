@@ -95,6 +95,11 @@ resource "aws_instance" "training_server" {
   vpc_security_group_ids = [aws_security_group.training_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.training_profile.name
 
+  # 实例初始化脚本：安装依赖、创建 python symlink、配置防火墙等
+  user_data = templatefile("${path.module}/user-data.sh", {
+    project_name = var.project_name
+  })
+
   root_block_device {
     volume_size = 50 # Larger disk for datasets
     volume_type = "gp3"

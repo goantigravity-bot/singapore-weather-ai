@@ -16,6 +16,7 @@ interface ForecastData {
         temperature: number | null;
         humidity: number | null;
         pm25: number | null;
+        psi: number | null;
     };
 }
 
@@ -26,8 +27,17 @@ interface Props {
 }
 
 const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
-    const { metrics } = useConfig();
+    const { metrics, psiThreshold } = useConfig();
     const [isMinimized, setIsMinimized] = React.useState(true);
+
+    // PSI 按 NEA 标准返回对应颜色
+    const getPsiColor = (psi: number) => {
+        if (psi <= 50) return '#4CAF50';
+        if (psi <= 100) return '#2196F3';
+        if (psi <= 200) return '#FF9800';
+        if (psi <= 300) return '#F44336';
+        return '#880E4F';
+    };
 
     if (loading) return <div className="dashboard-overlay" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', width: 'auto', textAlign: 'center' }}>Loading...</div>;
     if (error) return <div className="dashboard-overlay" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', width: 'auto' }}><span style={{ color: 'var(--accent-red)' }}>Error: {error}</span></div>;
@@ -47,9 +57,6 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
             </div>
         );
     }
-
-    const isRain = data.forecast.description.includes("Rain") || data.forecast.description.includes("Storm");
-    const statusColor = isRain ? "var(--accent-red)" : "var(--accent-green)";
 
     // Minimized State: Just a small floating button (Optional, but user might still want to hide it completely)
     if (isMinimized) {
@@ -165,31 +172,67 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
                 {/* Divider */}
                 <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
 
-                {/* 2. Primary Status (Rain) */}
-                {metrics.has('rain') && (
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px',
-                        borderRadius: '16px',
-                        background: isRain ? 'rgba(255, 87, 87, 0.15)' : 'rgba(75, 255, 120, 0.1)',
-                        border: `1px solid ${isRain ? 'rgba(255, 87, 87, 0.3)' : 'rgba(75, 255, 120, 0.3)'}`
-                    }}>
-                        <span style={{ fontSize: '1.8rem' }}>{isRain ? '🌧️' : '☁️'}</span>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Condition</span>
-                            <span style={{ fontSize: '1.1rem', fontWeight: 600, color: statusColor }}>
-                                {isRain ? 'Raining' : 'Clear Sky'}
-                            </span>
+                {/* 2. Recommendation Banner — waterfall: rain → PSI → recommended */}
+                {(() => {
+                    const isRain = data.forecast.description.includes("Rain") || data.forecast.description.includes("Storm");
+                    const psi = data.current_weather?.psi;
+                    const psiExceedsThreshold = psi != null && psi > psiThreshold;
+
+                    if (isRain) {
+                        return (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+                                borderRadius: '16px',
+                                background: 'rgba(255, 87, 87, 0.15)',
+                                border: '1px solid rgba(255, 87, 87, 0.3)'
+                            }}>
+                                <span style={{ fontSize: '1.8rem' }}>🌧️</span>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recommendation</span>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent-red)' }}>Not Recommended</span>
+                                </div>
+                                <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>Rain expected</span>
+                            </div>
+                        );
+                    }
+
+                    if (psiExceedsThreshold) {
+                        return (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+                                borderRadius: '16px',
+                                background: 'rgba(255, 152, 0, 0.15)',
+                                border: '1px solid rgba(255, 152, 0, 0.3)'
+                            }}>
+                                <span style={{ fontSize: '1.8rem' }}>🌫️</span>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recommendation</span>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 600, color: '#FF9800' }}>Not Recommended</span>
+                                </div>
+                                <span style={{ marginLeft: 'auto', fontWeight: 600, color: getPsiColor(psi!) }}>PSI: {psi}</span>
+                            </div>
+                        );
+                    }
+
+                    // Recommended
+                    return (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+                            borderRadius: '16px',
+                            background: 'rgba(75, 255, 120, 0.1)',
+                            border: '1px solid rgba(75, 255, 120, 0.3)'
+                        }}>
+                            <span style={{ fontSize: '1.8rem' }}>✅</span>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recommendation</span>
+                                <span style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent-green)' }}>Recommended</span>
+                            </div>
+                            {psi != null && (
+                                <span style={{ marginLeft: 'auto', fontWeight: 600, color: getPsiColor(psi) }}>PSI: {psi}</span>
+                            )}
                         </div>
-                        {data.forecast.rainfall_mm_next_10min > 0 && (
-                            <span style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--accent-cyan)' }}>
-                                {data.forecast.rainfall_mm_next_10min.toFixed(3)} mm
-                            </span>
-                        )}
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* 3. Metrics Grid */}
                 <div style={{
@@ -254,6 +297,25 @@ const ForecastPanel: React.FC<Props> = ({ data, loading, error }) => {
                                 </span>
                                 <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>µg</span>
                             </div>
+                        </div>
+                    )}
+
+                    {/* PSI — 颜色按 NEA 标准 */}
+                    {data.current_weather?.psi != null && (
+                        <div style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            padding: '12px',
+                            borderRadius: '16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                                <span>🌫️</span> PSI
+                            </div>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 600, color: getPsiColor(data.current_weather.psi) }}>
+                                {data.current_weather.psi}
+                            </span>
                         </div>
                     )}
                 </div>

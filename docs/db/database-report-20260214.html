@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather AI — Database Report</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.2rem;
+            text-align: center;
+        }
+
+        .kpi .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .kpi .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.3rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.55rem 0.9rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        th {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(56, 189, 248, 0.06);
+        }
+
+        td {
+            color: var(--text-muted);
+        }
+
+        td:first-child {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        tr:hover td {
+            background: rgba(56, 189, 248, 0.04);
+        }
+
+        td.num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-blue {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+        }
+
+        .badge-purple {
+            background: rgba(167, 139, 250, 0.15);
+            color: var(--accent2);
+        }
+
+        .badge-green {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--success);
+        }
+
+        .badge-yellow {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--warn);
+        }
+
+        .badge-red {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--danger);
+        }
+
+        .sample-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            margin: 0.8rem 0;
+        }
+
+        .sample-card h4 {
+            font-size: 0.85rem;
+            color: var(--accent2);
+            margin-bottom: 0.5rem;
+        }
+
+        .sample-row {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin: 0.2rem 0;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .sample-row .key {
+            color: var(--text);
+        }
+
+        .bar-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .bar {
+            height: 18px;
+            background: linear-gradient(90deg, #38bdf8, #a78bfa);
+            border-radius: 4px;
+            min-width: 4px;
+        }
+
+        .bar-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .warn-box {
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+        }
+
+        .warn-box strong {
+            color: var(--warn);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Weather AI — Database Report</h1>
+        <p class="subtitle">weather.db · Generated 2026-02-14 21:23 SGT · Size: 1,328 KB</p>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="value">10</div>
+                <div class="label">Tables</div>
+            </div>
+            <div class="kpi">
+                <div class="value">1,630</div>
+                <div class="label">User Queries</div>
+            </div>
+            <div class="kpi">
+                <div class="value">575</div>
+                <div class="label">User Forecasts</div>
+            </div>
+            <div class="kpi">
+                <div class="value">19</div>
+                <div class="label">Backtest Forecasts</div>
+            </div>
+            <div class="kpi">
+                <div class="value">9</div>
+                <div class="label">Actual Results</div>
+            </div>
+            <div class="kpi">
+                <div class="value">117</div>
+                <div class="label">Places</div>
+            </div>
+        </div>
+
+        <!-- Table Overview -->
+        <h2>Table Overview</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Rows</th>
+                    <th>Columns</th>
+                    <th>Indexes</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>user_activity</td>
+                    <td class="num">1,630</td>
+                    <td class="num">6</td>
+                    <td class="num">0</td>
+                    <td>User query log (query text, response time, outcome)</td>
+                </tr>
+                <tr>
+                    <td>forecast_result</td>
+                    <td class="num">594</td>
+                    <td class="num">11</td>
+                    <td class="num">4</td>
+                    <td>Predicted rainfall (user + backtest sources)</td>
+                </tr>
+                <tr>
+                    <td>activity</td>
+                    <td class="num">353</td>
+                    <td class="num">4</td>
+                    <td class="num">0</td>
+                    <td>Activity type per query (e.g. jogging, cycling)</td>
+                </tr>
+                <tr>
+                    <td>location</td>
+                    <td class="num">308</td>
+                    <td class="num">6</td>
+                    <td class="num">1</td>
+                    <td>Coordinates for each place point</td>
+                </tr>
+                <tr>
+                    <td>place</td>
+                    <td class="num">117</td>
+                    <td class="num">6</td>
+                    <td class="num">1</td>
+                    <td>Named places (112 point, 5 path)</td>
+                </tr>
+                <tr>
+                    <td>search_history</td>
+                    <td class="num">59</td>
+                    <td class="num">4</td>
+                    <td class="num">0</td>
+                    <td>Popular search display (frontend widget)</td>
+                </tr>
+                <tr>
+                    <td>geocode_cache</td>
+                    <td class="num">46</td>
+                    <td class="num">4</td>
+                    <td class="num">0</td>
+                    <td>Address → lat/lon cache (Nominatim + OneMap)</td>
+                </tr>
+                <tr>
+                    <td>actual_result</td>
+                    <td class="num">9</td>
+                    <td class="num">8</td>
+                    <td class="num">3</td>
+                    <td>Real NEA rainfall observations</td>
+                </tr>
+                <tr>
+                    <td>overpass_cache</td>
+                    <td class="num">9</td>
+                    <td class="num">3</td>
+                    <td class="num">0</td>
+                    <td>Overpass API route/area data cache</td>
+                </tr>
+                <tr>
+                    <td>sqlite_sequence</td>
+                    <td class="num">7</td>
+                    <td class="num">2</td>
+                    <td class="num">0</td>
+                    <td>SQLite AUTOINCREMENT tracking</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Schema Detail -->
+        <h2>Schema Detail</h2>
+
+        <h3>user_activity</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Column</th>
+                    <th>Type</th>
+                    <th>PK</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>query_id</td>
+                    <td><span class="badge badge-blue">INTEGER</span></td>
+                    <td>✅</td>
+                    <td>Auto-increment primary key</td>
+                </tr>
+                <tr>
+                    <td>query</td>
+                    <td><span class="badge badge-purple">TEXT</span></td>
+                    <td></td>
+                    <td>Raw user query string</td>
+                </tr>
+                <tr>
+                    <td>response_time_ms</td>
+                    <td><span class="badge badge-blue">REAL</span></td>
+                    <td></td>
+                    <td>API response latency</td>
+                </tr>
+                <tr>
+                    <td>forecast_outcome</td>
+                    <td><span class="badge badge-purple">TEXT</span></td>
+                    <td></td>
+                    <td>Summary of prediction result</td>
+                </tr>
+                <tr>
+                    <td>ip_address</td>
+                    <td><span class="badge badge-purple">TEXT</span></td>
+                    <td></td>
+                    <td>Client IP</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td><span class="badge badge-green">DATETIME</span></td>
+                    <td></td>
+                    <td>Timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>forecast_result</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Column</th>
+                    <th>Type</th>
+                    <th>PK</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>forecast_id</td>
+                    <td><span class="badge badge-blue">INTEGER</span></td>
+                    <td>✅</td>
+                    <td>Auto-increment primary key</td>
+                </tr>
+                <tr>
+                    <td>query_id</td>
+                    <td><span class="badge badge-blue">INTEGER</span></td>
+                    <td></td>
+                    <td>FK → user_activity (null for backtest)</td>
+                </tr>
+                <tr>
+                    <td>loc_id</td>
+                    <td><span class="badge badge-blue">INTEGER</span></td>
+                    <td></td>
+                    <td>FK → location</td>
+                </tr>
+                <tr>
+                    <td>rainfall_mm</td>
+                    <td><span class="badge badge-blue">REAL</span></td>
+                    <td></td>
+                    <td>Predicted rainfall (mm)</td>
+                </tr>
+                <tr>
+                    <td>status</td>
+                    <td><span class="badge badge-purple">TEXT</span></td>
+                    <td></td>
+                    <td>Heavy Rain / Light Rain / No Rain / Cloudy</td>
+                </tr>
+                <tr>
+                    <td>confidence</td>
+                    <td><span class="badge badge-blue">REAL</span></td>
+                    <td></td>
+                    <td>Model confidence 0-1</td>
+                </tr>
+                <tr>
+                    <td>is_risky</td>
+                    <td><span class="badge badge-blue">INTEGER</span></td>
+                    <td></td>
+                    <td>1 if rainfall ≥ 2mm</td>
+                </tr>
+                <tr>
+                    <td>response_time_ms</td>
+                    <td><span class="badge badge-blue">REAL</span></td>
+                    <td></td>
+                    <td>Inference latency</td>
+                </tr>
+                <tr>
+                    <td>forecast_time</td>
+                    <td><span class="badge badge-green">DATETIME</span></td>
+                    <td></td>
+                    <td>When prediction was made</td>
+                </tr>
+                <tr>
+                    <td>source</td>
+                    <td><span class="badge badge-purple">TEXT</span></td>
+                    <td></td>
+                    <td>'user' or 'backtest'</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td><span class="badge badge-green">DATETIME</span></td>
+                    <td></td>
+                    <td>Row creation time</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>actual_result</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Column</th>
+                    <th>Type</th>
+                    <th>PK</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>actual_id</td>
+                    <td><span class="badge badge-blue">INTEGER</span></td>
+                    <td>✅</td>
+                    <td>Auto-increment primary key</td>
+                </tr>
+                <tr>
+                    <td>loc_id</td>
+                    <td><span class="badge badge-blue">INTEGER</span></td>
+                    <td></td>
+                    <td>FK → location</td>
+                </tr>
+                <tr>
+                    <td>actual_rainfall_mm</td>
+                    <td><span class="badge badge-blue">REAL</span></td>
+                    <td></td>
+                    <td>Observed rainfall from NEA</td>
+                </tr>
+                <tr>
+                    <td>source</td>
+                    <td><span class="badge badge-purple">TEXT</span></td>
+                    <td></td>
+                    <td>'NEA:S111' (with station id)</td>
+                </tr>
+                <tr>
+                    <td>station_id</td>
+                    <td><span class="badge badge-purple">TEXT</span></td>
+                    <td></td>
+                    <td>Matched NEA station</td>
+                </tr>
+                <tr>
+                    <td>match_distance_km</td>
+                    <td><span class="badge badge-blue">REAL</span></td>
+                    <td></td>
+                    <td>Distance to matched station</td>
+                </tr>
+                <tr>
+                    <td>observation_time</td>
+                    <td><span class="badge badge-green">DATETIME</span></td>
+                    <td></td>
+                    <td>NEA observation timestamp</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td><span class="badge badge-green">DATETIME</span></td>
+                    <td></td>
+                    <td>Row creation time</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Relationships -->
+        <h2>Relationships</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>From</th>
+                    <th>→</th>
+                    <th>To</th>
+                    <th>Join Key</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>forecast_result</td>
+                    <td>→</td>
+                    <td>user_activity</td>
+                    <td>query_id</td>
+                </tr>
+                <tr>
+                    <td>forecast_result</td>
+                    <td>→</td>
+                    <td>location</td>
+                    <td>loc_id</td>
+                </tr>
+                <tr>
+                    <td>actual_result</td>
+                    <td>→</td>
+                    <td>location</td>
+                    <td>loc_id</td>
+                </tr>
+                <tr>
+                    <td>activity</td>
+                    <td>→</td>
+                    <td>user_activity</td>
+                    <td>query_id</td>
+                </tr>
+                <tr>
+                    <td>location</td>
+                    <td>→</td>
+                    <td>place</td>
+                    <td>place_id</td>
+                </tr>
+                <tr>
+                    <td>forecast_result ⟷ actual_result</td>
+                    <td></td>
+                    <td><em>Accuracy JOIN</em></td>
+                    <td>loc_id + julianday window &lt; 30min</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Forecast Breakdown -->
+        <h2>Forecast Breakdown</h2>
+        <div class="kpi-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="kpi">
+                <div class="value">575</div>
+                <div class="label">User Forecasts</div>
+            </div>
+            <div class="kpi">
+                <div class="value">19</div>
+                <div class="label">Backtest Forecasts</div>
+            </div>
+        </div>
+
+        <h3>Top Places by Forecast Count</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Place</th>
+                    <th>Forecasts</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>East Coast Park</td>
+                    <td class="num">162</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:100%"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Singapore</td>
+                    <td class="num">156</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:96%"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Rail Corridor</td>
+                    <td class="num">154</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:95%"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Marina Bay</td>
+                    <td class="num">33</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:20%"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Sentosa</td>
+                    <td class="num">28</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:17%"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>MacRitchie</td>
+                    <td class="num">12</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:7%"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Fort Canning</td>
+                    <td class="num">8</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:5%"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Southern Ridges</td>
+                    <td class="num">2</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:1%"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Labrador Nature Reserve</td>
+                    <td class="num">2</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:1%"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Gardens by the Bay</td>
+                    <td class="num">2</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar" style="width:1%"></div>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Data Quality -->
+        <h2>Data Quality Observations</h2>
+        <div class="warn-box">
+            <strong>⚠️ Negative Rainfall Predictions</strong><br>
+            Some <code>forecast_result</code> records show negative <code>rainfall_mm</code> values (e.g. -6.34mm).
+            The model output should be clamped to <code>max(0, predicted)</code> to prevent nonsensical predictions
+            appearing in accuracy calculations.
+        </div>
+        <div class="warn-box">
+            <strong>⚠️ Timezone Mismatch (Fixed)</strong><br>
+            NEA API returns <code>observation_time</code> with <code>+08:00</code> timezone offset, but SQLite
+            <code>julianday()</code> cannot parse it.
+            The <code>accuracy-backfill-test.py</code> normalizes timestamps. The live <code>actual_collector.py</code>
+            still needs the same fix.
+        </div>
+
+        <!-- Activity Timeline -->
+        <h2>Activity Timeline</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Earliest user_activity</td>
+                    <td>2026-02-14 09:37:20</td>
+                </tr>
+                <tr>
+                    <td>Latest user_activity</td>
+                    <td>2026-02-14 12:24:49</td>
+                </tr>
+                <tr>
+                    <td>Data span</td>
+                    <td>~3 hours (performance test window)</td>
+                </tr>
+                <tr>
+                    <td>Latest search_history</td>
+                    <td>2026-02-08 05:46:11</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Sample Data -->
+        <h2>Sample Records</h2>
+
+        <div class="sample-card">
+            <h4>user_activity (latest)</h4>
+            <div class="sample-row"><span class="key">query:</span> "jem" — <span class="key">outcome:</span> "Heavy
+                rain likely. Seek shelter." — <span class="key">response:</span> 32.6ms — <span class="key">ip:</span>
+                8.29.230.19</div>
+            <div class="sample-row"><span class="key">query:</span> "Kallang Riverside Park" — <span
+                    class="key">outcome:</span> "Heavy rain likely. Seek shelter." — <span class="key">response:</span>
+                22.8ms</div>
+            <div class="sample-row"><span class="key">query:</span> "Botanic Gardens" — <span
+                    class="key">outcome:</span> "Heavy rain likely. Seek shelter." — <span class="key">response:</span>
+                31.3ms</div>
+        </div>
+
+        <div class="sample-card">
+            <h4>actual_result (latest — from accuracy backfill test)</h4>
+            <div class="sample-row"><span class="key">station:</span> S50 (Clementi) — <span
+                    class="key">rainfall:</span> 0.0mm — <span class="key">distance:</span> 0.00km — <span
+                    class="key">obs_time:</span> 2026-02-14 21:15:00</div>
+            <div class="sample-row"><span class="key">station:</span> S107 (East Coast Park) — <span
+                    class="key">rainfall:</span> 0.0mm — <span class="key">distance:</span> 0.00km</div>
+            <div class="sample-row"><span class="key">station:</span> S60 (Sentosa) — <span class="key">rainfall:</span>
+                0.0mm — <span class="key">distance:</span> 0.00km</div>
+        </div>
+
+        <div class="sample-card">
+            <h4>search_history (latest — frontend "Popular Places" source)</h4>
+            <div class="sample-row"><span class="key">query:</span> "jogging at Punggol from 14:00 to 16:00" — <span
+                    class="key">time:</span> 2026-02-08</div>
+            <div class="sample-row"><span class="key">query:</span> "I would like to know if I can ride bicycle today
+                afternoon 2pm to 5pm along the rail corridor" — <span class="key">time:</span> 2026-02-08</div>
+            <div class="sample-row"><span class="key">query:</span> "commonwealth" — <span class="key">time:</span>
+                2026-01-27</div>
+        </div>
+
+        <footer>Weather AI — Database Report — Generated 2026-02-14</footer>
+    </div>
+</body>
+
+</html>

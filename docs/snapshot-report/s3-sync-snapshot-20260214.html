@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Sync Snapshot Report — 2026-02-14</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85em;
+            background: rgba(56, 189, 248, 0.1);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            color: var(--accent);
+        }
+
+        pre {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(56, 189, 248, 0.06);
+        }
+
+        td {
+            color: var(--text-muted);
+        }
+
+        td:first-child {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        tr:hover td {
+            background: rgba(56, 189, 248, 0.04);
+        }
+
+        ul,
+        ol {
+            margin: 0.5rem 0 1rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.3rem;
+            color: var(--text-muted);
+        }
+
+        strong {
+            color: var(--text);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-ok {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--success);
+        }
+
+        .badge-warn {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--warn);
+        }
+
+        .summary-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .stat-box {
+            background: rgba(56, 189, 248, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.3rem;
+        }
+
+        .arch-diagram {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            text-align: center;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            color: var(--text-muted);
+        }
+
+        .arch-diagram .highlight {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .arch-diagram .arrow {
+            color: var(--success);
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>S3 Sync Snapshot Report</h1>
+        <p class="subtitle">
+            <strong>Date</strong>: 2026-02-14 22:14 SGT &nbsp;|&nbsp;
+            <strong>Bucket</strong>: <code>weather-ai-models-de08370c</code> &nbsp;|&nbsp;
+            <strong>Region</strong>: ap-southeast-1 (Singapore) &nbsp;|&nbsp;
+            <strong>Purpose</strong>: Pre-shutdown verification for Spot Instance termination
+        </p>
+
+        <hr>
+
+        <h2>Executive Summary</h2>
+        <div class="summary-card">
+            <p><span class="badge badge-ok">✅ ALL CLEAR</span> — All critical artifacts are confirmed synced to S3. The
+                training server Spot Instance can be safely terminated.</p>
+            <div class="summary-grid">
+                <div class="stat-box">
+                    <div class="stat-value">✅</div>
+                    <div class="stat-label">Model Weights</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">✅</div>
+                    <div class="stat-label">Training History</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">✅</div>
+                    <div class="stat-label">Dashboard Logs</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">13,703</div>
+                    <div class="stat-label">Processed Files</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">~390MB</div>
+                    <div class="stat-label">Processed Data Size</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">1.3MB</div>
+                    <div class="stat-label">DB Backup</div>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2>Sync Architecture</h2>
+        <div class="arch-diagram">
+            <span class="highlight">Local Mac</span>
+            <span class="arrow"> ──rsync──→ </span>
+            <span class="highlight">Training Server</span> (i-05239b88c990b0558, Spot, g4dn.xlarge, 18.141.177.127)
+            <br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="arrow">↕</span> (aws s3 sync)
+            <br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="highlight">S3 Bucket</span> (weather-ai-models-de08370c)
+            <br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="arrow">↕</span> (cron 10-min)
+            <br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="highlight">API Server</span> (i-004dffd96ed716316, On-Demand)
+        </div>
+
+        <hr>
+
+        <h2>Detailed S3 Inventory</h2>
+
+        <h3>Core Model Artifacts</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>S3 Path</th>
+                    <th>Description</th>
+                    <th>Last Updated</th>
+                    <th>Size</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>models/latest.pth</code></td>
+                    <td>Latest model weights</td>
+                    <td>2026-02-14 21:54</td>
+                    <td>277 KB</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                </tr>
+                <tr>
+                    <td><code>models/20260214_*/</code></td>
+                    <td>Model version snapshots (8 versions today)</td>
+                    <td>2026-02-14 12:13 – 18:55</td>
+                    <td>~2.2 MB</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Training State & History</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>S3 Path</th>
+                    <th>Description</th>
+                    <th>Last Updated</th>
+                    <th>Size</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>history/training_history.json</code></td>
+                    <td>Full training metrics across all batches</td>
+                    <td>2026-02-14 21:54</td>
+                    <td>72.8 KB</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                </tr>
+                <tr>
+                    <td><code>state/training_state.json</code></td>
+                    <td>Current training pipeline state</td>
+                    <td>2026-02-14 21:54</td>
+                    <td>492 B</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                </tr>
+                <tr>
+                    <td><code>state/download_state.json</code></td>
+                    <td>Current download pipeline state</td>
+                    <td>2026-02-14 22:08</td>
+                    <td>154 B</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Dashboard & Monitoring</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>S3 Path</th>
+                    <th>Description</th>
+                    <th>Last Updated</th>
+                    <th>Size</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>logs/training.log</code></td>
+                    <td>Training log (displayed on Monitor Dashboard)</td>
+                    <td>2026-02-14 19:25</td>
+                    <td>63.4 KB</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                </tr>
+                <tr>
+                    <td><code>logs/download.log</code></td>
+                    <td>Download log (displayed on Monitor Dashboard)</td>
+                    <td>2026-02-14 22:14</td>
+                    <td>56.8 KB</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                </tr>
+                <tr>
+                    <td><code>monitor/</code></td>
+                    <td>Dashboard frontend static assets (HTML/JS/CSS)</td>
+                    <td>2026-01-28</td>
+                    <td>~208 KB</td>
+                    <td><span class="badge badge-ok">✅ Static</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Processed & Backup Data</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>S3 Path</th>
+                    <th>Description</th>
+                    <th>Last Updated</th>
+                    <th>Size</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>processed/satellite/</code></td>
+                    <td>Preprocessed .npy satellite patches</td>
+                    <td>2026-02-14 21:52</td>
+                    <td>13,703 files / ~390 MB</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                </tr>
+                <tr>
+                    <td><code>dbfiles/weather_20260214_2127.db</code></td>
+                    <td>SQLite database backup</td>
+                    <td>2026-02-14 21:28</td>
+                    <td>1.36 MB</td>
+                    <td><span class="badge badge-ok">✅ Backed Up</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>Sync Coverage by File Type</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>File Type</th>
+                    <th>Sync Method</th>
+                    <th>Automatic?</th>
+                    <th>Persisted to S3?</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Source code (.py, .sh)</td>
+                    <td><code>rsync</code> / <code>deploy_training_server.sh</code></td>
+                    <td>❌ Manual</td>
+                    <td><span class="badge badge-warn">⚠️ Not in S3</span></td>
+                    <td>Managed via Git; local is source of truth</td>
+                </tr>
+                <tr>
+                    <td>Model weights (.pth)</td>
+                    <td><code>sync_model_to_s3.sh</code></td>
+                    <td>✅ Post-training</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                    <td>Both latest + versioned snapshots</td>
+                </tr>
+                <tr>
+                    <td>Training history (.json)</td>
+                    <td><code>upload_history_to_s3()</code></td>
+                    <td>✅ Per-batch</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                    <td>Merged into master history on S3</td>
+                </tr>
+                <tr>
+                    <td>Logs (.log)</td>
+                    <td>Cron push scripts</td>
+                    <td>✅ Every minute</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                    <td>Dashboard reads from S3, not from server</td>
+                </tr>
+                <tr>
+                    <td>Processed satellite (.npy)</td>
+                    <td>Pipeline auto-upload</td>
+                    <td>✅ Post-preprocess</td>
+                    <td><span class="badge badge-ok">✅ Synced</span></td>
+                    <td>13,703 files covering training dates</td>
+                </tr>
+                <tr>
+                    <td>Raw satellite (.nc)</td>
+                    <td>Transient; cleaned after training</td>
+                    <td>N/A</td>
+                    <td>—</td>
+                    <td>~150GB/day, purged after batch success</td>
+                </tr>
+                <tr>
+                    <td>Database (.db)</td>
+                    <td>Manual backup script</td>
+                    <td>❌ Manual</td>
+                    <td><span class="badge badge-ok">✅ Backed Up</span></td>
+                    <td>Today's backup confirmed</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>Code File Comparison: Training Server vs Local</h2>
+        <p>SSH comparison performed against Spot instance <code>i-05239b88c990b0558</code> (<code>18.141.177.127</code>,
+            g4dn.xlarge).</p>
+
+        <h3>Files on Training Server (15 files)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Remote MD5</th>
+                    <th>Local MD5</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>weather_fusion_model.py</code></td>
+                    <td><code>782c37f9</code></td>
+                    <td><code>782c37f9</code></td>
+                    <td><span class="badge badge-ok">✅ Identical</span></td>
+                </tr>
+                <tr>
+                    <td><code>generate_report.py</code></td>
+                    <td><code>f255311f</code></td>
+                    <td><code>93bc68b3</code></td>
+                    <td><span class="badge badge-warn">⚠️ Diverged</span></td>
+                </tr>
+                <tr>
+                    <td><code>train_rolling_window.py</code></td>
+                    <td><code>aa99abda</code></td>
+                    <td><code>0a2ab95a</code></td>
+                    <td><span class="badge badge-warn">⚠️ Diverged</span></td>
+                </tr>
+                <tr>
+                    <td><code>training_scheduler.py</code></td>
+                    <td><code>76f276db</code></td>
+                    <td><code>853eba3f</code></td>
+                    <td><span class="badge badge-warn">⚠️ Diverged</span></td>
+                </tr>
+                <tr>
+                    <td><code>weather_dataset.py</code></td>
+                    <td><code>491851cc</code></td>
+                    <td><code>ef84a657</code></td>
+                    <td><span class="badge badge-warn">⚠️ Diverged</span></td>
+                </tr>
+                <tr>
+                    <td><code>auto_train_pipeline.py</code></td>
+                    <td><code>a6e8f38b</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+                <tr>
+                    <td><code>check_s3_data.py</code></td>
+                    <td><code>f11eb42a</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+                <tr>
+                    <td><code>check_s3_sat.py</code></td>
+                    <td><code>531857c6</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+                <tr>
+                    <td><code>cleanup_storage.py</code></td>
+                    <td><code>6dcd7ecc</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+                <tr>
+                    <td><code>notification.py</code></td>
+                    <td><code>3fa0dab1</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+                <tr>
+                    <td><code>preprocess_images.py</code></td>
+                    <td><code>c43b9c9c</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+                <tr>
+                    <td><code>process_gov_data_from_s3.py</code></td>
+                    <td><code>3815f4eb</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+                <tr>
+                    <td><code>satellite_preprocessor.py</code></td>
+                    <td><code>b045a0d2</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+                <tr>
+                    <td><code>sync_model_to_s3.sh</code></td>
+                    <td><code>c64acc3d</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+                <tr>
+                    <td><code>training_service.py</code></td>
+                    <td><code>28e24bfb</code></td>
+                    <td>—</td>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>scripts/ Directory</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Location</th>
+                    <th>File Count</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Training Server <code>scripts/</code></td>
+                    <td>0</td>
+                    <td>Empty — scripts were never deployed to Spot instance</td>
+                </tr>
+                <tr>
+                    <td>Local <code>scripts/</code></td>
+                    <td>13</td>
+                    <td>batch_scheduler.py, training_scheduler.py, bulk_download_to_s3.sh, etc.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Summary</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Count</th>
+                    <th>Action Needed</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge badge-ok">✅ Identical</span></td>
+                    <td>1</td>
+                    <td>None (<code>weather_fusion_model.py</code>)</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-warn">⚠️ Diverged</span></td>
+                    <td>4</td>
+                    <td>Sync before termination — local may have newer changes</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-warn">⚠️ Server Only</span></td>
+                    <td>10</td>
+                    <td>Download from server to local before termination</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>Cost Impact: Spot Instance Termination</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Scenario</th>
+                    <th>Monthly Cost</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Training server running 24/7 (g4dn.xlarge On-Demand)</td>
+                    <td>~$384/mo</td>
+                    <td>GPU instance, expensive</td>
+                </tr>
+                <tr>
+                    <td>Training server running 24/7 (t3.large On-Demand)</td>
+                    <td>~$68/mo</td>
+                    <td>CPU-only, moderate</td>
+                </tr>
+                <tr>
+                    <td><strong>Training server stopped</strong> (API + S3 only)</td>
+                    <td><strong>~$35/mo</strong></td>
+                    <td>Recommended steady-state</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>Conclusion & Recommendation</h2>
+        <div class="summary-card">
+            <p><strong>⚠️ Sync server-only files before terminating the Spot Instance.</strong></p>
+            <ul>
+                <li>✅ All model weights, training history, state files, and dashboard logs are confirmed on S3 (last
+                    sync: 21:54 SGT today)</li>
+                <li>✅ 13,703 preprocessed satellite patches (~390MB) are persisted</li>
+                <li>✅ Database backup completed at 21:28 SGT today</li>
+                <li>✅ Dashboard will continue to display the last training state from S3</li>
+                <li>⚠️ <strong>14 code files need attention</strong>: 10 server-only + 4 diverged — download before
+                    termination</li>
+            </ul>
+            <p style="margin-top: 1rem; color: var(--text-muted);">
+                <strong>Before Termination</strong>: Download server-only files and reconcile diverged files.
+            </p>
+            <pre><code># 1. Download all server code to local backup
+rsync -avz -e "ssh -i ~/.ssh/id_rsa" ubuntu@18.141.177.127:~/weather-ai/*.py ./server-backup/
+rsync -avz -e "ssh -i ~/.ssh/id_rsa" ubuntu@18.141.177.127:~/weather-ai/*.sh ./server-backup/
+
+# 2. Cancel Spot Request
+aws ec2 cancel-spot-instance-requests --spot-instance-request-ids &lt;sir-xxx&gt;
+
+# 3. Terminate Instance
+aws ec2 terminate-instances --instance-ids i-05239b88c990b0558 --region ap-southeast-1</code></pre>
+        </div>
+
+        <footer>Weather AI — S3 Sync Snapshot Report — Generated 2026-02-14 22:14 SGT</footer>
+    </div>
+</body>
+
+</html>

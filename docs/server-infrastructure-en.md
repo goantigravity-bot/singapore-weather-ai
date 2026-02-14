@@ -7,8 +7,8 @@
 ```mermaid
 graph LR
     subgraph AWS ap-southeast-1
-        DL[Download Server<br/>t3.micro<br/>18.142.90.30]
-        TR[Training Server<br/>t3.large<br/>46.137.236.8]
+        DL[Download Server<br/>t3.small<br/>13.214.203.173]
+        TR[Training Server<br/>g4dn.xlarge Spot<br/>18.141.177.127]
         API[API Server<br/>t3.medium<br/>3.0.28.161]
         S3[(S3<br/>weather-ai-models-de08370c)]
     end
@@ -26,17 +26,27 @@ graph LR
 
 ## Servers
 
-### 1. Download Server — `18.142.90.30`
+### 1. Download Server — `13.214.203.173`
 
 | Item | Value |
 |------|-------|
-| Instance | t3.micro (1 vCPU, 1GB RAM) |
+| Instance | t3.small (2 vCPU, 2GB RAM) |
 | Disk | 8GB EBS |
 | Hostname | ip-172-31-12-162 |
 | IAM Role | weather-ai-download-role |
 | Python | 3.10.12 (venv) |
 
 **Role**: Real-time download of JAXA Himawari satellite data + data.gov.sg sensor data, preprocessing and upload to S3.
+
+**Design: Streaming Pipeline (Zero Local Storage)**
+
+The bulk download script uses a streaming pipeline architecture where satellite data is **never written to local disk**. Data flows directly from the JAXA FTP source to S3 via a Unix pipe:
+
+```bash
+curl -s --ftp-ssl <JAXA_FTP_URL> | aws s3 cp - s3://<bucket>/<key>
+```
+
+This design eliminates disk I/O bottlenecks and allows the download server to operate with minimal disk space (8GB EBS). The `PARALLEL_JOBS=4` setting enables 4 concurrent streaming transfers, balancing throughput against JAXA FTP connection limits.
 
 **Systemd Service**:
 ```
@@ -73,17 +83,17 @@ Log: ~/download_manager.log
 
 ---
 
-### 2. Training Server — `46.137.236.8`
+### 2. Training Server — `18.141.177.127`
 
 | Item | Value |
 |------|-------|
-| Instance | t3.large (2 vCPU, 8GB RAM) |
-| Disk | 200GB EBS |
-| Hostname | ip-172-31-20-248 |
+| Instance | g4dn.xlarge Spot (4 vCPU, 16GB RAM, Tesla T4 GPU) |
+| Disk | 125GB NVMe SSD |
+| AMI | Deep Learning AMI (Ubuntu 20.04) |
 | IAM Role | weather-ai-training-role |
-| Python | 3.10.12 (venv) |
+| Python | 3.10.12 (venv) + PyTorch CUDA 12.1 |
 
-**Role**: Daily training of WeatherFusionNet model (download data from S3 → preprocess → train → upload model to S3).
+**Role**: GPU-accelerated training of WeatherFusionNet model (download data from S3 → preprocess → train → upload model to S3). ~8x faster per epoch vs CPU (2.8s vs 22s).
 
 **Systemd Service**: None (triggered via crontab `training_scheduler.py` or manually)
 
@@ -108,7 +118,7 @@ Log: ~/download_manager.log
 ```
 ~/weather-ai/
 ├── *.py, *.sh            # Scripts
-├── .env.production       # Production environment variables
+├── .env                  # Environment variables
 ├── training_state.json   # Scheduler state (last_processed_date, total_epochs, etc.)
 ├── training_metrics.json # Latest batch training metrics
 ├── weather_fusion_model.pth  # Current model
@@ -226,10 +236,10 @@ sequenceDiagram
 
 ```bash
 # Download Server
-ssh -i ~/.ssh/id_rsa ubuntu@18.142.90.30
+ssh -i ~/.ssh/id_rsa ubuntu@13.214.203.173
 
-# Training Server
-ssh -i ~/.ssh/id_rsa ubuntu@46.137.236.8
+# Training Server (Spot — IP may change)
+ssh -i ~/.ssh/id_rsa ubuntu@18.141.177.127
 
 # API Server
 ssh -i ~/.ssh/id_rsa ubuntu@3.0.28.161

@@ -137,11 +137,11 @@ def upload_history_to_s3(date_str, metrics):
             "metrics": {
                 "mae": metrics.get("last_val_mae", 0.0),
                 "rmse": metrics.get("rmse", 0.0),
-                "accuracy": 0.0
+                "accuracy": metrics.get("rain_accuracy", 0.0)
             },
             "data_info": {
                 "date_range": date_str,
-                "sensor_records": 0
+                "sensor_records": metrics.get("total_train_samples", 0)
             },
             "training_config": {
                 "epochs": metrics.get("final_epoch", EPOCHS_PER_BATCH)
@@ -483,7 +483,7 @@ send_training_failure_email("{error_msg}", "Batch {date_str}")
 '''
         
         # 使用 bash 加载环境变量
-        shell_cmd = f'''cd {WORK_DIR} && source venv/bin/activate && set -a && source .env.production && set +a && python3 -c '{python_script}' '''
+        shell_cmd = f'''cd {WORK_DIR} && source venv/bin/activate && set -a && source .env && set +a && python3 -c '{python_script}' '''
         
         result = subprocess.run(
             ["bash", "-c", shell_cmd],
@@ -710,7 +710,7 @@ if __name__ == "__main__":
     os.chdir(WORK_DIR)
     
     # 加载环境变量
-    env_file = WORK_DIR / ".env.production"
+    env_file = WORK_DIR / ".env"
     if env_file.exists():
         with open(env_file) as f:
             for line in f:

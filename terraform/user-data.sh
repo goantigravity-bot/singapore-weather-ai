@@ -35,6 +35,11 @@ apt-get install -y \
     unzip \
     build-essential
 
+# Ubuntu 默认不提供 python 命令，仅有 python3
+# training_scheduler.py 的子进程依赖 python 命令，缺少此链接会导致训练失败
+echo "创建 python -> python3 符号链接..."
+ln -sf /usr/bin/python3 /usr/bin/python
+
 # 创建项目目录
 echo "创建项目目录..."
 mkdir -p /home/ubuntu/${project_name}

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,7 +18,13 @@
             --warn: #fbbf24;
             --danger: #f87171;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--bg);
@@ -25,222 +32,334 @@
             line-height: 1.7;
             padding: 2rem;
         }
-        .container { max-width: 1100px; margin: 0 auto; }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
 
         h1 {
-            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #38bdf8, #a78bfa);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
+
         h2 {
-            font-size: 1.35rem; font-weight: 600; color: var(--accent);
-            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.4rem;
             border-bottom: 1px solid var(--border);
         }
+
         h3 {
-            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent2);
             margin: 1.5rem 0 0.8rem;
         }
-        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
-        p { margin-bottom: 0.8rem; }
-        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
-        a { color: var(--accent); text-decoration: none; }
-        a:hover { text-decoration: underline; }
+
+        h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 1rem 0 0.5rem;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
 
         blockquote {
-            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
-            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            border-left: 3px solid var(--accent);
+            padding: 0.5rem 1rem;
+            background: rgba(56, 189, 248, 0.06);
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
             color: var(--text-muted);
         }
 
         code {
-            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
-            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
-            border-radius: 4px; color: var(--accent);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85em;
+            background: rgba(56, 189, 248, 0.1);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            color: var(--accent);
         }
+
         pre {
-            background: var(--card-bg); border: 1px solid var(--border);
-            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
-            overflow-x: auto; line-height: 1.5;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            line-height: 1.5;
         }
+
         pre code {
-            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+            background: none;
+            padding: 0;
+            color: var(--text);
+            font-size: 0.85rem;
         }
 
         table {
-            width: 100%; border-collapse: collapse; margin: 1rem 0;
-            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
             border: 1px solid var(--border);
         }
-        th, td {
-            text-align: left; padding: 0.6rem 1rem;
-            border-bottom: 1px solid var(--border); font-size: 0.9rem;
-        }
-        th {
-            color: var(--accent); font-weight: 600; font-size: 0.8rem;
-            text-transform: uppercase; letter-spacing: 0.05em;
-            background: rgba(56,189,248,0.06);
-        }
-        td { color: var(--text-muted); }
-        td:first-child { color: var(--text); font-weight: 500; }
-        tr:hover td { background: rgba(56,189,248,0.04); }
 
-        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
-        li { margin-bottom: 0.3rem; color: var(--text-muted); }
-        strong { color: var(--text); }
+        th,
+        td {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(56, 189, 248, 0.06);
+        }
+
+        td {
+            color: var(--text-muted);
+        }
+
+        td:first-child {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        tr:hover td {
+            background: rgba(56, 189, 248, 0.04);
+        }
+
+        ul,
+        ol {
+            margin: 0.5rem 0 1rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.3rem;
+            color: var(--text-muted);
+        }
+
+        strong {
+            color: var(--text);
+        }
 
         .mermaid {
-            display: flex; justify-content: center;
-            padding: 1.5rem 0; overflow-x: auto;
+            display: flex;
+            justify-content: center;
+            padding: 1.5rem 0;
+            overflow-x: auto;
         }
 
         footer {
-            text-align: center; color: var(--text-muted); font-size: 0.85rem;
-            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1 id="weather-ai-server-infrastructure">Weather AI Server Infrastructure</h1>
-<blockquote>
-<p>Last updated: 2026-02-14</p>
-</blockquote>
-<h2 id="architecture-overview">Architecture Overview</h2>
-<div class="mermaid">
-graph LR
-    subgraph AWS ap-southeast-1
-        DL[Download Server<br/>t3.micro<br/>18.142.90.30]
-        TR[Training Server<br/>t3.large<br/>46.137.236.8]
-        API[API Server<br/>t3.medium<br/>3.0.28.161]
-        S3[(S3<br/>weather-ai-models-de08370c)]
-    end
+        <blockquote>
+            <p>Last updated: 2026-02-14</p>
+        </blockquote>
+        <h2 id="architecture-overview">Architecture Overview</h2>
+        <div class="mermaid">
+            graph LR
+            subgraph AWS ap-southeast-1
+            DL[Download Server<br />t3.small<br />13.214.203.173]
+            TR[Training Server<br />g4dn.xlarge Spot<br />18.141.177.127]
+            API[API Server<br />t3.medium<br />3.0.28.161]
+            S3[(S3<br />weather-ai-models-de08370c)]
+            end
 
-    JAXA[JAXA Himawari] -->|satellite .nc| DL
-    GOV[data.gov.sg] -->|sensor JSON| DL
-    DL -->|raw .nc + .npy + JSON| S3
-    S3 -->|.nc / .npy + CSV| TR
-    S3 -->|model .pth + .npy + CSV| API
-    TR -->|trained model .pth| S3
-    API -->|predictions| Users
-</div>
+            JAXA[JAXA Himawari] -->|satellite .nc| DL
+            GOV[data.gov.sg] -->|sensor JSON| DL
+            DL -->|raw .nc + .npy + JSON| S3
+            S3 -->|.nc / .npy + CSV| TR
+            S3 -->|model .pth + .npy + CSV| API
+            TR -->|trained model .pth| S3
+            API -->|predictions| Users
+        </div>
 
-<hr />
-<h2 id="servers">Servers</h2>
-<h3 id="1-download-server-181429030">1. Download Server — <code>18.142.90.30</code></h3>
-<table>
-<thead>
-<tr>
-<th>Item</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Instance</td>
-<td>t3.micro (1 vCPU, 1GB RAM)</td>
-</tr>
-<tr>
-<td>Disk</td>
-<td>8GB EBS</td>
-</tr>
-<tr>
-<td>Hostname</td>
-<td>ip-172-31-12-162</td>
-</tr>
-<tr>
-<td>IAM Role</td>
-<td>weather-ai-download-role</td>
-</tr>
-<tr>
-<td>Python</td>
-<td>3.10.12 (venv)</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Role</strong>: Real-time download of JAXA Himawari satellite data + data.gov.sg sensor data, preprocessing and upload to S3.</p>
-<p><strong>Systemd Service</strong>:</p>
-<div class="highlight"><pre><span></span><code>weather-download.service  (Restart=always, RestartSec=30)
+        <hr />
+        <h2 id="servers">Servers</h2>
+        <h3 id="1-download-server-132142031730">1. Download Server — <code>13.214.203.173</code></h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Instance</td>
+                    <td>t3.small (2 vCPU, 2GB RAM)</td>
+                </tr>
+                <tr>
+                    <td>Disk</td>
+                    <td>8GB EBS</td>
+                </tr>
+                <tr>
+                    <td>Hostname</td>
+                    <td>ip-172-31-12-162</td>
+                </tr>
+                <tr>
+                    <td>IAM Role</td>
+                    <td>weather-ai-download-role</td>
+                </tr>
+                <tr>
+                    <td>Python</td>
+                    <td>3.10.12 (venv)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Role</strong>: Real-time download of JAXA Himawari satellite data + data.gov.sg sensor data,
+            preprocessing and upload to S3.</p>
+        <h4>Design: Streaming Pipeline (Zero Local Storage)</h4>
+        <p>The bulk download script uses a streaming pipeline architecture where satellite data is <strong>never written
+                to local disk</strong>. Data flows directly from the JAXA FTP source to S3 via a Unix pipe:</p>
+        <div class="highlight">
+            <pre><span></span><code>curl -s --ftp-ssl &lt;JAXA_FTP_URL&gt; | aws s3 cp - s3://&lt;bucket&gt;/&lt;key&gt;
+</code></pre>
+        </div>
+        <p>This design eliminates disk I/O bottlenecks and allows the download server to operate with minimal disk space
+            (8GB EBS). The <code>PARALLEL_JOBS=4</code> setting enables 4 concurrent streaming transfers, balancing
+            throughput against JAXA FTP connection limits.</p>
+        <p><strong>Systemd Service</strong>:</p>
+        <div class="highlight">
+            <pre><span></span><code>weather-download.service  (Restart=always, RestartSec=30)
 ExecStart: venv/bin/python3 download_manager.py
 Log: ~/download_manager.log
-</code></pre></div>
+</code></pre>
+        </div>
 
-<p><strong>Crontab</strong>:</p>
-<div class="highlight"><pre><span></span><code>* * * * * ~/push_download_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1
-</code></pre></div>
+        <p><strong>Crontab</strong>:</p>
+        <div class="highlight">
+            <pre><span></span><code>* * * * * ~/push_download_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1
+</code></pre>
+        </div>
 
-<p><strong>Key Files</strong>:
-| File | Purpose |
-|------|---------|
-| <code>download_manager.py</code> | Main scheduler — real-time download + historical backfill + gov data |
-| <code>download_jaxa_data.py</code> | JAXA FTP satellite data download |
-| <code>fetch_and_process_gov_data.py</code> | data.gov.sg API data collection + processing |
-| <code>cleanup_storage.py</code> | Local disk cleanup |
-| <code>notification.py</code> | Email notifications |
-| <code>bulk_download_to_s3_parallel.sh</code> | Bulk parallel download script |</p>
-<p><strong>Directory Structure</strong>:</p>
-<div class="highlight"><pre><span></span><code>~/weather-ai/
+        <p><strong>Key Files</strong>:
+            | File | Purpose |
+            |------|---------|
+            | <code>download_manager.py</code> | Main scheduler — real-time download + historical backfill + gov data |
+            | <code>download_jaxa_data.py</code> | JAXA FTP satellite data download |
+            | <code>fetch_and_process_gov_data.py</code> | data.gov.sg API data collection + processing |
+            | <code>cleanup_storage.py</code> | Local disk cleanup |
+            | <code>notification.py</code> | Email notifications |
+            | <code>bulk_download_to_s3_parallel.sh</code> | Bulk parallel download script |</p>
+        <p><strong>Directory Structure</strong>:</p>
+        <div class="highlight">
+            <pre><span></span><code>~/weather-ai/
 ├── *.py, *.sh          # Scripts
 ├── .env                # Environment variables (JAXA credentials, S3 config)
 ├── real_sensor_data.csv # Sensor data
 ├── venv/               # Python virtual environment
 ├── Dockerfile          # Container config
 └── requirements.txt
-</code></pre></div>
+</code></pre>
+        </div>
 
-<hr />
-<h3 id="2-training-server-461372368">2. Training Server — <code>46.137.236.8</code></h3>
-<table>
-<thead>
-<tr>
-<th>Item</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Instance</td>
-<td>t3.large (2 vCPU, 8GB RAM)</td>
-</tr>
-<tr>
-<td>Disk</td>
-<td>200GB EBS</td>
-</tr>
-<tr>
-<td>Hostname</td>
-<td>ip-172-31-20-248</td>
-</tr>
-<tr>
-<td>IAM Role</td>
-<td>weather-ai-training-role</td>
-</tr>
-<tr>
-<td>Python</td>
-<td>3.10.12 (venv)</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Role</strong>: Daily training of WeatherFusionNet model (download data from S3 → preprocess → train → upload model to S3).</p>
-<p><strong>Systemd Service</strong>: None (triggered via crontab <code>training_scheduler.py</code> or manually)</p>
-<p><strong>Crontab</strong>:</p>
-<div class="highlight"><pre><span></span><code>*/5 * * * * ~/push_training_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1
-</code></pre></div>
+        <hr />
+        <h3 id="2-training-server-18141177127">2. Training Server — <code>18.141.177.127</code></h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Instance</td>
+                    <td>g4dn.xlarge Spot (4 vCPU, 16GB RAM, Tesla T4 GPU)</td>
+                </tr>
+                <tr>
+                    <td>Disk</td>
+                    <td>125GB NVMe SSD</td>
+                </tr>
+                <tr>
+                    <td>AMI</td>
+                    <td>Deep Learning AMI (Ubuntu 20.04)</td>
+                </tr>
+                <tr>
+                    <td>IAM Role</td>
+                    <td>weather-ai-training-role</td>
+                </tr>
+                <tr>
+                    <td>Python</td>
+                    <td>3.10.12 (venv) + PyTorch CUDA 12.1</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Role</strong>: GPU-accelerated training of WeatherFusionNet model (download data from S3 → preprocess
+            → train → upload model to S3). ~8x faster per epoch vs CPU (2.8s vs 22s).</p>
+        <p><strong>Systemd Service</strong>: None (triggered via crontab <code>training_scheduler.py</code> or manually)
+        </p>
+        <p><strong>Crontab</strong>:</p>
+        <div class="highlight">
+            <pre><span></span><code>*/5 * * * * ~/push_training_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1
+</code></pre>
+        </div>
 
-<p><strong>Key Files</strong>:
-| File | Purpose |
-|------|---------|
-| <code>training_scheduler.py</code> | Main scheduler — check S3 data by date → download → preprocess → train → upload |
-| <code>train_rolling_window.py</code> | Rolling window training logic |
-| <code>weather_dataset.py</code> | PyTorch Dataset — sensor + satellite data alignment |
-| <code>weather_fusion_model.py</code> | WeatherFusionNet model definition |
-| <code>preprocess_images.py</code> | Raw .nc → crop Singapore region → .npy |
-| <code>process_gov_data_from_s3.py</code> | Gov JSON → real_sensor_data.csv |
-| <code>sync_model_to_s3.sh</code> | Upload model to S3 after training |
-| <code>notification.py</code> | Training success/failure email notifications |</p>
-<p><strong>Directory Structure</strong>:</p>
-<div class="highlight"><pre><span></span><code>~/weather-ai/
+        <p><strong>Key Files</strong>:
+            | File | Purpose |
+            |------|---------|
+            | <code>training_scheduler.py</code> | Main scheduler — check S3 data by date → download → preprocess →
+            train → upload |
+            | <code>train_rolling_window.py</code> | Rolling window training logic |
+            | <code>weather_dataset.py</code> | PyTorch Dataset — sensor + satellite data alignment |
+            | <code>weather_fusion_model.py</code> | WeatherFusionNet model definition |
+            | <code>preprocess_images.py</code> | Raw .nc → crop Singapore region → .npy |
+            | <code>process_gov_data_from_s3.py</code> | Gov JSON → real_sensor_data.csv |
+            | <code>sync_model_to_s3.sh</code> | Upload model to S3 after training |
+            | <code>notification.py</code> | Training success/failure email notifications |</p>
+        <p><strong>Directory Structure</strong>:</p>
+        <div class="highlight">
+            <pre><span></span><code>~/weather-ai/
 ├── *.py, *.sh            # Scripts
-├── .env.production       # Production environment variables
+├── .env                  # Environment variables
 ├── training_state.json   # Scheduler state (last_processed_date, total_epochs, etc.)
 ├── training_metrics.json # Latest batch training metrics
 ├── weather_fusion_model.pth  # Current model
@@ -249,67 +368,74 @@ Log: ~/download_manager.log
 ├── govdata/              # Government data JSON
 ├── model_backups/        # Model backups (before each training)
 └── venv/
-</code></pre></div>
+</code></pre>
+        </div>
 
-<hr />
-<h3 id="3-api-server-3028161">3. API Server — <code>3.0.28.161</code></h3>
-<table>
-<thead>
-<tr>
-<th>Item</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Instance</td>
-<td>t3.medium (2 vCPU, 4GB RAM)</td>
-</tr>
-<tr>
-<td>Disk</td>
-<td>20GB EBS</td>
-</tr>
-<tr>
-<td>Hostname</td>
-<td>ip-172-31-13-229</td>
-</tr>
-<tr>
-<td>IAM Role</td>
-<td>weather-ai-api-role</td>
-</tr>
-<tr>
-<td>Python</td>
-<td>3.10.12 (venv)</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Role</strong>: Weather prediction REST API + frontend static file serving.</p>
-<p><strong>Systemd Service</strong>:</p>
-<div class="highlight"><pre><span></span><code>weather-api.service  (Restart=always, RestartSec=10)
+        <hr />
+        <h3 id="3-api-server-3028161">3. API Server — <code>3.0.28.161</code></h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Instance</td>
+                    <td>t3.medium (2 vCPU, 4GB RAM)</td>
+                </tr>
+                <tr>
+                    <td>Disk</td>
+                    <td>20GB EBS</td>
+                </tr>
+                <tr>
+                    <td>Hostname</td>
+                    <td>ip-172-31-13-229</td>
+                </tr>
+                <tr>
+                    <td>IAM Role</td>
+                    <td>weather-ai-api-role</td>
+                </tr>
+                <tr>
+                    <td>Python</td>
+                    <td>3.10.12 (venv)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Role</strong>: Weather prediction REST API + frontend static file serving.</p>
+        <p><strong>Systemd Service</strong>:</p>
+        <div class="highlight">
+            <pre><span></span><code>weather-api.service  (Restart=always, RestartSec=10)
 ExecStart: venv/bin/python3 api.py
 Port: 8000
-</code></pre></div>
+</code></pre>
+        </div>
 
-<p><strong>Nginx</strong>: Reverse proxy 80/443 → 8000</p>
-<p><strong>Crontab</strong>:</p>
-<div class="highlight"><pre><span></span><code>*/10 * * * * cd ~/weather-ai &amp;&amp; ./fetch_latest_model.sh &gt;&gt; /var/log/model_sync.log 2&gt;&amp;1
-</code></pre></div>
+        <p><strong>Nginx</strong>: Reverse proxy 80/443 → 8000</p>
+        <p><strong>Crontab</strong>:</p>
+        <div class="highlight">
+            <pre><span></span><code>*/10 * * * * cd ~/weather-ai &amp;&amp; ./fetch_latest_model.sh &gt;&gt; /var/log/model_sync.log 2&gt;&amp;1
+</code></pre>
+        </div>
 
-<p><strong>Key Files</strong>:
-| File | Purpose |
-|------|---------|
-| <code>api.py</code> | FastAPI main service — prediction, search, monitoring, data sync |
-| <code>predict.py</code> | Inference logic — ensemble prediction + Delaunay triangulation + cloud analysis |
-| <code>weather_fusion_model.py</code> | Model definition (shared with training) |
-| <code>weather_dataset.py</code> | Dataset utilities (latlon2xy) |
-| <code>db.py</code> | SQLite data layer — caching, user activity, prediction records |
-| <code>smart_query.py</code> | NLU natural language query parsing |
-| <code>geocoding.py</code> | Geocoding (Nominatim + OneMap) |
-| <code>monitor_api.py</code> | Monitoring dashboard API |
-| <code>actual_collector.py</code> | Actual weather data collection (for prediction accuracy comparison) |
-| <code>perf-test.py</code> | Performance test script |</p>
-<p><strong>Directory Structure</strong>:</p>
-<div class="highlight"><pre><span></span><code>~/weather-ai/
+        <p><strong>Key Files</strong>:
+            | File | Purpose |
+            |------|---------|
+            | <code>api.py</code> | FastAPI main service — prediction, search, monitoring, data sync |
+            | <code>predict.py</code> | Inference logic — ensemble prediction + Delaunay triangulation + cloud analysis
+            |
+            | <code>weather_fusion_model.py</code> | Model definition (shared with training) |
+            | <code>weather_dataset.py</code> | Dataset utilities (latlon2xy) |
+            | <code>db.py</code> | SQLite data layer — caching, user activity, prediction records |
+            | <code>smart_query.py</code> | NLU natural language query parsing |
+            | <code>geocoding.py</code> | Geocoding (Nominatim + OneMap) |
+            | <code>monitor_api.py</code> | Monitoring dashboard API |
+            | <code>actual_collector.py</code> | Actual weather data collection (for prediction accuracy comparison) |
+            | <code>perf-test.py</code> | Performance test script |</p>
+        <p><strong>Directory Structure</strong>:</p>
+        <div class="highlight">
+            <pre><span></span><code>~/weather-ai/
 ├── *.py                    # Scripts
 ├── .env                    # Environment variables
 ├── weather_fusion_model.pth  # Latest model synced from S3
@@ -318,11 +444,13 @@ Port: 8000
 ├── satellite_data/         # Deprecated (no longer downloads raw .nc)
 ├── frontend/dist/          # React frontend build artifacts
 └── venv/
-</code></pre></div>
+</code></pre>
+        </div>
 
-<hr />
-<h2 id="s3-bucket-structure">S3 Bucket Structure</h2>
-<div class="highlight"><pre><span></span><code>s3://weather-ai-models-de08370c/
+        <hr />
+        <h2 id="s3-bucket-structure">S3 Bucket Structure</h2>
+        <div class="highlight">
+            <pre><span></span><code>s3://weather-ai-models-de08370c/
 ├── satellite/{YYYYMMDD}/        # Raw satellite .nc (~700MB/file, 144 files/day)
 ├── processed/satellite/{YYYYMMDD}/  # Preprocessed .npy (~16KB/file)
 ├── govdata/                     # Government data JSON (rainfall, temperature, humidity, pm25)
@@ -330,59 +458,64 @@ Port: 8000
 ├── state/training_state.json    # Training progress state
 ├── history/training_history.json # Training history records
 └── archived/                    # Archived data
-</code></pre></div>
+</code></pre>
+        </div>
 
-<hr />
-<h2 id="data-flow">Data Flow</h2>
-<div class="mermaid">
-sequenceDiagram
-    participant JAXA
-    participant DL as Download Server
-    participant S3
-    participant TR as Training Server
-    participant API as API Server
+        <hr />
+        <h2 id="data-flow">Data Flow</h2>
+        <div class="mermaid">
+            sequenceDiagram
+            participant JAXA
+            participant DL as Download Server
+            participant S3
+            participant TR as Training Server
+            participant API as API Server
 
-    Note over DL: Every 10 minutes
-    JAXA->>DL: Himawari .nc (FTP)
-    DL->>DL: Crop Singapore region → .npy
-    DL->>S3: Upload .nc + .npy
+            Note over DL: Every 10 minutes
+            JAXA->>DL: Himawari .nc (FTP)
+            DL->>DL: Crop Singapore region → .npy
+            DL->>S3: Upload .nc + .npy
 
-    Note over DL: Every 5 minutes
-    DL->>DL: Collect data.gov.sg API
-    DL->>S3: Upload sensor JSON
+            Note over DL: Every 5 minutes
+            DL->>DL: Collect data.gov.sg API
+            DL->>S3: Upload sensor JSON
 
-    Note over TR: On-demand / Manual trigger
-    S3->>TR: Download .nc/.npy + JSON
-    TR->>TR: Preprocess + Train (100 epochs/batch)
-    TR->>S3: Upload latest.pth
+            Note over TR: On-demand / Manual trigger
+            S3->>TR: Download .nc/.npy + JSON
+            TR->>TR: Preprocess + Train (100 epochs/batch)
+            TR->>S3: Upload latest.pth
 
-    Note over API: Every 5 minutes
-    S3->>API: Sync .npy + model + CSV
-    API->>API: Multi-modal inference
-</div>
+            Note over API: Every 5 minutes
+            S3->>API: Sync .npy + model + CSV
+            API->>API: Multi-modal inference
+        </div>
 
-<hr />
-<h2 id="ssh-access">SSH Access</h2>
-<div class="highlight"><pre><span></span><code><span class="c1"># Download Server</span>
-ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@18.142.90.30
+        <hr />
+        <h2 id="ssh-access">SSH Access</h2>
+        <div class="highlight">
+            <pre><span></span><code><span class="c1"># Download Server</span>
+ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@13.214.203.173
 
-<span class="c1"># Training Server</span>
-ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@46.137.236.8
+<span class="c1"># Training Server (Spot — IP may change)</span>
+ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@18.141.177.127
 
 <span class="c1"># API Server</span>
 ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@3.0.28.161
-</code></pre></div>
+</code></pre>
+        </div>
 
-<hr />
-<h2 id="health-check">Health Check</h2>
-<div class="highlight"><pre><span></span><code><span class="c1"># Check all servers</span>
+        <hr />
+        <h2 id="health-check">Health Check</h2>
+        <div class="highlight">
+            <pre><span></span><code><span class="c1"># Check all servers</span>
 ./scripts/server-health-check.sh<span class="w"> </span>all
 
 <span class="c1"># Check individual server</span>
 ./scripts/server-health-check.sh<span class="w"> </span>download
 ./scripts/server-health-check.sh<span class="w"> </span>training
 ./scripts/server-health-check.sh<span class="w"> </span>api
-</code></pre></div>
+</code></pre>
+        </div>
         <footer>Weather AI — Weather AI Server Infrastructure — Generated 2026-02-14</footer>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
@@ -402,4 +535,5 @@ ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w
         });
     </script>
 </body>
+
 </html>

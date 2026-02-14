@@ -11,7 +11,7 @@ GOVDATA_PREFIX="govdata"
 MIN_FILES_PER_DAY=50  # 每天最少文件数，低于此值不标记为完成
 
 # 并行配置
-PARALLEL_JOBS="${PARALLEL_JOBS:-4}"  # 默认 4 个并行下载
+PARALLEL_JOBS="${PARALLEL_JOBS:-8}"  # 默认 8 个并行下载
 
 # JAXA 凭证
 JAXA_USER="${JAXA_USER:-}"

@@ -12,6 +12,8 @@ interface ConfigState {
     toggleShowStations: () => void;
     geocodingProvider: GeocodingProvider;
     setGeocodingProvider: (p: GeocodingProvider) => void;
+    psiThreshold: number;
+    setPsiThreshold: (n: number) => void;
 }
 
 const ConfigContext = createContext<ConfigState | undefined>(undefined);
@@ -45,6 +47,11 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [geocodingProvider, setGeocodingProviderState] = useState<GeocodingProvider>(() => {
         const saved = localStorage.getItem('geocoding_provider');
         return (saved === 'onemap' ? 'onemap' : 'nominatim') as GeocodingProvider;
+    });
+
+    const [psiThreshold, setPsiThresholdState] = useState<number>(() => {
+        const saved = localStorage.getItem('psi_threshold');
+        return saved ? parseInt(saved, 10) : 50;
     });
 
     // 启动时从后端同步当前 provider 配置
@@ -103,12 +110,18 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }).catch(err => console.error('Failed to sync geocoding provider:', err));
     }, []);
 
+    const setPsiThreshold = useCallback((n: number) => {
+        setPsiThresholdState(n);
+        localStorage.setItem('psi_threshold', String(n));
+    }, []);
+
     return (
         <ConfigContext.Provider value={{
             metrics, toggleMetric,
             showTriangle, toggleShowTriangle,
             showStations, toggleShowStations,
             geocodingProvider, setGeocodingProvider,
+            psiThreshold, setPsiThreshold,
         }}>
             {children}
         </ConfigContext.Provider>

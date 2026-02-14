@@ -86,11 +86,16 @@ export const LABELS = {
         mapOptions: "Map Display Options",
         visible: "Visible",
         hidden: "Hidden",
+        hazeAlert: {
+            title: "Haze Alert Threshold",
+            description: "Show warning when PSI exceeds this value",
+        },
         metrics: {
             rain: "Rainfall Prediction",
             temp: "Temperature",
             hum: "Humidity",
-            pm25: "PM2.5 (Air Quality)"
+            pm25: "PM2.5 (Air Quality)",
+            psi: "PSI (Haze Index)"
         },
         toggles: {
             triangle: "Interpolation Triangle",

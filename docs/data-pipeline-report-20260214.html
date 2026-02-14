@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Pipeline Report — 2026-02-14</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin: 2.5rem 0 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+
+        h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 1rem 0 0.5rem;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85em;
+            background: rgba(56, 189, 248, 0.1);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            color: var(--accent);
+        }
+
+        pre {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(56, 189, 248, 0.06);
+        }
+
+        td {
+            color: var(--text-muted);
+        }
+
+        td:first-child {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        tr:hover td {
+            background: rgba(56, 189, 248, 0.04);
+        }
+
+        ul,
+        ol {
+            margin: 0.5rem 0 1rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.3rem;
+            color: var(--text-muted);
+        }
+
+        strong {
+            color: var(--text);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-fixed {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--success);
+        }
+
+        .badge-open {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--danger);
+        }
+
+        .badge-improved {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+        }
+
+        .badge-strategy {
+            background: rgba(167, 139, 250, 0.15);
+            color: var(--accent2);
+        }
+
+        .summary-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .phase-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .phase-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            padding: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.2rem;
+            text-align: center;
+        }
+
+        .stat-num {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.3rem;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔬 Data Pipeline: Problems, Fixes & Strategy</h1>
+        <p class="subtitle">Weather AI Project — Comprehensive Review — 14 February 2026</p>
+
+        <!-- Overview Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-num">12</div>
+                <div class="stat-label">Problems Identified</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">10</div>
+                <div class="stat-label">Fixed / Improved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">2</div>
+                <div class="stat-label">Open Issues</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">193</div>
+                <div class="stat-label">Days Trained</div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Pipeline Overview -->
+        <h2>Pipeline Overview</h2>
+        <div class="mermaid">
+            <pre><code>Source Data          →    Cleansing & Alignment    →    Preprocessing     →    Training & Output
+─────────────         ──────────────────────────     ─────────────────     ─────────────────────
+🛰️ JAXA Satellite      Timestamp Alignment           Crop Singapore        WeatherFusionModel
+🌡️ NEA Sensors          Geospatial Matching           Normalize .npy        Rolling Window
+🌧️ NEA Rainfall         Outlier Removal               Feature Engineering   Rain-Day Strategy
+📍 Station Metadata     Data Completeness Check       Dataset Generation    S3 Sync & Notify</code></pre>
+        </div>
+
+        <hr>
+
+        <!-- ==================== PHASE 1: SOURCE DATA ==================== -->
+        <h2>Phase 1: Source Data Acquisition</h2>
+        <p>Raw data is ingested from two external sources: JAXA Himawari satellite (FTP) and Singapore NEA government
+            APIs (REST).</p>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">1</span> <strong>Himawari-8 vs Himawari-9 File Format
+                    Mismatch</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Download scripts only recognized <code>NC_H09_</code> files, missing older Himawari-8 data
+                        (<code>NC_H08_</code>)</td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td>Hardcoded regex <code>NC_H09_</code> in <code>preprocess_images.py</code>,
+                        <code>weather_dataset.py</code>, and <code>bulk_download_to_s3_parallel.sh</code></td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>Updated all regex patterns to <code>NC_H0[89]_</code> to support both satellite generations</td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Unlocked historical data from Oct 2025 when Himawari-8 was still active</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">2</span> <strong>S3 "Ghost Markers" — False Completion
+                    Signals</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Training scheduler skipped dates that appeared complete but had 0 actual data files</td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td><code>.complete</code> markers were created before verifying minimum file count</td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>Added <code>MIN_FILES_PER_DAY=50</code> threshold check; purged ~40 ghost markers (2025-10-12 to
+                        2025-11-25)</td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Restored data integrity and prevented silent training on empty datasets</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">3</span> <strong>FTP Download Failures & Zombie
+                    Processes</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Download server unresponsive; memory exhausted on t3.micro (1GB RAM) due to orphaned
+                        <code>curl</code>/<code>xargs</code> processes</td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td>Parallel <code>xargs -P 4</code> processes accumulated without cleanup when FTP connections
+                        stalled</td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>Implemented zombie process cleanup, upgraded to t3.small (2GB), added aggressive timeout and
+                        monitoring</td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Download server now runs stable; parallel threads increased from 4 → 8</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">4</span> <strong>JAXA Tile Selection Strategy</strong>
+            </div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-improved">🔧 Improved</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Inconsistent satellite coverage — some dates had mixed resolution tiles</td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td>No preference logic for tile variants (<code>07001_06001</code> vs <code>06001_06001</code>)
+                    </td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>"Best-Fit" selection: prioritize <code>07001</code> tiles, fallback to <code>06001</code> when
+                        unavailable</td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Consistent tile quality across all training dates</td>
+                </tr>
+            </table>
+        </div>
+
+        <hr>
+
+        <!-- ==================== PHASE 2: CLEANSING ==================== -->
+        <h2>Phase 2: Data Cleansing & Alignment</h2>
+        <p>Aligning multi-source data with different temporal resolutions and coordinate systems.</p>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">5</span> <strong>Timestamp Timezone Mismatch in Actual
+                    Results</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-open">⚠️ Open</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Forecast accuracy calculation returns NULL — cannot match forecasts to actual readings</td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td><code>actual_collector.py</code> stores timestamps with timezone offsets (e.g.,
+                        <code>+08:00</code>), but SQLite's <code>julianday()</code> returns NULL for offset-aware
+                        strings</td>
+                </tr>
+                <tr>
+                    <td>Workaround</td>
+                    <td>Manual data correction pending; requires retroactive fix of existing records</td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Dashboard accuracy metrics unavailable until fixed</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">6</span> <strong>Satellite–Sensor Temporal
+                    Alignment</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Satellite data (10-min intervals) and NEA sensor data (1-min updates) had mismatched timestamps
+                    </td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td>No unified resampling strategy — raw data fed directly into model</td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>Implemented resampling in <code>train_rolling_window.py</code>: sensor data aggregated to 10-min
+                        windows aligned with satellite timestamps</td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Eliminated temporal noise in feature vectors</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">7</span> <strong>Geospatial Station Matching
+                    Failures</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span> (with known limitation)</td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Choa Chu Kang benchmark location consistently outside 2km matching range for NEA stations</td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td>NEA station coverage is sparse in the western region; nearest station is >2km</td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>Implemented <code>station_id</code> + <code>match_distance_km</code> tracking in
+                        <code>actual_result</code> table with configurable threshold</td>
+                </tr>
+                <tr>
+                    <td>Known Limitation</td>
+                    <td>Choa Chu Kang remains unmatched — intentional data quality decision (Won't Fix)</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">8</span> <strong>Data Completeness Gaps (Jan 21–29 Sensor
+                    Data)</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Real-time prediction API returned stale results for recent dates</td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td>Sensor data download pipeline had not fetched Jan 21–29 data after a scheduler restart</td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>Initiated manual backfill + updated scheduler to detect and fill gaps automatically</td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Restored prediction accuracy for the live simulation window</td>
+                </tr>
+            </table>
+        </div>
+
+        <hr>
+
+        <!-- ==================== PHASE 3: TRAINING ==================== -->
+        <h2>Phase 3: Training & Model Output</h2>
+        <p>Orchestration, training stability, and model quality issues encountered during the 120-day historical run.
+        </p>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">9</span> <strong>Negative Rainfall Predictions</strong>
+            </div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-open">⚠️ Open</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Model outputs negative rainfall values (physically impossible)</td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td><code>WeatherFusionModel</code> uses linear output layer without non-negative constraint for
+                        rainfall</td>
+                </tr>
+                <tr>
+                    <td>Proposed Fix</td>
+                    <td>Clamp rainfall predictions to <code>max(0, value)</code> in <code>predict.py</code>, or add ReLU
+                        activation for rainfall head</td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Some API responses show negative mm/h values; cosmetic but undermines credibility</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">10</span> <strong>Training Scheduler — <code>python</code>
+                    Command Not Found</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Training stopped at Jan 15 with <code>[Errno 2] No such file or directory: 'python'</code></td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td>Ubuntu does not create <code>python</code> symlink by default; scheduler subprocess called
+                        <code>python</code> instead of <code>python3</code></td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>Created symlink on server (<code>ln -sf /usr/bin/python3 /usr/bin/python</code>) and persisted
+                        in Terraform <code>user-data.sh</code></td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Training can now proceed past Jan 15; fix survives instance recreation</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">11</span> <strong>Train-then-Cleanup Execution
+                    Order</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Training failures required full re-download of 150GB+ raw data for retry</td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td>Original sequence cleaned up raw files <em>before</em> confirming training success</td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>Reordered to: Train → Verify → Sync to S3 → Cleanup → Archive</td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>Failed training batches can be retried immediately without re-downloading</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="summary-card">
+            <div class="phase-header"><span class="phase-num">12</span> <strong>BoundLocalError in Rolling Window
+                    Loop</strong></div>
+            <table>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Detail</th>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>Symptom</td>
+                    <td>Single-day training batches silently skipped; <code>BoundLocalError</code> on undefined variable
+                    </td>
+                </tr>
+                <tr>
+                    <td>Root Cause</td>
+                    <td>Loop condition used <code>&lt;</code> instead of <code>&lt;=</code> for end date, causing
+                        single-day ranges to never execute</td>
+                </tr>
+                <tr>
+                    <td>Fix</td>
+                    <td>Updated to <code>while current_start &lt;= end_date</code> in
+                        <code>train_rolling_window.py</code></td>
+                </tr>
+                <tr>
+                    <td>Impact</td>
+                    <td>All date ranges, including single-day batches, now train correctly</td>
+                </tr>
+            </table>
+        </div>
+
+        <hr>
+
+        <!-- ==================== STRATEGY ==================== -->
+        <h2>Strategy: Rain-Day Data for Training</h2>
+        <p>The current model trains on all available dates uniformly. However, most days in Singapore have
+            <strong>extended dry periods</strong>, which creates a data imbalance — the model learns to predict "no
+            rain" very well but performs poorly on actual rainy events.</p>
+
+        <h3>Current Problem</h3>
+        <div class="summary-card">
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                    <th>Notes</th>
+                </tr>
+                <tr>
+                    <td>Total Training Days</td>
+                    <td>193</td>
+                    <td>Oct 2025 – Jan 2026</td>
+                </tr>
+                <tr>
+                    <td>Estimated Rain Days</td>
+                    <td>~100–120</td>
+                    <td>Singapore averages ~167 rain days/year</td>
+                </tr>
+                <tr>
+                    <td>Estimated Dry Days</td>
+                    <td>~70–90</td>
+                    <td>Contributing minimal rainfall signal</td>
+                </tr>
+                <tr>
+                    <td>Model Bias</td>
+                    <td>Toward 0mm</td>
+                    <td>Dry-day dominance suppresses wet predictions</td>
+                </tr>
+                <tr>
+                    <td>Negative Predictions</td>
+                    <td>Observed</td>
+                    <td>No ReLU/clamping on rainfall output head</td>
+                </tr>
+            </table>
+        </div>
+
+        <h3>Proposed Strategy: Rain-Day Prioritized Training</h3>
+        <div class="summary-card">
+            <h4>Step 1: Data Classification</h4>
+            <p>Classify each training day based on total rainfall recorded across all stations:</p>
+            <table>
+                <tr>
+                    <th>Category</th>
+                    <th>Criteria</th>
+                    <th>Training Weight</th>
+                </tr>
+                <tr>
+                    <td>🌧️ Heavy Rain Day</td>
+                    <td>&gt;= 20mm total in any station</td>
+                    <td><strong>3x</strong> oversampling</td>
+                </tr>
+                <tr>
+                    <td>🌦️ Moderate Rain Day</td>
+                    <td>1mm – 20mm total</td>
+                    <td><strong>2x</strong> oversampling</td>
+                </tr>
+                <tr>
+                    <td>☀️ Dry Day</td>
+                    <td>&lt; 1mm total</td>
+                    <td>1x (baseline)</td>
+                </tr>
+            </table>
+
+            <h4>Step 2: Weighted Sampling in DataLoader</h4>
+            <p>Instead of discarding dry days, use a <code>WeightedRandomSampler</code> in PyTorch to oversample rain
+                events:</p>
+            <pre><code># Assign weights based on daily rainfall classification
+sample_weights = []
+for sample in dataset:
+    if sample.daily_rainfall >= 20:
+        sample_weights.append(3.0)  # Heavy rain
+    elif sample.daily_rainfall >= 1:
+        sample_weights.append(2.0)  # Moderate
+    else:
+        sample_weights.append(1.0)  # Dry
+
+sampler = WeightedRandomSampler(sample_weights, num_samples=len(dataset))</code></pre>
+
+            <h4>Step 3: Loss Function Enhancement</h4>
+            <p>Apply asymmetric loss to penalize underestimation of rainfall more heavily than overestimation:</p>
+            <pre><code># Asymmetric MSE: higher penalty for under-predicting rain
+def rain_aware_loss(pred, target, alpha=2.0):
+    error = pred - target
+    # Under-prediction (pred < target) gets alpha x penalty
+    weights = torch.where(error < 0, alpha, 1.0)
+    return (weights * error ** 2).mean()</code></pre>
+
+            <h4>Step 4: Output Constraint</h4>
+            <p>Enforce physical constraints on the model output:</p>
+            <pre><code># In predict.py — clamp rainfall to non-negative
+predictions['rainfall'] = max(0.0, raw_prediction['rainfall'])</code></pre>
+        </div>
+
+        <h3>Expected Improvements</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Current</th>
+                    <th>Expected</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Rain Event Detection (Recall)</td>
+                    <td>Low — biased to "no rain"</td>
+                    <td>Significantly improved via oversampling</td>
+                </tr>
+                <tr>
+                    <td>False Negatives (Missed Rain)</td>
+                    <td>High</td>
+                    <td>Reduced by asymmetric loss</td>
+                </tr>
+                <tr>
+                    <td>Negative Predictions</td>
+                    <td>Present</td>
+                    <td>Eliminated by output clamping</td>
+                </tr>
+                <tr>
+                    <td>Overall MAE</td>
+                    <td>~0.11</td>
+                    <td>May increase slightly for dry days, but better for rain events</td>
+                </tr>
+                <tr>
+                    <td>User Trust</td>
+                    <td>Medium</td>
+                    <td>Higher — fewer nonsensical outputs</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Implementation Priority</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Priority</th>
+                    <th>Action</th>
+                    <th>File(s)</th>
+                    <th>Effort</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge badge-fixed">P0</span></td>
+                    <td>Clamp negative rainfall predictions to 0</td>
+                    <td><code>predict.py</code></td>
+                    <td>1 line</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-fixed">P0</span></td>
+                    <td>Fix timezone in <code>actual_collector.py</code></td>
+                    <td><code>actual_collector.py</code></td>
+                    <td>Small</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-improved">P1</span></td>
+                    <td>Add WeightedRandomSampler for rain-day oversampling</td>
+                    <td><code>weather_dataset.py</code>, <code>train_rolling_window.py</code></td>
+                    <td>Medium</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-strategy">P2</span></td>
+                    <td>Implement rain-aware asymmetric loss</td>
+                    <td><code>train_rolling_window.py</code></td>
+                    <td>Medium</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-strategy">P3</span></td>
+                    <td>Add ReLU activation to rainfall output head</td>
+                    <td><code>weather_fusion_model.py</code></td>
+                    <td>Small (requires retraining)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <!-- ==================== SUMMARY ==================== -->
+        <h2>Summary: All Issues at a Glance</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Phase</th>
+                    <th>Issue</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Source</td>
+                    <td>Himawari-8/9 file format mismatch</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Source</td>
+                    <td>S3 ghost markers</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Source</td>
+                    <td>FTP zombie processes</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Source</td>
+                    <td>Tile selection strategy</td>
+                    <td><span class="badge badge-improved">🔧 Improved</span></td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Cleansing</td>
+                    <td>Timestamp timezone mismatch</td>
+                    <td><span class="badge badge-open">⚠️ Open</span></td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Cleansing</td>
+                    <td>Satellite–sensor temporal alignment</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Cleansing</td>
+                    <td>Geospatial station matching</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>Cleansing</td>
+                    <td>Sensor data gaps (Jan 21–29)</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>Training</td>
+                    <td>Negative rainfall predictions</td>
+                    <td><span class="badge badge-open">⚠️ Open</span></td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>Training</td>
+                    <td><code>python</code> command not found</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>11</td>
+                    <td>Training</td>
+                    <td>Train-then-cleanup execution order</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+                <tr>
+                    <td>12</td>
+                    <td>Training</td>
+                    <td>Rolling window BoundLocalError</td>
+                    <td><span class="badge badge-fixed">✅ Fixed</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <footer>Weather AI — Data Pipeline Report — Generated 2026-02-14 22:36 SGT</footer>
+    </div>
+</body>
+
+</html>
