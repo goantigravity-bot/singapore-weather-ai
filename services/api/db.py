@@ -139,6 +139,11 @@ def create_tables():
         c.execute("CREATE INDEX IF NOT EXISTS idx_actual_loc ON actual_result(loc_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_actual_time ON actual_result(observation_time)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_forecast_time ON forecast_result(forecast_time)")
+        # 复合索引: accuracy 查询先按 loc_id 过滤再按时间范围匹配
+        c.execute("CREATE INDEX IF NOT EXISTS idx_actual_loc_time ON actual_result(loc_id, observation_time)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_forecast_loc_time ON forecast_result(loc_id, forecast_time)")
+        # accuracy 查询按 source='backtest' 过滤
+        c.execute("CREATE INDEX IF NOT EXISTS idx_forecast_source ON forecast_result(source)")
 
         # 迁移：为已存在的表添加新列（ALTER TABLE 是幂等安全的，列已存在会忽略）
         for stmt in [
@@ -274,9 +279,22 @@ def save_actual_result(loc_id, actual_rainfall_mm, observation_time,
 
 
 # ── Forecast vs Actual 闭环查询 ──
+# Accuracy API 只统计 backtest 预测（固定 10 个测试点，每 10 分钟），
+# 数据量可控（~百行级），JOIN 性能 <10ms。
+# 用户查询的 forecast 分布过广（30K+ × 130K+），julianday JOIN 无法利用索引。
+# 时间匹配窗口：0.021 天 ≈ 30 分钟
+
+_ACCURACY_JOIN = """
+    FROM forecast_result f
+    JOIN actual_result a
+        ON a.loc_id = f.loc_id
+        AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+    WHERE f.source = 'backtest'
+"""
+
 
 def get_unmatched_forecasts(hours=2):
-    """获取最近 N 小时内尚未配对 actual 的 forecast 记录"""
+    """获取最近 N 小时内尚未配对 actual 的 backtest forecast"""
     with get_db() as conn:
         rows = conn.execute("""
             SELECT f.forecast_id, f.loc_id, f.rainfall_mm, f.forecast_time,
@@ -284,9 +302,11 @@ def get_unmatched_forecasts(hours=2):
                    l.lat, l.lon
             FROM forecast_result f
             JOIN location l ON f.loc_id = l.loc_id
-            LEFT JOIN actual_result a ON f.loc_id = a.loc_id
+            LEFT JOIN actual_result a
+                ON a.loc_id = f.loc_id
                 AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
             WHERE a.actual_id IS NULL
+              AND f.source = 'backtest'
               AND f.forecast_time >= datetime('now', ? || ' hours')
               AND f.forecast_time <= datetime('now')
         """, (f"-{hours}",)).fetchall()
@@ -296,17 +316,17 @@ def get_unmatched_forecasts(hours=2):
 def get_accuracy_summary():
     """总体准确度概览：MAE、bias、样本数、匹配率"""
     with get_db() as conn:
-        row = conn.execute("""
+        row = conn.execute(f"""
             SELECT
                 COUNT(*) AS sample_count,
                 AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
                 AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias,
                 AVG(a.match_distance_km) AS avg_match_distance_km
-            FROM forecast_result f
-            JOIN actual_result a ON f.loc_id = a.loc_id
-                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+            {_ACCURACY_JOIN}
         """).fetchone()
-        total = conn.execute("SELECT COUNT(*) AS cnt FROM forecast_result").fetchone()
+        total = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM forecast_result WHERE source = 'backtest'"
+        ).fetchone()
         result = dict(row)
         result["total_forecasts"] = total["cnt"]
         result["match_rate"] = round(result["sample_count"] / max(total["cnt"], 1), 4)
@@ -316,15 +336,13 @@ def get_accuracy_summary():
 def get_accuracy_by_hour():
     """按小时聚合的 MAE 和 bias — 发现哪个时段预测最不准"""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT
                 CAST(strftime('%H', f.forecast_time) AS INTEGER) AS hour,
                 COUNT(*) AS count,
                 AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
                 AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias
-            FROM forecast_result f
-            JOIN actual_result a ON f.loc_id = a.loc_id
-                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+            {_ACCURACY_JOIN}
             GROUP BY hour
             ORDER BY hour
         """).fetchall()
@@ -341,10 +359,12 @@ def get_accuracy_by_location():
                 AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
                 AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias
             FROM forecast_result f
-            JOIN actual_result a ON f.loc_id = a.loc_id
+            JOIN actual_result a
+                ON a.loc_id = f.loc_id
                 AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
             JOIN location l ON f.loc_id = l.loc_id
             JOIN place p ON l.place_id = p.place_id
+            WHERE f.source = 'backtest'
             GROUP BY p.place_name
             ORDER BY mae DESC
         """).fetchall()
@@ -354,7 +374,7 @@ def get_accuracy_by_location():
 def get_accuracy_by_rain_level():
     """按降雨量级聚合 — 发现模型对哪种雨量预测偏差最大"""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT
                 CASE
                     WHEN a.actual_rainfall_mm < 0.5 THEN 'No Rain'
@@ -365,9 +385,7 @@ def get_accuracy_by_rain_level():
                 COUNT(*) AS count,
                 AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
                 AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias
-            FROM forecast_result f
-            JOIN actual_result a ON f.loc_id = a.loc_id
-                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
+            {_ACCURACY_JOIN}
             GROUP BY rain_level
             ORDER BY mae DESC
         """).fetchall()
@@ -377,7 +395,7 @@ def get_accuracy_by_rain_level():
 def get_accuracy_by_distance():
     """按匹配距离分桶 — 验证 2km 阈值是否合理"""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT
                 CASE
                     WHEN a.match_distance_km < 0.5 THEN '0-0.5km'
@@ -388,10 +406,8 @@ def get_accuracy_by_distance():
                 COUNT(*) AS count,
                 AVG(ABS(f.rainfall_mm - a.actual_rainfall_mm)) AS mae,
                 AVG(f.rainfall_mm - a.actual_rainfall_mm) AS bias
-            FROM forecast_result f
-            JOIN actual_result a ON f.loc_id = a.loc_id
-                AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
-            WHERE a.match_distance_km IS NOT NULL
+            {_ACCURACY_JOIN}
+            AND a.match_distance_km IS NOT NULL
             GROUP BY distance_bin
             ORDER BY distance_bin
         """).fetchall()

@@ -1,0 +1,701 @@
+{
+  "metadata": {
+    "base_url": "http://3.0.28.161:8000",
+    "test_time": "2026-02-13T05:30:13.367630",
+    "total_requests": 12265,
+    "total_duration_s": 602.7,
+    "throughput_rps": 20.35
+  },
+  "overall": {
+    "total_requests": 12265,
+    "successful": 11269,
+    "failed": 996,
+    "success_rate_pct": 91.88,
+    "avg_response_ms": 728.2,
+    "p95_response_ms": 1636.6
+  },
+  "service_availability": {
+    "/health": {
+      "total_requests": 1183,
+      "successful": 1183,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/stations": {
+      "total_requests": 624,
+      "successful": 624,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/predict?coords": {
+      "total_requests": 1792,
+      "successful": 1792,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/smart-query": {
+      "total_requests": 1852,
+      "successful": 1852,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/predict?location": {
+      "total_requests": 6209,
+      "successful": 5213,
+      "failed": 996,
+      "availability_pct": 83.96
+    },
+    "/popular-searches": {
+      "total_requests": 605,
+      "successful": 605,
+      "failed": 0,
+      "availability_pct": 100.0
+    }
+  },
+  "response_times": {
+    "/health": {
+      "avg_ms": 93.8,
+      "median_ms": 77.7,
+      "p95_ms": 201.5,
+      "p99_ms": 285.8,
+      "min_ms": 31.4,
+      "max_ms": 475.0,
+      "sample_count": 1183
+    },
+    "/stations": {
+      "avg_ms": 107.7,
+      "median_ms": 96.1,
+      "p95_ms": 233.2,
+      "p99_ms": 297.5,
+      "min_ms": 34.9,
+      "max_ms": 394.8,
+      "sample_count": 624
+    },
+    "/predict?coords": {
+      "avg_ms": 575.8,
+      "median_ms": 533.8,
+      "p95_ms": 1108.8,
+      "p99_ms": 1469.8,
+      "min_ms": 72.0,
+      "max_ms": 2836.0,
+      "sample_count": 1792
+    },
+    "/smart-query": {
+      "avg_ms": 1512.0,
+      "median_ms": 891.5,
+      "p95_ms": 6011.3,
+      "p99_ms": 8560.9,
+      "min_ms": 46.0,
+      "max_ms": 11361.7,
+      "sample_count": 1852
+    },
+    "/predict?location": {
+      "avg_ms": 783.7,
+      "median_ms": 724.3,
+      "p95_ms": 1503.1,
+      "p99_ms": 2137.6,
+      "min_ms": 85.9,
+      "max_ms": 5546.3,
+      "sample_count": 5213
+    },
+    "/popular-searches": {
+      "avg_ms": 182.9,
+      "median_ms": 166.5,
+      "p95_ms": 329.7,
+      "p99_ms": 438.1,
+      "min_ms": 50.3,
+      "max_ms": 3085.1,
+      "sample_count": 605
+    }
+  },
+  "forecast_performance": {
+    "total_forecasts": 7005,
+    "distribution": {
+      "Cloudy": 7005
+    }
+  },
+  "popular_places": [
+    {
+      "name": "Marina Bay Sands",
+      "searches": 643
+    },
+    {
+      "name": "West Coast Park",
+      "searches": 481
+    },
+    {
+      "name": "East Coast Park",
+      "searches": 453
+    },
+    {
+      "name": "Changi Beach Park",
+      "searches": 451
+    },
+    {
+      "name": "Sentosa Beach",
+      "searches": 448
+    },
+    {
+      "name": "Pasir Ris Park",
+      "searches": 444
+    },
+    {
+      "name": "Jurong Lake Gardens",
+      "searches": 387
+    },
+    {
+      "name": "Gardens by the Bay",
+      "searches": 371
+    },
+    {
+      "name": "Hort Park",
+      "searches": 368
+    },
+    {
+      "name": "Botanic Gardens",
+      "searches": 347
+    },
+    {
+      "name": "Southern Ridges",
+      "searches": 306
+    },
+    {
+      "name": "Coney Island",
+      "searches": 294
+    },
+    {
+      "name": "Bukit Timah Nature Reserve",
+      "searches": 290
+    },
+    {
+      "name": "Labrador Nature Reserve",
+      "searches": 271
+    },
+    {
+      "name": "Rail Corridor",
+      "searches": 264
+    },
+    {
+      "name": "MacRitchie Reservoir",
+      "searches": 262
+    },
+    {
+      "name": "Sungei Buloh Wetland Reserve",
+      "searches": 260
+    },
+    {
+      "name": "Sembawang Hot Spring Park",
+      "searches": 246
+    },
+    {
+      "name": "Bedok Reservoir Park",
+      "searches": 238
+    },
+    {
+      "name": "Fort Canning Park",
+      "searches": 236
+    }
+  ],
+  "error_analysis": {
+    "/predict?location -> 404": 996
+  },
+  "system_metrics": {
+    "summary": {},
+    "sample_interval_s": 15,
+    "total_samples": 41,
+    "time_series": [
+      {
+        "timestamp": "05:20:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:20:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:20:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:20:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:21:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:21:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:21:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:21:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:22:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:22:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:22:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:22:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:23:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:23:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:23:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:23:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:24:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:24:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:24:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:24:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:25:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:25:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:25:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:25:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:26:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:26:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:26:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:26:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:27:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:27:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:27:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:27:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:28:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:28:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:28:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:28:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:29:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:29:25",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:29:40",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:29:55",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      },
+      {
+        "timestamp": "05:30:10",
+        "cpu_pct": null,
+        "mem_total_mb": null,
+        "mem_used_mb": null,
+        "mem_pct": null,
+        "disk_total_gb": 460.4,
+        "disk_used_gb": 436.8,
+        "disk_pct": 94.9,
+        "net_rx_kbps": 0.0,
+        "net_tx_kbps": 0.0
+      }
+    ]
+  }
+}

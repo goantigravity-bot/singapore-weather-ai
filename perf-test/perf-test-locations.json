@@ -1,0 +1,336 @@
+{
+    "description": "Popular outdoor activity locations in Singapore for weather forecast performance testing",
+    "version": "1.0",
+    "locations": [
+        {
+            "name": "East Coast Park",
+            "lat": 1.3008,
+            "lon": 103.9122,
+            "category": "beach_park",
+            "activities": [
+                "cycling",
+                "jogging",
+                "BBQ",
+                "swimming"
+            ]
+        },
+        {
+            "name": "Gardens by the Bay",
+            "lat": 1.2816,
+            "lon": 103.8636,
+            "category": "garden",
+            "activities": [
+                "walking",
+                "sightseeing",
+                "photography"
+            ]
+        },
+        {
+            "name": "Sentosa Beach",
+            "lat": 1.2494,
+            "lon": 103.8303,
+            "category": "beach_park",
+            "activities": [
+                "swimming",
+                "beach volleyball",
+                "sunbathing"
+            ]
+        },
+        {
+            "name": "MacRitchie Reservoir",
+            "lat": 1.3430,
+            "lon": 103.8340,
+            "category": "nature_trail",
+            "activities": [
+                "hiking",
+                "treetop walk",
+                "kayaking"
+            ]
+        },
+        {
+            "name": "Botanic Gardens",
+            "lat": 1.3138,
+            "lon": 103.8159,
+            "category": "garden",
+            "activities": [
+                "walking",
+                "picnic",
+                "photography"
+            ]
+        },
+        {
+            "name": "Marina Bay Sands",
+            "lat": 1.2834,
+            "lon": 103.8607,
+            "category": "attraction",
+            "activities": [
+                "sightseeing",
+                "dining",
+                "shopping"
+            ]
+        },
+        {
+            "name": "Bukit Timah Nature Reserve",
+            "lat": 1.3544,
+            "lon": 103.7764,
+            "category": "nature_trail",
+            "activities": [
+                "hiking",
+                "mountain biking",
+                "bird watching"
+            ]
+        },
+        {
+            "name": "Pasir Ris Park",
+            "lat": 1.3810,
+            "lon": 103.9505,
+            "category": "beach_park",
+            "activities": [
+                "cycling",
+                "BBQ",
+                "mangrove walk"
+            ]
+        },
+        {
+            "name": "Punggol Waterway Park",
+            "lat": 1.4088,
+            "lon": 103.9023,
+            "category": "park",
+            "activities": [
+                "cycling",
+                "jogging",
+                "canoeing"
+            ]
+        },
+        {
+            "name": "Coney Island",
+            "lat": 1.4075,
+            "lon": 103.9190,
+            "category": "nature_trail",
+            "activities": [
+                "cycling",
+                "bird watching",
+                "walking"
+            ]
+        },
+        {
+            "name": "West Coast Park",
+            "lat": 1.2820,
+            "lon": 103.7644,
+            "category": "beach_park",
+            "activities": [
+                "cycling",
+                "playground",
+                "BBQ"
+            ]
+        },
+        {
+            "name": "Jurong Lake Gardens",
+            "lat": 1.3385,
+            "lon": 103.7290,
+            "category": "garden",
+            "activities": [
+                "walking",
+                "kayaking",
+                "playground"
+            ]
+        },
+        {
+            "name": "Bishan-Ang Mo Kio Park",
+            "lat": 1.3616,
+            "lon": 103.8456,
+            "category": "park",
+            "activities": [
+                "jogging",
+                "cycling",
+                "dog walking"
+            ]
+        },
+        {
+            "name": "Sungei Buloh Wetland Reserve",
+            "lat": 1.4467,
+            "lon": 103.7290,
+            "category": "nature_trail",
+            "activities": [
+                "bird watching",
+                "hiking",
+                "photography"
+            ]
+        },
+        {
+            "name": "Southern Ridges",
+            "lat": 1.2735,
+            "lon": 103.7998,
+            "category": "nature_trail",
+            "activities": [
+                "hiking",
+                "sightseeing",
+                "photography"
+            ]
+        },
+        {
+            "name": "Changi Beach Park",
+            "lat": 1.3897,
+            "lon": 103.9912,
+            "category": "beach_park",
+            "activities": [
+                "cycling",
+                "BBQ",
+                "fishing"
+            ]
+        },
+        {
+            "name": "Fort Canning Park",
+            "lat": 1.2974,
+            "lon": 103.8463,
+            "category": "park",
+            "activities": [
+                "walking",
+                "photography",
+                "picnic"
+            ]
+        },
+        {
+            "name": "Labrador Nature Reserve",
+            "lat": 1.2651,
+            "lon": 103.8025,
+            "category": "nature_trail",
+            "activities": [
+                "hiking",
+                "bird watching",
+                "fishing"
+            ]
+        },
+        {
+            "name": "Bedok Reservoir Park",
+            "lat": 1.3399,
+            "lon": 103.9326,
+            "category": "park",
+            "activities": [
+                "jogging",
+                "kayaking",
+                "dragon boating"
+            ]
+        },
+        {
+            "name": "Rail Corridor",
+            "lat": 1.3300,
+            "lon": 103.7900,
+            "category": "nature_trail",
+            "activities": [
+                "walking",
+                "cycling",
+                "photography"
+            ]
+        },
+        {
+            "name": "Pulau Ubin",
+            "lat": 1.4066,
+            "lon": 103.9596,
+            "category": "island",
+            "activities": [
+                "cycling",
+                "hiking",
+                "kayaking"
+            ]
+        },
+        {
+            "name": "Sembawang Hot Spring Park",
+            "lat": 1.4313,
+            "lon": 103.8203,
+            "category": "park",
+            "activities": [
+                "relaxation",
+                "egg boiling",
+                "walking"
+            ]
+        },
+        {
+            "name": "Kallang Riverside Park",
+            "lat": 1.3110,
+            "lon": 103.8677,
+            "category": "park",
+            "activities": [
+                "jogging",
+                "cycling",
+                "water sports"
+            ]
+        },
+        {
+            "name": "Hort Park",
+            "lat": 1.2774,
+            "lon": 103.8009,
+            "category": "garden",
+            "activities": [
+                "gardening workshop",
+                "walking",
+                "photography"
+            ]
+        },
+        {
+            "name": "Upper Seletar Reservoir",
+            "lat": 1.4016,
+            "lon": 103.8085,
+            "category": "park",
+            "activities": [
+                "fishing",
+                "jogging",
+                "bird watching"
+            ]
+        }
+    ],
+    "query_templates": [
+        "Will it rain at {location} {time_desc}?",
+        "Is it safe to go to {location} for {activity} {time_desc}?",
+        "Should I bring umbrella to {location} {time_desc}?",
+        "Weather at {location} {time_desc}",
+        "Can I do {activity} at {location} {time_desc}?",
+        "Is {location} good for outdoor activity {time_desc}?",
+        "Rain forecast for {location} {time_desc}",
+        "What is the weather like at {location} {time_desc}?",
+        "Is it going to be sunny at {location} {time_desc}?",
+        "Best time to visit {location} today?"
+    ],
+    "time_slots": [
+        {
+            "desc": "this morning",
+            "hour_start": 6,
+            "hour_end": 12
+        },
+        {
+            "desc": "this afternoon",
+            "hour_start": 12,
+            "hour_end": 17
+        },
+        {
+            "desc": "this evening",
+            "hour_start": 17,
+            "hour_end": 21
+        },
+        {
+            "desc": "now",
+            "hour_start": null,
+            "hour_end": null
+        },
+        {
+            "desc": "today",
+            "hour_start": 6,
+            "hour_end": 21
+        },
+        {
+            "desc": "tomorrow morning",
+            "hour_start": 6,
+            "hour_end": 12
+        },
+        {
+            "desc": "tomorrow afternoon",
+            "hour_start": 12,
+            "hour_end": 17
+        },
+        {
+            "desc": "this weekend",
+            "hour_start": 8,
+            "hour_end": 18
+        }
+    ]
+}

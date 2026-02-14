@@ -82,9 +82,12 @@ def preprocess(input_dirs):
             logger.warning(f"Directory '{d}' not found. Skipping.")
             continue
             
-        found_files = glob.glob(os.path.join(d, "NC_H09_*.nc"))
-        logger.info(f"Found {len(found_files)} satellite files in '{d}'.")
-        all_files.extend(found_files)
+        # 兼容 Himawari-8 (H08) 和 Himawari-9 (H09) 两种前缀
+        for prefix in ["NC_H08_", "NC_H09_"]:
+            found_files = glob.glob(os.path.join(d, f"{prefix}*.nc"))
+            if found_files:
+                logger.info(f"Found {len(found_files)} {prefix} files in '{d}'.")
+                all_files.extend(found_files)
         
     if not all_files:
         logger.info("No files found in any of the specified directories.")

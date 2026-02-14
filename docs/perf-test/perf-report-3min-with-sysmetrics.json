@@ -1,0 +1,362 @@
+{
+  "metadata": {
+    "base_url": "http://localhost:8000",
+    "test_time": "2026-02-12T15:52:49.051996",
+    "total_requests": 2165,
+    "total_duration_s": 181.1,
+    "throughput_rps": 11.95
+  },
+  "overall": {
+    "total_requests": 2165,
+    "successful": 2165,
+    "failed": 0,
+    "success_rate_pct": 100.0,
+    "avg_response_ms": 118.9,
+    "p95_response_ms": 226.3
+  },
+  "service_availability": {
+    "/predict?coords": {
+      "total_requests": 325,
+      "successful": 325,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/predict?location": {
+      "total_requests": 1045,
+      "successful": 1045,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/smart-query": {
+      "total_requests": 353,
+      "successful": 353,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/popular-searches": {
+      "total_requests": 114,
+      "successful": 114,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/health": {
+      "total_requests": 219,
+      "successful": 219,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/stations": {
+      "total_requests": 109,
+      "successful": 109,
+      "failed": 0,
+      "availability_pct": 100.0
+    }
+  },
+  "response_times": {
+    "/predict?coords": {
+      "avg_ms": 100.4,
+      "median_ms": 86.5,
+      "p95_ms": 208.8,
+      "p99_ms": 280.8,
+      "min_ms": 41.2,
+      "max_ms": 527.9,
+      "sample_count": 325
+    },
+    "/predict?location": {
+      "avg_ms": 107.1,
+      "median_ms": 89.9,
+      "p95_ms": 224.7,
+      "p99_ms": 361.1,
+      "min_ms": 44.6,
+      "max_ms": 724.7,
+      "sample_count": 1045
+    },
+    "/smart-query": {
+      "avg_ms": 304.8,
+      "median_ms": 85.3,
+      "p95_ms": 1246.3,
+      "p99_ms": 5396.3,
+      "min_ms": 7.7,
+      "max_ms": 7994.8,
+      "sample_count": 353
+    },
+    "/popular-searches": {
+      "avg_ms": 25.3,
+      "median_ms": 18.3,
+      "p95_ms": 64.2,
+      "p99_ms": 97.1,
+      "min_ms": 16.4,
+      "max_ms": 129.1,
+      "sample_count": 114
+    },
+    "/health": {
+      "avg_ms": 6.8,
+      "median_ms": 3.8,
+      "p95_ms": 14.5,
+      "p99_ms": 77.2,
+      "min_ms": 2.9,
+      "max_ms": 135.6,
+      "sample_count": 219
+    },
+    "/stations": {
+      "avg_ms": 7.8,
+      "median_ms": 5.4,
+      "p95_ms": 18.8,
+      "p99_ms": 30.6,
+      "min_ms": 4.7,
+      "max_ms": 41.8,
+      "sample_count": 109
+    }
+  },
+  "forecast_performance": {
+    "total_forecasts": 1370,
+    "distribution": {
+      "Cloudy": 1370
+    }
+  },
+  "popular_places": [
+    {
+      "name": "Marina Bay Sands",
+      "searches": 104
+    },
+    {
+      "name": "West Coast Park",
+      "searches": 102
+    },
+    {
+      "name": "Pasir Ris Park",
+      "searches": 79
+    },
+    {
+      "name": "East Coast Park",
+      "searches": 78
+    },
+    {
+      "name": "Sentosa Beach",
+      "searches": 75
+    },
+    {
+      "name": "Changi Beach Park",
+      "searches": 70
+    },
+    {
+      "name": "Jurong Lake Gardens",
+      "searches": 68
+    },
+    {
+      "name": "Coney Island",
+      "searches": 58
+    },
+    {
+      "name": "Hort Park",
+      "searches": 57
+    },
+    {
+      "name": "Botanic Gardens",
+      "searches": 56
+    },
+    {
+      "name": "Gardens by the Bay",
+      "searches": 51
+    },
+    {
+      "name": "MacRitchie Reservoir",
+      "searches": 51
+    },
+    {
+      "name": "Upper Seletar Reservoir",
+      "searches": 51
+    },
+    {
+      "name": "Bukit Timah Nature Reserve",
+      "searches": 49
+    },
+    {
+      "name": "Sungei Buloh Wetland Reserve",
+      "searches": 49
+    },
+    {
+      "name": "Rail Corridor",
+      "searches": 48
+    },
+    {
+      "name": "Labrador Nature Reserve",
+      "searches": 47
+    },
+    {
+      "name": "Bishan-Ang Mo Kio Park",
+      "searches": 46
+    },
+    {
+      "name": "Kallang Riverside Park",
+      "searches": 46
+    },
+    {
+      "name": "Fort Canning Park",
+      "searches": 44
+    }
+  ],
+  "error_analysis": "No errors",
+  "system_metrics": {
+    "summary": {
+      "cpu": {
+        "avg_pct": 41.9,
+        "max_pct": 57.4,
+        "min_pct": 12.9
+      },
+      "memory": {
+        "avg_pct": 41.8,
+        "max_pct": 42.0,
+        "min_pct": 41.6
+      }
+    },
+    "sample_interval_s": 15,
+    "total_samples": 12,
+    "time_series": [
+      {
+        "timestamp": "15:49:47",
+        "cpu_pct": 42.4,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1610.0,
+        "mem_pct": 42.0,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 96.9,
+        "net_rx_kbps": 739.6,
+        "net_tx_kbps": 3147.9
+      },
+      {
+        "timestamp": "15:50:03",
+        "cpu_pct": 53.5,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1610.0,
+        "mem_pct": 42.0,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 0.5,
+        "net_tx_kbps": 0.3
+      },
+      {
+        "timestamp": "15:50:18",
+        "cpu_pct": 38.4,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1609.0,
+        "mem_pct": 41.9,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 4.7,
+        "net_tx_kbps": 2.6
+      },
+      {
+        "timestamp": "15:50:34",
+        "cpu_pct": 46.5,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1609.0,
+        "mem_pct": 41.9,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 0.8,
+        "net_tx_kbps": 0.4
+      },
+      {
+        "timestamp": "15:50:49",
+        "cpu_pct": 51.0,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1607.0,
+        "mem_pct": 41.9,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 0.1,
+        "net_tx_kbps": 0.2
+      },
+      {
+        "timestamp": "15:51:05",
+        "cpu_pct": 30.3,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1607.0,
+        "mem_pct": 41.9,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 0.2,
+        "net_tx_kbps": 0.2
+      },
+      {
+        "timestamp": "15:51:20",
+        "cpu_pct": 51.0,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1607.0,
+        "mem_pct": 41.9,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 4.9,
+        "net_tx_kbps": 2.6
+      },
+      {
+        "timestamp": "15:51:36",
+        "cpu_pct": 12.9,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1599.0,
+        "mem_pct": 41.7,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 0.1,
+        "net_tx_kbps": 0.2
+      },
+      {
+        "timestamp": "15:51:51",
+        "cpu_pct": 34.0,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1598.0,
+        "mem_pct": 41.7,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 1.1,
+        "net_tx_kbps": 0.5
+      },
+      {
+        "timestamp": "15:52:07",
+        "cpu_pct": 47.5,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1598.0,
+        "mem_pct": 41.7,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 0.6,
+        "net_tx_kbps": 0.2
+      },
+      {
+        "timestamp": "15:52:22",
+        "cpu_pct": 57.4,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1597.0,
+        "mem_pct": 41.6,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 4.9,
+        "net_tx_kbps": 2.6
+      },
+      {
+        "timestamp": "15:52:38",
+        "cpu_pct": 37.9,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1598.0,
+        "mem_pct": 41.6,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.6,
+        "disk_pct": 97.0,
+        "net_rx_kbps": 0.4,
+        "net_tx_kbps": 0.2
+      }
+    ]
+  }
+}

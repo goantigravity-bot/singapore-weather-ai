@@ -140,40 +140,56 @@ DATA_KEY = "govdata/real_sensor_data.csv"
 SYNC_INTERVAL = 300 # 5 minutes
 
 def sync_satellite_data(s3, bucket):
-    """Sync recent satellite data (Last 3 hours)"""
-    # Logic: List and Download
+    """Sync preprocessed satellite .npy from S3 (instead of raw .nc).
+
+    Downloads from s3://bucket/processed/satellite/YYYYMMDD/ into local
+    processed_data/. Each .npy is ~16KB (vs ~700MB raw .nc), so full-day
+    sync costs ~2.3MB instead of ~100GB. predict.py already prioritizes
+    processed_data/ .npy over satellite_data/ .nc, so no other changes needed.
+    """
     now_utc = datetime.utcnow()
-    # Check current day and previous day (if near boundary)
     dates_to_check = [now_utc.date()]
     if now_utc.hour < 3:
         dates_to_check.append(now_utc.date() - timedelta(days=1))
-    
-    local_dir = "satellite_data"
+
+    local_dir = "processed_data"
     os.makedirs(local_dir, exist_ok=True)
-    
+
     for d in dates_to_check:
-        date_str = d.strftime("%Y%m%d") # S3 uses YYYYMMDD
-        prefix = f"satellite/{date_str}/"
+        date_str = d.strftime("%Y%m%d")
+        prefix = f"processed/satellite/{date_str}/"
         try:
-             # Limit to recent files? 
-             # For simplicity, we sync the whole day's folder if feasible (~144 files/day * 5MB = 700MB)
-             # Storage might fill up. Implement cleanup.
-             objs = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
-             if 'Contents' in objs:
-                 for obj in objs['Contents']:
-                     key = obj['Key']
-                     filename = os.path.basename(key)
-                     local_path = os.path.join(local_dir, filename)
-                     
-                     if not os.path.exists(local_path):
-                          logger.info(f"⬇️ [API] Downloading satellite: {filename}")
-                          s3.download_file(bucket, key, local_path)
-                          
+            objs = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
+            if 'Contents' in objs:
+                for obj in objs['Contents']:
+                    key = obj['Key']
+                    filename = os.path.basename(key)
+                    if not filename.endswith(".npy"):
+                        continue
+                    local_path = os.path.join(local_dir, filename)
+                    if not os.path.exists(local_path):
+                        logger.info(f"⬇️ [API] Downloading processed satellite: {filename}")
+                        s3.download_file(bucket, key, local_path)
         except Exception as e:
-            logger.warning(f"Error listing/downloading satellite: {e}")
-            
-    # Cleanup old files (> 6 hours)
-    # TODO: Implement strict cleanup to avoid disk fill
+            logger.warning(f"Error syncing processed satellite data: {e}")
+
+    # Cleanup: remove .npy files older than 3 hours
+    # File naming: NC_H09_YYYYMMDD_HHMM_R21_FLDK.*.npy
+    cleanup_count = 0
+    cutoff = now_utc - timedelta(hours=3)
+    for f in os.listdir(local_dir):
+        if not f.endswith(".npy"):
+            continue
+        try:
+            parts = f.split("_")
+            file_dt = datetime.strptime(f"{parts[2]}_{parts[3]}", "%Y%m%d_%H%M")
+            if file_dt < cutoff:
+                os.remove(os.path.join(local_dir, f))
+                cleanup_count += 1
+        except (ValueError, IndexError):
+            pass
+    if cleanup_count:
+        logger.info(f"🧹 Cleaned {cleanup_count} old processed satellite files")
 
 def sync_assets_thread():
     """Background thread to sync model and data from S3"""

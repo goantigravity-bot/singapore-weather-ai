@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug Report — 2026-02-14</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.3rem; color: var(--text-muted); }
+        strong { color: var(--text); }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="bug-report-2026-02-14">Bug Report — 2026-02-14</h1>
+<h2 id="api-server-disk-exhaustion-due-to-uncleaned-satellite-data">API Server Disk Exhaustion Due to Uncleaned Satellite Data</h2>
+<p><strong>Discovered</strong>: 2026-02-14<br />
+<strong>Severity</strong>: Critical<br />
+<strong>Status</strong>: ✅ Fixed  </p>
+<hr />
+<h3 id="symptoms">Symptoms</h3>
+<p>API server (<code>3.0.28.161</code>, t3.medium, 20GB EBS) disk usage reached <strong>96%</strong> with only <strong>914MB</strong> free. The <code>satellite_data/</code> directory accumulated <strong>8.8GB</strong> (13 <code>.nc</code> files), threatening service stability.</p>
+<h3 id="root-cause">Root Cause</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Bug</th>
+<th>File</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Satellite data cleanup never implemented</td>
+<td><code>api.py</code> (<code>sync_satellite_data</code>)</td>
+<td>Background sync thread downloads satellite data every 5 minutes (~144 files/day × 5MB = 700MB/day) but cleanup was left as <code># TODO</code>, causing unlimited accumulation</td>
+</tr>
+</tbody>
+</table>
+<h4 id="code-location">Code Location</h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># api.py L175-176 (before fix)</span>
+<span class="c1"># Cleanup old files (&gt; 6 hours)</span>
+<span class="c1"># TODO: Implement strict cleanup to avoid disk fill</span>
+</code></pre></div>
+
+<p><code>sync_satellite_data()</code> during each sync cycle:
+1. ✅ Listed satellite files in S3 by date
+2. ✅ Downloaded missing files to <code>satellite_data/</code>
+3. ❌ <strong>Never cleaned up</strong> — old files were never deleted</p>
+<h3 id="fix">Fix</h3>
+<div class="highlight"><pre><span></span><code><span class="w"> </span># api.py — sync_satellite_data()
+<span class="gd">-    # Cleanup old files (&gt; 6 hours)</span>
+<span class="gd">-    # TODO: Implement strict cleanup to avoid disk fill</span>
+<span class="gi">+    # Cleanup: remove satellite files older than 3 hours to prevent disk exhaustion.</span>
+<span class="gi">+    cleanup_count = 0</span>
+<span class="gi">+    cutoff = now_utc - timedelta(hours=3)</span>
+<span class="gi">+    for f in os.listdir(local_dir):</span>
+<span class="gi">+        if not f.endswith(&quot;.nc&quot;):</span>
+<span class="gi">+            continue</span>
+<span class="gi">+        ...</span>
+</code></pre></div>
+
+<p><strong>Design Decisions</strong>:
+- <strong>3-hour window</strong> (instead of the commented 6 hours): keeps enough recent data while capping max usage at ~100MB (3h × 6 files/h × 5MB)
+- <strong>Timestamp from filename</strong> (not <code>os.stat</code> mtime): file name timestamp is the true data time, unaffected by download timing</p>
+<h3 id="deployment-verification">Deployment &amp; Verification</h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deploy</td>
+<td><code>scp api.py ubuntu@3.0.28.161:~/weather-ai/api.py</code></td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Clean old data</td>
+<td><code>rm -rf ~/weather-ai/satellite_data/*</code></td>
+<td>Freed 8.8GB</td>
+</tr>
+<tr>
+<td>Restart</td>
+<td><code>sudo systemctl restart weather-api</code></td>
+<td>✅ active</td>
+</tr>
+<tr>
+<td>Health check</td>
+<td><code>curl http://3.0.28.161:8000/health</code></td>
+<td><code>{"status":"ok","version":"0.8.0"}</code></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code>Before: 95% disk used (914MB free), satellite_data/ = 8.8GB
+After:  50% disk used (9.8GB free), satellite_data/ = 16KB
+</code></pre></div>
+
+<h3 id="lessons-learned">Lessons Learned</h3>
+<ol>
+<li><strong>TODO comments ≠ done</strong> — Critical resource cleanup should never be left as a TODO</li>
+<li><strong>Background thread side-effects need monitoring</strong> — Silent daemon threads produce no visible errors until disk fills</li>
+<li><strong>Periodic health checks should include disk metrics</strong> — <code>df -h</code> should be part of automated alerting</li>
+</ol>
+<hr />
+<h2 id="training-failure-loop-dataset-is-empty-0-samples">Training Failure Loop: Dataset is empty (0 samples)</h2>
+<p><strong>Discovered</strong>: 2026-02-14<br />
+<strong>Severity</strong>: Critical<br />
+<strong>Status</strong>: ✅ Fixed  </p>
+<h3 id="symptoms_1">Symptoms</h3>
+<p>Training scheduler stuck on <code>2026-01-05</code>, failing every ~3 minutes and sending email notifications for hours. Error:</p>
+<div class="highlight"><pre><span></span><code>ValueError: Dataset is empty (0 samples). Check satellite data in processed_data/ and satellite_data/
+</code></pre></div>
+
+<h3 id="root-cause_1">Root Cause</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Bug</th>
+<th>File</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Incomplete preprocessed data on S3</td>
+<td><code>processed/satellite/20260105/</code></td>
+<td>Only 12 .npy files (UTC 17:40-19:30, i.e. SGT 01:40-03:30) — too narrow a window</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Scheduler reuses stale .npy</td>
+<td><code>training_scheduler.py</code></td>
+<td><code>_check_processed_available</code> hits incomplete data, takes fast path, skips full-day preprocessing</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Corrupt temp files not cleaned</td>
+<td>Training server <code>satellite_data/</code></td>
+<td>23 files with random suffixes (e.g. <code>.nc.8871bfaF</code>) consuming 7.1GB, not recognized by dataset</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Causal Chain</strong>: S3 has 143 complete raw .nc → but only 12 .npy (early morning window) → scheduler detects .npy, takes fast path → 12 .npy cover SGT 01:40-03:30 only → sparse nighttime sensor data → time alignment produces 0 valid samples → repeated failure without advancing date</p>
+<h3 id="fix-steps">Fix Steps</h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Stop scheduler</td>
+<td>Email bombardment stopped</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Clean corrupt .nc temp files</td>
+<td>Freed 7.1GB</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Clean stale local .npy</td>
+<td>Cleared wrong cache</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Delete 12 incomplete .npy from S3</td>
+<td>Forces full raw .nc → preprocess pipeline</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Restart scheduler <code>--run 1</code></td>
+<td>Downloading 143 complete .nc for full-day preprocessing</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="api-satellite-data-changed-from-raw-nc-to-processed-npy">API Satellite Data Changed from Raw .nc to Processed .npy</h2>
+<p><strong>Discovered</strong>: 2026-02-14<br />
+<strong>Severity</strong>: Medium (Optimization)<br />
+<strong>Status</strong>: ✅ Fixed  </p>
+<h3 id="symptoms_2">Symptoms</h3>
+<p>API server was downloading raw <code>.nc</code> satellite data (~700MB/day), which was the root cause of the earlier disk exhaustion. In practice, the API inference pipeline only needs the cropped Singapore region (64×64 matrix).</p>
+<h3 id="fix_1">Fix</h3>
+<p>Changed <code>sync_satellite_data()</code> to sync <code>.npy</code> files from S3 <code>processed/satellite/</code> (~16KB each), stored in <code>processed_data/</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Before (raw .nc)</th>
+<th>After (processed .npy)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Daily data volume</td>
+<td>~700MB</td>
+<td>~2.3MB</td>
+</tr>
+<tr>
+<td>Disk exhaustion risk</td>
+<td>High</td>
+<td>Near zero</td>
+</tr>
+<tr>
+<td>Cloud analysis</td>
+<td>✅</td>
+<td>✅ (when data available)</td>
+</tr>
+</tbody>
+</table>
+<p><code>predict.py</code> already prioritizes <code>processed_data/</code> directory — no additional changes needed. Once the download server catches up to the current date, the API will automatically receive real-time satellite data.</p>
+        <footer>Weather AI — Bug Report — 2026-02-14 — Generated 2026-02-14</footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

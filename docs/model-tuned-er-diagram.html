@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather AI Model-Tuned: Data Model & Logic Flow</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --border: #334155;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .card h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            padding: 1rem 0;
+            overflow-x: auto;
+        }
+        /* Mermaid dark theme overrides */
+        .mermaid svg { max-width: 100%; }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .metric-card {
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .metric-card.good .metric-value { color: #4ade80; }
+        .metric-card.warn .metric-value { color: #fbbf24; }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Weather AI Model-Tuned</h1>
+        <p class="subtitle">Data Model, Logic Flow & Training Pipeline — Generated 2026-02-12</p>
+
+        <!-- Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card good">
+                <div class="metric-value">96.1%</div>
+                <div class="metric-label">Accuracy</div>
+            </div>
+            <div class="metric-card warn">
+                <div class="metric-value">32.1%</div>
+                <div class="metric-label">Precision</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">69.5%</div>
+                <div class="metric-label">Recall</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">43.9%</div>
+                <div class="metric-label">F1 Score</div>
+            </div>
+            <div class="metric-card good">
+                <div class="metric-value">0.111</div>
+                <div class="metric-label">MAE (mm)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">276K</div>
+                <div class="metric-label">Samples</div>
+            </div>
+        </div>
+
+        <!-- ER Diagram -->
+        <div class="card">
+            <h2><span class="icon">🗂️</span> Data Model (ER Diagram)</h2>
+            <div class="mermaid">
+erDiagram
+    S3_GOVDATA ||--o{ RAINFALL_JSON : "per day"
+    S3_GOVDATA ||--o{ TEMPERATURE_JSON : "per day"
+    S3_GOVDATA ||--o{ HUMIDITY_JSON : "per day"
+    S3_GOVDATA ||--o{ PM25_JSON : "per day"
+
+    RAINFALL_JSON {
+        string date "e.g. 2025-10-01"
+        json items "287 time steps per day"
+    }
+
+    RAINFALL_JSON ||--o{ SENSOR_READING : "per station per 5min"
+
+    SENSOR_READING {
+        datetime timestamp "5-min interval"
+        string station_id "e.g. S50 S94"
+        float value_mm "rainfall amount"
+    }
+
+    S3_SATELLITE ||--o{ PROCESSED_NPY : "per 10min slot"
+
+    PROCESSED_NPY {
+        string filename "NC_H09_YYYYMMDD_HHMM"
+        int rows "18 pixels SG latitude"
+        int cols "25 pixels SG longitude"
+        float brightness_temp "Kelvin"
+    }
+
+    SENSOR_READING }o--|| SENSOR_CSV : "pivot and resample"
+
+    SENSOR_CSV {
+        datetime timestamp "10-min resampled"
+        string sensor_id "60 plus stations"
+        float temperature "Celsius"
+        float rainfall "mm sum"
+        float humidity "percent"
+        float pm25 "ug per m3"
+    }
+
+    SENSOR_CSV ||--o{ TRAINING_SAMPLE : "sliding window"
+    PROCESSED_NPY ||--o{ TRAINING_SAMPLE : "time-aligned"
+
+    TRAINING_SAMPLE {
+        tensor sat_image "1x18x25 satellite"
+        tensor sensor_seq "6x4 time series"
+        tensor target "1 rainfall value"
+    }
+
+    TRAINING_SAMPLE }o--|| WEATHER_FUSION_NET : "train"
+
+    WEATHER_FUSION_NET {
+        module SatelliteEncoder "CNN 3-layer"
+        module SensorEncoder "LSTM"
+        module FusionHead "Linear 192-64-1"
+        float rain_weight "WeightedMSELoss"
+    }
+
+    WEATHER_FUSION_NET ||--|| MODEL_PTH : "saves best"
+
+    MODEL_PTH {
+        string path "weather_fusion_tuned pth"
+        float best_val_loss "0.553"
+        int best_epoch "2"
+    }
+            </div>
+        </div>
+
+        <!-- Model Logic -->
+        <div class="card">
+            <h2><span class="icon">🧠</span> Model Logic Flow</h2>
+            <div class="mermaid">
+flowchart LR
+    subgraph Input
+        SAT["Satellite .npy\n1x18x25"]
+        SEN["Sensor Sequence\n6x4 features"]
+    end
+
+    subgraph WeatherFusionNet
+        SE["SatelliteEncoder\nCNN → 128-dim"]
+        LE["SensorEncoder\nLSTM → 64-dim"]
+        CAT["Concat\n192-dim"]
+        FH["FusionHead\nLinear 192→64→1"]
+    end
+
+    subgraph Output
+        PRED["Predicted\nRainfall mm"]
+    end
+
+    SAT --> SE --> CAT
+    SEN --> LE --> CAT
+    CAT --> FH --> PRED
+
+    subgraph Loss
+        WL["WeightedMSELoss\nrain_weight=3.0"]
+    end
+
+    PRED --> WL
+            </div>
+        </div>
+
+        <!-- Training Pipeline -->
+        <div class="card">
+            <h2><span class="icon">🔄</span> Training Pipeline Flow</h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph Step1["Step 1: Scan Rainy Dates"]
+        S3G["S3 govdata/\nrainfall_*.json"] --> SCAN["scan_rainy_dates.py"]
+        SCAN --> RD["rainy_dates.json\n78 rainy / 98 total"]
+    end
+
+    subgraph Step2["Step 2: Download and Train"]
+        RD --> DL["download_and_train.py"]
+        S3SAT["S3 processed/\nsatellite/*.npy"] --> DL
+        DL --> CSV["real_sensor_data.csv\n3M rows"]
+        DL --> NPY["4,711 satellite .npy"]
+        CSV --> DS["WeatherDataset\n276K samples"]
+        NPY --> DS
+        DS --> TRAIN["Train on MPS\nWeightedMSELoss"]
+        TRAIN --> MODEL["weather_fusion_tuned.pth"]
+    end
+
+    subgraph Step3["Step 3: Backtest"]
+        MODEL --> BT["backtest.py"]
+        DS --> BT
+        BT --> RESULTS["Accuracy: 96.1%\nPrecision: 32.1%\nRecall: 69.5%\nF1: 43.9%"]
+    end
+            </div>
+        </div>
+
+        <footer>
+            Weather AI Model-Tuned PoC &mdash; Trained on 98 days (Oct 2025 - Jan 2026) &mdash; MPS (Apple Silicon)
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

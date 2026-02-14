@@ -1,0 +1,100 @@
+05:55:43 [INFO] 📂 Loaded 25 locations from perf-test-locations.json
+05:55:43 [INFO] ============================================================
+05:55:43 [INFO] 🚀 Singapore Weather AI — Performance Test
+05:55:43 [INFO] ============================================================
+05:55:43 [INFO] Target:       http://3.0.28.161:8000
+05:55:43 [INFO] Mode:         10 minutes
+05:55:43 [INFO] Concurrency:  20
+05:55:43 [INFO] Locations:    25
+05:55:43 [INFO] Delay:        0.1~0.5s
+05:55:43 [INFO] ------------------------------------------------------------
+05:55:43 [INFO] 🔍 Pre-flight health check...
+05:55:43 [INFO] ✅ Service is up (39ms)
+05:55:43 [INFO] 📈 System metrics collector started (15s interval)
+05:55:43 [INFO] ------------------------------------------------------------
+05:55:43 [INFO] 🏃 Running tests...
+05:55:59 [INFO] [09:44 left] 248 reqs | ✓ 248 ✗ 0 | Avg: 846ms
+05:56:14 [INFO] [09:29 left] 506 reqs | ✓ 506 ✗ 0 | Avg: 751ms
+05:56:29 [INFO] [09:14 left] 799 reqs | ✓ 799 ✗ 0 | Avg: 801ms
+05:56:44 [INFO] [08:59 left] 978 reqs | ✓ 978 ✗ 0 | Avg: 908ms
+05:56:59 [INFO] [08:44 left] 1195 reqs | ✓ 1195 ✗ 0 | Avg: 936ms
+05:57:14 [INFO] [08:29 left] 1447 reqs | ✓ 1447 ✗ 0 | Avg: 912ms
+05:57:29 [INFO] [08:14 left] 1728 reqs | ✓ 1728 ✗ 0 | Avg: 901ms
+05:57:44 [INFO] [07:59 left] 1992 reqs | ✓ 1992 ✗ 0 | Avg: 894ms
+05:57:59 [INFO] [07:44 left] 2275 reqs | ✓ 2275 ✗ 0 | Avg: 879ms
+05:58:14 [INFO] [07:29 left] 2561 reqs | ✓ 2561 ✗ 0 | Avg: 859ms
+05:58:29 [INFO] [07:14 left] 2824 reqs | ✓ 2824 ✗ 0 | Avg: 861ms
+05:58:44 [INFO] [06:59 left] 3051 reqs | ✓ 3051 ✗ 0 | Avg: 872ms
+05:58:59 [INFO] [06:44 left] 3306 reqs | ✓ 3306 ✗ 0 | Avg: 873ms
+05:59:14 [INFO] [06:29 left] 3561 reqs | ✓ 3561 ✗ 0 | Avg: 873ms
+05:59:29 [INFO] [06:14 left] 3829 reqs | ✓ 3829 ✗ 0 | Avg: 870ms
+05:59:44 [INFO] [05:58 left] 4098 reqs | ✓ 4098 ✗ 0 | Avg: 865ms
+06:00:00 [INFO] [05:43 left] 4355 reqs | ✓ 4355 ✗ 0 | Avg: 863ms
+06:00:15 [INFO] [05:28 left] 4617 reqs | ✓ 4617 ✗ 0 | Avg: 863ms
+06:00:30 [INFO] [05:13 left] 4845 reqs | ✓ 4845 ✗ 0 | Avg: 867ms
+06:00:45 [INFO] [04:58 left] 5120 reqs | ✓ 5120 ✗ 0 | Avg: 866ms
+06:01:00 [INFO] [04:43 left] 5348 reqs | ✓ 5348 ✗ 0 | Avg: 874ms
+06:01:15 [INFO] [04:28 left] 5619 reqs | ✓ 5619 ✗ 0 | Avg: 872ms
+06:01:30 [INFO] [04:13 left] 5881 reqs | ✓ 5881 ✗ 0 | Avg: 866ms
+06:01:45 [INFO] [03:58 left] 6159 reqs | ✓ 6159 ✗ 0 | Avg: 868ms
+06:02:00 [INFO] [03:43 left] 6317 reqs | ✓ 6317 ✗ 0 | Avg: 880ms
+06:02:15 [INFO] [03:28 left] 6578 reqs | ✓ 6578 ✗ 0 | Avg: 881ms
+06:02:30 [INFO] [03:13 left] 6836 reqs | ✓ 6836 ✗ 0 | Avg: 883ms
+06:02:45 [INFO] [02:57 left] 7117 reqs | ✓ 7117 ✗ 0 | Avg: 880ms
+06:03:01 [INFO] [02:42 left] 7387 reqs | ✓ 7387 ✗ 0 | Avg: 878ms
+06:03:16 [INFO] [02:27 left] 7641 reqs | ✓ 7641 ✗ 0 | Avg: 876ms
+06:03:31 [INFO] [02:12 left] 7912 reqs | ✓ 7912 ✗ 0 | Avg: 875ms
+06:03:46 [INFO] [01:57 left] 8163 reqs | ✓ 8163 ✗ 0 | Avg: 874ms
+06:04:01 [INFO] [01:42 left] 8401 reqs | ✓ 8401 ✗ 0 | Avg: 877ms
+06:04:16 [INFO] [01:27 left] 8667 reqs | ✓ 8667 ✗ 0 | Avg: 876ms
+06:04:31 [INFO] [01:12 left] 8948 reqs | ✓ 8948 ✗ 0 | Avg: 873ms
+06:04:46 [INFO] [00:57 left] 9225 reqs | ✓ 9225 ✗ 0 | Avg: 869ms
+06:05:01 [INFO] [00:42 left] 9528 reqs | ✓ 9528 ✗ 0 | Avg: 865ms
+06:05:16 [INFO] [00:27 left] 9806 reqs | ✓ 9806 ✗ 0 | Avg: 862ms
+06:05:31 [INFO] [00:12 left] 10081 reqs | ✓ 10081 ✗ 0 | Avg: 860ms
+06:05:43 [INFO] ⏳ Finishing remaining requests...
+06:05:49 [INFO] 📈 Collected 41 system metric samples
+06:05:49 [INFO] ------------------------------------------------------------
+06:05:49 [INFO] 📊 Generating report...
+06:05:49 [INFO] 💾 Report saved to: perf-report-after-cache.json
+06:05:49 [INFO] ============================================================
+06:05:49 [INFO] 📊 RESULTS SUMMARY
+06:05:49 [INFO] ============================================================
+06:05:49 [INFO] Total:        10337 requests in 605.4s
+06:05:49 [INFO] Success Rate: 100.0%
+06:05:49 [INFO] Throughput:   17.07 req/s
+06:05:49 [INFO] Avg Latency:  861.2ms
+06:05:49 [INFO] P95 Latency:  4601.6ms
+06:05:49 [INFO] ----------------------------------------
+06:05:49 [INFO] 🏥 Service Availability:
+06:05:49 [INFO]   /stations                  100.0% (484/484)
+06:05:49 [INFO]   /predict?location          100.0% (5179/5179)
+06:05:49 [INFO]   /health                    100.0% (1028/1028)
+06:05:49 [INFO]   /predict?coords            100.0% (1581/1581)
+06:05:49 [INFO]   /popular-searches          100.0% (483/483)
+06:05:49 [INFO]   /smart-query               100.0% (1582/1582)
+06:05:49 [INFO] ----------------------------------------
+06:05:49 [INFO] ⏱️  Response Times:
+06:05:49 [INFO]   /stations                 avg=     98ms  p95=    203ms  max=    567ms
+06:05:49 [INFO]   /predict?location         avg=    644ms  p95=   1306ms  max=   4519ms
+06:05:49 [INFO]   /health                   avg=     80ms  p95=    171ms  max=    373ms
+06:05:49 [INFO]   /predict?coords           avg=    498ms  p95=   1005ms  max=   3906ms
+06:05:49 [INFO]   /popular-searches         avg=    173ms  p95=    304ms  max=    446ms
+06:05:49 [INFO]   /smart-query              avg=   2885ms  p95=   7611ms  max=  13235ms
+06:05:49 [INFO] ----------------------------------------
+06:05:49 [INFO] 🌦️  Forecast Distribution:
+06:05:49 [INFO]   Cloudy               6760
+06:05:49 [INFO] ----------------------------------------
+06:05:49 [INFO] 📍 Top Searched Places:
+06:05:49 [INFO]   Marina Bay Sands               568 searches
+06:05:49 [INFO]   Sentosa Beach                  398 searches
+06:05:49 [INFO]   West Coast Park                387 searches
+06:05:49 [INFO]   Changi Beach Park              376 searches
+06:05:49 [INFO]   East Coast Park                365 searches
+06:05:49 [INFO]   Pasir Ris Park                 362 searches
+06:05:49 [INFO]   Jurong Lake Gardens            326 searches
+06:05:49 [INFO]   Gardens by the Bay             323 searches
+06:05:49 [INFO]   Botanic Gardens                296 searches
+06:05:49 [INFO]   Hort Park                      276 searches
+06:05:49 [INFO] ============================================================
+06:05:49 [INFO] ✅ Performance test complete!

@@ -1,0 +1,1760 @@
+{
+  "scan_time": "2026-02-12T13:19:43.578956",
+  "threshold_mm": 5.0,
+  "total_dates": 98,
+  "rainy_dates_count": 77,
+  "all_days": [
+    {
+      "date": "2025-10-01",
+      "total_rainfall_mm": 593.9,
+      "max_rainfall_mm": 9.7,
+      "rain_station_count": 57,
+      "total_readings": 16645,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-02",
+      "total_rainfall_mm": 444.0,
+      "max_rainfall_mm": 12.8,
+      "rain_station_count": 50,
+      "total_readings": 16439,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-03",
+      "total_rainfall_mm": 681.2,
+      "max_rainfall_mm": 9.8,
+      "rain_station_count": 56,
+      "total_readings": 16250,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-04",
+      "total_rainfall_mm": 174.9,
+      "max_rainfall_mm": 7.8,
+      "rain_station_count": 54,
+      "total_readings": 15856,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-05",
+      "total_rainfall_mm": 5.0,
+      "max_rainfall_mm": 0.4,
+      "rain_station_count": 16,
+      "total_readings": 16065,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-10-06",
+      "total_rainfall_mm": 238.3,
+      "max_rainfall_mm": 8,
+      "rain_station_count": 33,
+      "total_readings": 15974,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-07",
+      "total_rainfall_mm": 453.7,
+      "max_rainfall_mm": 9.4,
+      "rain_station_count": 47,
+      "total_readings": 15743,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-08",
+      "total_rainfall_mm": 225.2,
+      "max_rainfall_mm": 8.8,
+      "rain_station_count": 28,
+      "total_readings": 15737,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-09",
+      "total_rainfall_mm": 494.4,
+      "max_rainfall_mm": 6.9,
+      "rain_station_count": 55,
+      "total_readings": 15759,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-10",
+      "total_rainfall_mm": 0.2,
+      "max_rainfall_mm": 0.2,
+      "rain_station_count": 1,
+      "total_readings": 15778,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-10-11",
+      "total_rainfall_mm": 19.0,
+      "max_rainfall_mm": 3,
+      "rain_station_count": 17,
+      "total_readings": 15785,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-12",
+      "total_rainfall_mm": 293.0,
+      "max_rainfall_mm": 10.7,
+      "rain_station_count": 32,
+      "total_readings": 15785,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-13",
+      "total_rainfall_mm": 75.4,
+      "max_rainfall_mm": 9.6,
+      "rain_station_count": 9,
+      "total_readings": 15767,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-14",
+      "total_rainfall_mm": 58.6,
+      "max_rainfall_mm": 4.8,
+      "rain_station_count": 20,
+      "total_readings": 15775,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-15",
+      "total_rainfall_mm": 177.0,
+      "max_rainfall_mm": 8,
+      "rain_station_count": 34,
+      "total_readings": 16152,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-16",
+      "total_rainfall_mm": 541.1,
+      "max_rainfall_mm": 10.8,
+      "rain_station_count": 43,
+      "total_readings": 16589,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-17",
+      "total_rainfall_mm": 304.5,
+      "max_rainfall_mm": 11.4,
+      "rain_station_count": 37,
+      "total_readings": 16626,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-18",
+      "total_rainfall_mm": 185.6,
+      "max_rainfall_mm": 4.6,
+      "rain_station_count": 36,
+      "total_readings": 16644,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-19",
+      "total_rainfall_mm": 188.6,
+      "max_rainfall_mm": 7,
+      "rain_station_count": 37,
+      "total_readings": 16640,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-20",
+      "total_rainfall_mm": 22.0,
+      "max_rainfall_mm": 1.2,
+      "rain_station_count": 21,
+      "total_readings": 16646,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-21",
+      "total_rainfall_mm": 11.6,
+      "max_rainfall_mm": 2.8,
+      "rain_station_count": 12,
+      "total_readings": 16639,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-22",
+      "total_rainfall_mm": 593.8,
+      "max_rainfall_mm": 4.7,
+      "rain_station_count": 58,
+      "total_readings": 16641,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-23",
+      "total_rainfall_mm": 0.0,
+      "max_rainfall_mm": 0.0,
+      "rain_station_count": 0,
+      "total_readings": 16608,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-10-24",
+      "total_rainfall_mm": 1430.3,
+      "max_rainfall_mm": 9.4,
+      "rain_station_count": 58,
+      "total_readings": 16634,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-25",
+      "total_rainfall_mm": 37.6,
+      "max_rainfall_mm": 0.4,
+      "rain_station_count": 58,
+      "total_readings": 16635,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-26",
+      "total_rainfall_mm": 0.4,
+      "max_rainfall_mm": 0.4,
+      "rain_station_count": 1,
+      "total_readings": 16632,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-10-27",
+      "total_rainfall_mm": 883.5,
+      "max_rainfall_mm": 9.9,
+      "rain_station_count": 57,
+      "total_readings": 16646,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-28",
+      "total_rainfall_mm": 0.2,
+      "max_rainfall_mm": 0.2,
+      "rain_station_count": 1,
+      "total_readings": 16586,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-10-29",
+      "total_rainfall_mm": 21.0,
+      "max_rainfall_mm": 5.2,
+      "rain_station_count": 8,
+      "total_readings": 16554,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-30",
+      "total_rainfall_mm": 0.0,
+      "max_rainfall_mm": 0.0,
+      "rain_station_count": 0,
+      "total_readings": 16629,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-10-31",
+      "total_rainfall_mm": 0.0,
+      "max_rainfall_mm": 0.0,
+      "rain_station_count": 0,
+      "total_readings": 16646,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-11-01",
+      "total_rainfall_mm": 27.4,
+      "max_rainfall_mm": 4.5,
+      "rain_station_count": 4,
+      "total_readings": 16456,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-02",
+      "total_rainfall_mm": 1241.7,
+      "max_rainfall_mm": 10.4,
+      "rain_station_count": 57,
+      "total_readings": 16550,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-03",
+      "total_rainfall_mm": 296.2,
+      "max_rainfall_mm": 8.6,
+      "rain_station_count": 56,
+      "total_readings": 16618,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-04",
+      "total_rainfall_mm": 22.5,
+      "max_rainfall_mm": 4.9,
+      "rain_station_count": 11,
+      "total_readings": 16900,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-05",
+      "total_rainfall_mm": 0.2,
+      "max_rainfall_mm": 0.2,
+      "rain_station_count": 1,
+      "total_readings": 16711,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-11-06",
+      "total_rainfall_mm": 0.0,
+      "max_rainfall_mm": 0.0,
+      "rain_station_count": 0,
+      "total_readings": 16638,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-11-07",
+      "total_rainfall_mm": 21.6,
+      "max_rainfall_mm": 2.6,
+      "rain_station_count": 30,
+      "total_readings": 16617,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-08",
+      "total_rainfall_mm": 0.0,
+      "max_rainfall_mm": 0.0,
+      "rain_station_count": 0,
+      "total_readings": 16646,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-11-09",
+      "total_rainfall_mm": 1.6,
+      "max_rainfall_mm": 1.2,
+      "rain_station_count": 1,
+      "total_readings": 16646,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-11-10",
+      "total_rainfall_mm": 777.8,
+      "max_rainfall_mm": 6.2,
+      "rain_station_count": 58,
+      "total_readings": 16558,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-11",
+      "total_rainfall_mm": 206.4,
+      "max_rainfall_mm": 13.4,
+      "rain_station_count": 46,
+      "total_readings": 16350,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-12",
+      "total_rainfall_mm": 202.7,
+      "max_rainfall_mm": 6.3,
+      "rain_station_count": 56,
+      "total_readings": 16430,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-13",
+      "total_rainfall_mm": 741.2,
+      "max_rainfall_mm": 8.8,
+      "rain_station_count": 59,
+      "total_readings": 16930,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-14",
+      "total_rainfall_mm": 874.4,
+      "max_rainfall_mm": 12,
+      "rain_station_count": 58,
+      "total_readings": 16571,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-15",
+      "total_rainfall_mm": 85.8,
+      "max_rainfall_mm": 7.1,
+      "rain_station_count": 26,
+      "total_readings": 16489,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-16",
+      "total_rainfall_mm": 1385.7,
+      "max_rainfall_mm": 12.2,
+      "rain_station_count": 57,
+      "total_readings": 16581,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-17",
+      "total_rainfall_mm": 1041.2,
+      "max_rainfall_mm": 11.9,
+      "rain_station_count": 57,
+      "total_readings": 16780,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-18",
+      "total_rainfall_mm": 372.8,
+      "max_rainfall_mm": 8.3,
+      "rain_station_count": 54,
+      "total_readings": 16773,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-19",
+      "total_rainfall_mm": 396.2,
+      "max_rainfall_mm": 8,
+      "rain_station_count": 58,
+      "total_readings": 16643,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-20",
+      "total_rainfall_mm": 810.6,
+      "max_rainfall_mm": 9.6,
+      "rain_station_count": 58,
+      "total_readings": 16725,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-21",
+      "total_rainfall_mm": 5.6,
+      "max_rainfall_mm": 0.4,
+      "rain_station_count": 11,
+      "total_readings": 16738,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-22",
+      "total_rainfall_mm": 1719.8,
+      "max_rainfall_mm": 9,
+      "rain_station_count": 59,
+      "total_readings": 16916,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-23",
+      "total_rainfall_mm": 503.9,
+      "max_rainfall_mm": 9,
+      "rain_station_count": 58,
+      "total_readings": 16820,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-24",
+      "total_rainfall_mm": 44.0,
+      "max_rainfall_mm": 3.6,
+      "rain_station_count": 57,
+      "total_readings": 16933,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-25",
+      "total_rainfall_mm": 751.8,
+      "max_rainfall_mm": 10.4,
+      "rain_station_count": 59,
+      "total_readings": 16931,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-26",
+      "total_rainfall_mm": 2.4,
+      "max_rainfall_mm": 0.2,
+      "rain_station_count": 1,
+      "total_readings": 16933,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-11-27",
+      "total_rainfall_mm": 319.1,
+      "max_rainfall_mm": 10.1,
+      "rain_station_count": 59,
+      "total_readings": 16824,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-28",
+      "total_rainfall_mm": 716.4,
+      "max_rainfall_mm": 5.5,
+      "rain_station_count": 59,
+      "total_readings": 16933,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-29",
+      "total_rainfall_mm": 26.6,
+      "max_rainfall_mm": 1.6,
+      "rain_station_count": 21,
+      "total_readings": 16933,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-30",
+      "total_rainfall_mm": 39.8,
+      "max_rainfall_mm": 3.8,
+      "rain_station_count": 2,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-01",
+      "total_rainfall_mm": 328.5,
+      "max_rainfall_mm": 21.5,
+      "rain_station_count": 17,
+      "total_readings": 16923,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-02",
+      "total_rainfall_mm": 1588.0,
+      "max_rainfall_mm": 8.2,
+      "rain_station_count": 59,
+      "total_readings": 16912,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-03",
+      "total_rainfall_mm": 87.2,
+      "max_rainfall_mm": 5.4,
+      "rain_station_count": 25,
+      "total_readings": 16845,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-04",
+      "total_rainfall_mm": 1716.7,
+      "max_rainfall_mm": 16.2,
+      "rain_station_count": 58,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-05",
+      "total_rainfall_mm": 507.6,
+      "max_rainfall_mm": 12,
+      "rain_station_count": 38,
+      "total_readings": 16894,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-06",
+      "total_rainfall_mm": 52.0,
+      "max_rainfall_mm": 7.4,
+      "rain_station_count": 23,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-07",
+      "total_rainfall_mm": 30.6,
+      "max_rainfall_mm": 3.4,
+      "rain_station_count": 5,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-08",
+      "total_rainfall_mm": 31.8,
+      "max_rainfall_mm": 2.4,
+      "rain_station_count": 3,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-09",
+      "total_rainfall_mm": 11.2,
+      "max_rainfall_mm": 2,
+      "rain_station_count": 11,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-10",
+      "total_rainfall_mm": 1058.9,
+      "max_rainfall_mm": 11.9,
+      "rain_station_count": 59,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-11",
+      "total_rainfall_mm": 11.6,
+      "max_rainfall_mm": 0.6,
+      "rain_station_count": 17,
+      "total_readings": 16756,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-12",
+      "total_rainfall_mm": 2486.4,
+      "max_rainfall_mm": 15.1,
+      "rain_station_count": 58,
+      "total_readings": 16091,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-13",
+      "total_rainfall_mm": 1832.5,
+      "max_rainfall_mm": 12.2,
+      "rain_station_count": 58,
+      "total_readings": 15784,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-14",
+      "total_rainfall_mm": 2240.6,
+      "max_rainfall_mm": 11.2,
+      "rain_station_count": 58,
+      "total_readings": 16617,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-15",
+      "total_rainfall_mm": 550.6,
+      "max_rainfall_mm": 2.4,
+      "rain_station_count": 58,
+      "total_readings": 16676,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-16",
+      "total_rainfall_mm": 1385.7,
+      "max_rainfall_mm": 8.5,
+      "rain_station_count": 59,
+      "total_readings": 16891,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-17",
+      "total_rainfall_mm": 399.2,
+      "max_rainfall_mm": 3,
+      "rain_station_count": 53,
+      "total_readings": 16871,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-18",
+      "total_rainfall_mm": 1.0,
+      "max_rainfall_mm": 0.4,
+      "rain_station_count": 4,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-12-19",
+      "total_rainfall_mm": 29.2,
+      "max_rainfall_mm": 1.8,
+      "rain_station_count": 30,
+      "total_readings": 16931,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-20",
+      "total_rainfall_mm": 144.3,
+      "max_rainfall_mm": 6,
+      "rain_station_count": 43,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-21",
+      "total_rainfall_mm": 0.4,
+      "max_rainfall_mm": 0.4,
+      "rain_station_count": 1,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-12-22",
+      "total_rainfall_mm": 3.6,
+      "max_rainfall_mm": 1.2,
+      "rain_station_count": 7,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-12-23",
+      "total_rainfall_mm": 0.0,
+      "max_rainfall_mm": 0.0,
+      "rain_station_count": 0,
+      "total_readings": 16931,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-12-24",
+      "total_rainfall_mm": 7.6,
+      "max_rainfall_mm": 1,
+      "rain_station_count": 11,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-25",
+      "total_rainfall_mm": 288.5,
+      "max_rainfall_mm": 8.6,
+      "rain_station_count": 30,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-26",
+      "total_rainfall_mm": 1127.4,
+      "max_rainfall_mm": 13.8,
+      "rain_station_count": 57,
+      "total_readings": 16929,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-27",
+      "total_rainfall_mm": 236.7,
+      "max_rainfall_mm": 9,
+      "rain_station_count": 25,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-28",
+      "total_rainfall_mm": 693.9,
+      "max_rainfall_mm": 15,
+      "rain_station_count": 53,
+      "total_readings": 16928,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-29",
+      "total_rainfall_mm": 528.9,
+      "max_rainfall_mm": 7.8,
+      "rain_station_count": 59,
+      "total_readings": 16926,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-30",
+      "total_rainfall_mm": 0.4,
+      "max_rainfall_mm": 0.2,
+      "rain_station_count": 2,
+      "total_readings": 16929,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2025-12-31",
+      "total_rainfall_mm": 128.4,
+      "max_rainfall_mm": 6.2,
+      "rain_station_count": 17,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2026-01-01",
+      "total_rainfall_mm": 195.6,
+      "max_rainfall_mm": 7.2,
+      "rain_station_count": 26,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2026-01-02",
+      "total_rainfall_mm": 46.7,
+      "max_rainfall_mm": 3.7,
+      "rain_station_count": 29,
+      "total_readings": 17050,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2026-01-03",
+      "total_rainfall_mm": 1.2,
+      "max_rainfall_mm": 0.2,
+      "rain_station_count": 6,
+      "total_readings": 17220,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2026-01-04",
+      "total_rainfall_mm": 0.0,
+      "max_rainfall_mm": 0.0,
+      "rain_station_count": 0,
+      "total_readings": 17220,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2026-02-08",
+      "total_rainfall_mm": 0.2,
+      "max_rainfall_mm": 0.2,
+      "rain_station_count": 1,
+      "total_readings": 13454,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    },
+    {
+      "date": "2026-02-12",
+      "total_rainfall_mm": 0.0,
+      "max_rainfall_mm": 0.0,
+      "rain_station_count": 0,
+      "total_readings": 7378,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": false
+    }
+  ],
+  "rainy_days": [
+    {
+      "date": "2025-10-01",
+      "total_rainfall_mm": 593.9,
+      "max_rainfall_mm": 9.7,
+      "rain_station_count": 57,
+      "total_readings": 16645,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-02",
+      "total_rainfall_mm": 444.0,
+      "max_rainfall_mm": 12.8,
+      "rain_station_count": 50,
+      "total_readings": 16439,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-03",
+      "total_rainfall_mm": 681.2,
+      "max_rainfall_mm": 9.8,
+      "rain_station_count": 56,
+      "total_readings": 16250,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-04",
+      "total_rainfall_mm": 174.9,
+      "max_rainfall_mm": 7.8,
+      "rain_station_count": 54,
+      "total_readings": 15856,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-06",
+      "total_rainfall_mm": 238.3,
+      "max_rainfall_mm": 8,
+      "rain_station_count": 33,
+      "total_readings": 15974,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-07",
+      "total_rainfall_mm": 453.7,
+      "max_rainfall_mm": 9.4,
+      "rain_station_count": 47,
+      "total_readings": 15743,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-08",
+      "total_rainfall_mm": 225.2,
+      "max_rainfall_mm": 8.8,
+      "rain_station_count": 28,
+      "total_readings": 15737,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-09",
+      "total_rainfall_mm": 494.4,
+      "max_rainfall_mm": 6.9,
+      "rain_station_count": 55,
+      "total_readings": 15759,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-11",
+      "total_rainfall_mm": 19.0,
+      "max_rainfall_mm": 3,
+      "rain_station_count": 17,
+      "total_readings": 15785,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-12",
+      "total_rainfall_mm": 293.0,
+      "max_rainfall_mm": 10.7,
+      "rain_station_count": 32,
+      "total_readings": 15785,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-13",
+      "total_rainfall_mm": 75.4,
+      "max_rainfall_mm": 9.6,
+      "rain_station_count": 9,
+      "total_readings": 15767,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-14",
+      "total_rainfall_mm": 58.6,
+      "max_rainfall_mm": 4.8,
+      "rain_station_count": 20,
+      "total_readings": 15775,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-15",
+      "total_rainfall_mm": 177.0,
+      "max_rainfall_mm": 8,
+      "rain_station_count": 34,
+      "total_readings": 16152,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-16",
+      "total_rainfall_mm": 541.1,
+      "max_rainfall_mm": 10.8,
+      "rain_station_count": 43,
+      "total_readings": 16589,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-17",
+      "total_rainfall_mm": 304.5,
+      "max_rainfall_mm": 11.4,
+      "rain_station_count": 37,
+      "total_readings": 16626,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-18",
+      "total_rainfall_mm": 185.6,
+      "max_rainfall_mm": 4.6,
+      "rain_station_count": 36,
+      "total_readings": 16644,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-19",
+      "total_rainfall_mm": 188.6,
+      "max_rainfall_mm": 7,
+      "rain_station_count": 37,
+      "total_readings": 16640,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-20",
+      "total_rainfall_mm": 22.0,
+      "max_rainfall_mm": 1.2,
+      "rain_station_count": 21,
+      "total_readings": 16646,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-21",
+      "total_rainfall_mm": 11.6,
+      "max_rainfall_mm": 2.8,
+      "rain_station_count": 12,
+      "total_readings": 16639,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-22",
+      "total_rainfall_mm": 593.8,
+      "max_rainfall_mm": 4.7,
+      "rain_station_count": 58,
+      "total_readings": 16641,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-24",
+      "total_rainfall_mm": 1430.3,
+      "max_rainfall_mm": 9.4,
+      "rain_station_count": 58,
+      "total_readings": 16634,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-25",
+      "total_rainfall_mm": 37.6,
+      "max_rainfall_mm": 0.4,
+      "rain_station_count": 58,
+      "total_readings": 16635,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-27",
+      "total_rainfall_mm": 883.5,
+      "max_rainfall_mm": 9.9,
+      "rain_station_count": 57,
+      "total_readings": 16646,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-10-29",
+      "total_rainfall_mm": 21.0,
+      "max_rainfall_mm": 5.2,
+      "rain_station_count": 8,
+      "total_readings": 16554,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-01",
+      "total_rainfall_mm": 27.4,
+      "max_rainfall_mm": 4.5,
+      "rain_station_count": 4,
+      "total_readings": 16456,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-02",
+      "total_rainfall_mm": 1241.7,
+      "max_rainfall_mm": 10.4,
+      "rain_station_count": 57,
+      "total_readings": 16550,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-03",
+      "total_rainfall_mm": 296.2,
+      "max_rainfall_mm": 8.6,
+      "rain_station_count": 56,
+      "total_readings": 16618,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-04",
+      "total_rainfall_mm": 22.5,
+      "max_rainfall_mm": 4.9,
+      "rain_station_count": 11,
+      "total_readings": 16900,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-07",
+      "total_rainfall_mm": 21.6,
+      "max_rainfall_mm": 2.6,
+      "rain_station_count": 30,
+      "total_readings": 16617,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-10",
+      "total_rainfall_mm": 777.8,
+      "max_rainfall_mm": 6.2,
+      "rain_station_count": 58,
+      "total_readings": 16558,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-11",
+      "total_rainfall_mm": 206.4,
+      "max_rainfall_mm": 13.4,
+      "rain_station_count": 46,
+      "total_readings": 16350,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-12",
+      "total_rainfall_mm": 202.7,
+      "max_rainfall_mm": 6.3,
+      "rain_station_count": 56,
+      "total_readings": 16430,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-13",
+      "total_rainfall_mm": 741.2,
+      "max_rainfall_mm": 8.8,
+      "rain_station_count": 59,
+      "total_readings": 16930,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-14",
+      "total_rainfall_mm": 874.4,
+      "max_rainfall_mm": 12,
+      "rain_station_count": 58,
+      "total_readings": 16571,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-15",
+      "total_rainfall_mm": 85.8,
+      "max_rainfall_mm": 7.1,
+      "rain_station_count": 26,
+      "total_readings": 16489,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-16",
+      "total_rainfall_mm": 1385.7,
+      "max_rainfall_mm": 12.2,
+      "rain_station_count": 57,
+      "total_readings": 16581,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-17",
+      "total_rainfall_mm": 1041.2,
+      "max_rainfall_mm": 11.9,
+      "rain_station_count": 57,
+      "total_readings": 16780,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-18",
+      "total_rainfall_mm": 372.8,
+      "max_rainfall_mm": 8.3,
+      "rain_station_count": 54,
+      "total_readings": 16773,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-19",
+      "total_rainfall_mm": 396.2,
+      "max_rainfall_mm": 8,
+      "rain_station_count": 58,
+      "total_readings": 16643,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-20",
+      "total_rainfall_mm": 810.6,
+      "max_rainfall_mm": 9.6,
+      "rain_station_count": 58,
+      "total_readings": 16725,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-21",
+      "total_rainfall_mm": 5.6,
+      "max_rainfall_mm": 0.4,
+      "rain_station_count": 11,
+      "total_readings": 16738,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-22",
+      "total_rainfall_mm": 1719.8,
+      "max_rainfall_mm": 9,
+      "rain_station_count": 59,
+      "total_readings": 16916,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-23",
+      "total_rainfall_mm": 503.9,
+      "max_rainfall_mm": 9,
+      "rain_station_count": 58,
+      "total_readings": 16820,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-24",
+      "total_rainfall_mm": 44.0,
+      "max_rainfall_mm": 3.6,
+      "rain_station_count": 57,
+      "total_readings": 16933,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-25",
+      "total_rainfall_mm": 751.8,
+      "max_rainfall_mm": 10.4,
+      "rain_station_count": 59,
+      "total_readings": 16931,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-27",
+      "total_rainfall_mm": 319.1,
+      "max_rainfall_mm": 10.1,
+      "rain_station_count": 59,
+      "total_readings": 16824,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-28",
+      "total_rainfall_mm": 716.4,
+      "max_rainfall_mm": 5.5,
+      "rain_station_count": 59,
+      "total_readings": 16933,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-29",
+      "total_rainfall_mm": 26.6,
+      "max_rainfall_mm": 1.6,
+      "rain_station_count": 21,
+      "total_readings": 16933,
+      "has_satellite_processed": false,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-11-30",
+      "total_rainfall_mm": 39.8,
+      "max_rainfall_mm": 3.8,
+      "rain_station_count": 2,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-01",
+      "total_rainfall_mm": 328.5,
+      "max_rainfall_mm": 21.5,
+      "rain_station_count": 17,
+      "total_readings": 16923,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-02",
+      "total_rainfall_mm": 1588.0,
+      "max_rainfall_mm": 8.2,
+      "rain_station_count": 59,
+      "total_readings": 16912,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-03",
+      "total_rainfall_mm": 87.2,
+      "max_rainfall_mm": 5.4,
+      "rain_station_count": 25,
+      "total_readings": 16845,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-04",
+      "total_rainfall_mm": 1716.7,
+      "max_rainfall_mm": 16.2,
+      "rain_station_count": 58,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-05",
+      "total_rainfall_mm": 507.6,
+      "max_rainfall_mm": 12,
+      "rain_station_count": 38,
+      "total_readings": 16894,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-06",
+      "total_rainfall_mm": 52.0,
+      "max_rainfall_mm": 7.4,
+      "rain_station_count": 23,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-07",
+      "total_rainfall_mm": 30.6,
+      "max_rainfall_mm": 3.4,
+      "rain_station_count": 5,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-08",
+      "total_rainfall_mm": 31.8,
+      "max_rainfall_mm": 2.4,
+      "rain_station_count": 3,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-09",
+      "total_rainfall_mm": 11.2,
+      "max_rainfall_mm": 2,
+      "rain_station_count": 11,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-10",
+      "total_rainfall_mm": 1058.9,
+      "max_rainfall_mm": 11.9,
+      "rain_station_count": 59,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-11",
+      "total_rainfall_mm": 11.6,
+      "max_rainfall_mm": 0.6,
+      "rain_station_count": 17,
+      "total_readings": 16756,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-12",
+      "total_rainfall_mm": 2486.4,
+      "max_rainfall_mm": 15.1,
+      "rain_station_count": 58,
+      "total_readings": 16091,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-13",
+      "total_rainfall_mm": 1832.5,
+      "max_rainfall_mm": 12.2,
+      "rain_station_count": 58,
+      "total_readings": 15784,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-14",
+      "total_rainfall_mm": 2240.6,
+      "max_rainfall_mm": 11.2,
+      "rain_station_count": 58,
+      "total_readings": 16617,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-15",
+      "total_rainfall_mm": 550.6,
+      "max_rainfall_mm": 2.4,
+      "rain_station_count": 58,
+      "total_readings": 16676,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-16",
+      "total_rainfall_mm": 1385.7,
+      "max_rainfall_mm": 8.5,
+      "rain_station_count": 59,
+      "total_readings": 16891,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-17",
+      "total_rainfall_mm": 399.2,
+      "max_rainfall_mm": 3,
+      "rain_station_count": 53,
+      "total_readings": 16871,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-19",
+      "total_rainfall_mm": 29.2,
+      "max_rainfall_mm": 1.8,
+      "rain_station_count": 30,
+      "total_readings": 16931,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-20",
+      "total_rainfall_mm": 144.3,
+      "max_rainfall_mm": 6,
+      "rain_station_count": 43,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-24",
+      "total_rainfall_mm": 7.6,
+      "max_rainfall_mm": 1,
+      "rain_station_count": 11,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-25",
+      "total_rainfall_mm": 288.5,
+      "max_rainfall_mm": 8.6,
+      "rain_station_count": 30,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-26",
+      "total_rainfall_mm": 1127.4,
+      "max_rainfall_mm": 13.8,
+      "rain_station_count": 57,
+      "total_readings": 16929,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-27",
+      "total_rainfall_mm": 236.7,
+      "max_rainfall_mm": 9,
+      "rain_station_count": 25,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-28",
+      "total_rainfall_mm": 693.9,
+      "max_rainfall_mm": 15,
+      "rain_station_count": 53,
+      "total_readings": 16928,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-29",
+      "total_rainfall_mm": 528.9,
+      "max_rainfall_mm": 7.8,
+      "rain_station_count": 59,
+      "total_readings": 16926,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2025-12-31",
+      "total_rainfall_mm": 128.4,
+      "max_rainfall_mm": 6.2,
+      "rain_station_count": 17,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2026-01-01",
+      "total_rainfall_mm": 195.6,
+      "max_rainfall_mm": 7.2,
+      "rain_station_count": 26,
+      "total_readings": 16933,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    },
+    {
+      "date": "2026-01-02",
+      "total_rainfall_mm": 46.7,
+      "max_rainfall_mm": 3.7,
+      "rain_station_count": 29,
+      "total_readings": 17050,
+      "has_satellite_processed": true,
+      "has_satellite_raw": true,
+      "is_rainy": true
+    }
+  ]
+}

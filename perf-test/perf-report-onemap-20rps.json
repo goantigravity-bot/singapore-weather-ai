@@ -1,0 +1,278 @@
+{
+  "metadata": {
+    "base_url": "http://localhost:8000",
+    "test_time": "2026-02-13T07:34:55.868529",
+    "total_requests": 1112,
+    "total_duration_s": 64.4,
+    "throughput_rps": 17.28
+  },
+  "overall": {
+    "total_requests": 1112,
+    "successful": 1112,
+    "failed": 0,
+    "success_rate_pct": 100.0,
+    "avg_response_ms": 1046.9,
+    "p95_response_ms": 3498.9
+  },
+  "service_availability": {
+    "/health": {
+      "total_requests": 116,
+      "successful": 116,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/popular-searches": {
+      "total_requests": 53,
+      "successful": 53,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/predict?location": {
+      "total_requests": 553,
+      "successful": 553,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/smart-query": {
+      "total_requests": 175,
+      "successful": 175,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/stations": {
+      "total_requests": 60,
+      "successful": 60,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/predict?coords": {
+      "total_requests": 155,
+      "successful": 155,
+      "failed": 0,
+      "availability_pct": 100.0
+    }
+  },
+  "response_times": {
+    "/health": {
+      "avg_ms": 79.3,
+      "median_ms": 50.0,
+      "p95_ms": 241.9,
+      "p99_ms": 283.7,
+      "min_ms": 3.5,
+      "max_ms": 669.5,
+      "sample_count": 116
+    },
+    "/popular-searches": {
+      "avg_ms": 267.9,
+      "median_ms": 234.4,
+      "p95_ms": 503.9,
+      "p99_ms": 621.7,
+      "min_ms": 67.8,
+      "max_ms": 625.7,
+      "sample_count": 53
+    },
+    "/predict?location": {
+      "avg_ms": 944.3,
+      "median_ms": 839.0,
+      "p95_ms": 2026.4,
+      "p99_ms": 3006.9,
+      "min_ms": 81.6,
+      "max_ms": 3885.6,
+      "sample_count": 553
+    },
+    "/smart-query": {
+      "avg_ms": 2932.9,
+      "median_ms": 1726.5,
+      "p95_ms": 8039.3,
+      "p99_ms": 10892.8,
+      "min_ms": 72.7,
+      "max_ms": 11998.5,
+      "sample_count": 175
+    },
+    "/stations": {
+      "avg_ms": 86.5,
+      "median_ms": 77.2,
+      "p95_ms": 221.7,
+      "p99_ms": 317.9,
+      "min_ms": 14.2,
+      "max_ms": 383.1,
+      "sample_count": 60
+    },
+    "/predict?coords": {
+      "avg_ms": 645.9,
+      "median_ms": 582.5,
+      "p95_ms": 1412.3,
+      "p99_ms": 1751.6,
+      "min_ms": 100.4,
+      "max_ms": 1780.8,
+      "sample_count": 155
+    }
+  },
+  "forecast_performance": {
+    "total_forecasts": 708,
+    "distribution": {
+      "Cloudy": 708
+    }
+  },
+  "popular_places": [
+    {
+      "name": "Marina Bay Sands",
+      "searches": 66
+    },
+    {
+      "name": "Sentosa Beach",
+      "searches": 48
+    },
+    {
+      "name": "Pasir Ris Park",
+      "searches": 44
+    },
+    {
+      "name": "Changi Beach Park",
+      "searches": 37
+    },
+    {
+      "name": "West Coast Park",
+      "searches": 36
+    },
+    {
+      "name": "Rail Corridor",
+      "searches": 34
+    },
+    {
+      "name": "Botanic Gardens",
+      "searches": 31
+    },
+    {
+      "name": "Hort Park",
+      "searches": 30
+    },
+    {
+      "name": "East Coast Park",
+      "searches": 30
+    },
+    {
+      "name": "Labrador Nature Reserve",
+      "searches": 29
+    },
+    {
+      "name": "Jurong Lake Gardens",
+      "searches": 29
+    },
+    {
+      "name": "Bukit Timah Nature Reserve",
+      "searches": 29
+    },
+    {
+      "name": "Southern Ridges",
+      "searches": 28
+    },
+    {
+      "name": "Sungei Buloh Wetland Reserve",
+      "searches": 27
+    },
+    {
+      "name": "Bedok Reservoir Park",
+      "searches": 25
+    },
+    {
+      "name": "Gardens by the Bay",
+      "searches": 25
+    },
+    {
+      "name": "MacRitchie Reservoir",
+      "searches": 24
+    },
+    {
+      "name": "Upper Seletar Reservoir",
+      "searches": 24
+    },
+    {
+      "name": "Coney Island",
+      "searches": 23
+    },
+    {
+      "name": "Fort Canning Park",
+      "searches": 22
+    }
+  ],
+  "error_analysis": "No errors",
+  "system_metrics": {
+    "summary": {
+      "cpu": {
+        "avg_pct": 79.2,
+        "max_pct": 100.0,
+        "min_pct": 2.0
+      },
+      "memory": {
+        "avg_pct": 38.6,
+        "max_pct": 38.7,
+        "min_pct": 38.5
+      }
+    },
+    "sample_interval_s": 15,
+    "total_samples": 5,
+    "time_series": [
+      {
+        "timestamp": "07:33:51",
+        "cpu_pct": 94.1,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1484.0,
+        "mem_pct": 38.7,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.9,
+        "disk_pct": 98.3,
+        "net_rx_kbps": 1110.8,
+        "net_tx_kbps": 3546.0
+      },
+      {
+        "timestamp": "07:34:07",
+        "cpu_pct": 100.0,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1476.0,
+        "mem_pct": 38.5,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.9,
+        "disk_pct": 98.4,
+        "net_rx_kbps": 8.8,
+        "net_tx_kbps": 1.8
+      },
+      {
+        "timestamp": "07:34:22",
+        "cpu_pct": 100.0,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1478.0,
+        "mem_pct": 38.5,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.9,
+        "disk_pct": 98.4,
+        "net_rx_kbps": 2.1,
+        "net_tx_kbps": 1.0
+      },
+      {
+        "timestamp": "07:34:38",
+        "cpu_pct": 100.0,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1481.0,
+        "mem_pct": 38.6,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.9,
+        "disk_pct": 98.4,
+        "net_rx_kbps": 9.6,
+        "net_tx_kbps": 4.3
+      },
+      {
+        "timestamp": "07:34:53",
+        "cpu_pct": 2.0,
+        "mem_total_mb": 3837.0,
+        "mem_used_mb": 1478.0,
+        "mem_pct": 38.5,
+        "disk_total_gb": 19.2,
+        "disk_used_gb": 18.9,
+        "disk_pct": 98.4,
+        "net_rx_kbps": 3.8,
+        "net_tx_kbps": 1.2
+      }
+    ]
+  }
+}

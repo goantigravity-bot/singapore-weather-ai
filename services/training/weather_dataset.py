@@ -77,7 +77,7 @@ class WeatherDataset(Dataset):
         processed_dir = "processed_data"
         if os.path.exists(processed_dir):
             for f in os.listdir(processed_dir):
-                if f.startswith("NC_H09_") and f.endswith(".npy"):
+                if (f.startswith("NC_H09_") or f.startswith("NC_H08_")) and f.endswith(".npy"):
                     parts = f.split("_")
                     if len(parts) >= 4:
                         ts_str = f"{parts[2]}_{parts[3]}"
@@ -90,7 +90,7 @@ class WeatherDataset(Dataset):
 
         if os.path.exists(sat_dir):
             for f in os.listdir(sat_dir):
-                 if f.startswith("NC_H09_") and f.endswith(".nc"):
+                 if (f.startswith("NC_H09_") or f.startswith("NC_H08_")) and f.endswith(".nc"):
                      parts = f.split("_")
                      if len(parts) >= 4:
                         ts_str = f"{parts[2]}_{parts[3]}"
@@ -220,8 +220,22 @@ class WeatherDataset(Dataset):
 
 def get_dataloaders(csv_path, sat_dir, batch_size=4, split=0.8):
     dataset = WeatherDataset(csv_path, sat_dir)
+
+    # 空数据集防护：避免 DataLoader 因 num_samples=0 崩溃
+    if len(dataset) == 0:
+        raise ValueError(
+            f"Dataset is empty (0 samples). "
+            f"Check satellite data in processed_data/ and {sat_dir}/"
+        )
+
     train_size = int(split * len(dataset))
     val_size = len(dataset) - train_size
+
+    # 防止 train_size 为 0（数据量极少时）
+    if train_size == 0:
+        train_size = 1
+        val_size = len(dataset) - 1
+
     train_ds, val_ds = torch.utils.data.random_split(dataset, [train_size, val_size])
     
     # 多线程数据预取：4 个子进程并行准备下一批数据

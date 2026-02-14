@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather AI Web App: Data Model & Logic Flow</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --border: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card h2 .icon {
+            font-size: 1.3rem;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            padding: 1rem 0;
+            overflow-x: auto;
+        }
+
+        .endpoints {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .endpoint {
+            background: rgba(56, 189, 248, 0.06);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+        }
+
+        .endpoint .method {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #4ade80;
+            letter-spacing: 0.05em;
+        }
+
+        .endpoint .path {
+            font-family: 'SF Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent);
+        }
+
+        .endpoint .desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Weather AI Web Application</h1>
+        <p class="subtitle">Data Model, API Endpoints & Logic Flow — Generated 2026-02-12</p>
+
+        <!-- API Endpoints -->
+        <div class="card">
+            <h2><span class="icon">🔌</span> API Endpoints</h2>
+            <div class="endpoints">
+                <div class="endpoint">
+                    <div class="method">GET</div>
+                    <div class="path">/predict</div>
+                    <div class="desc">Weather prediction by lat/lon or location name</div>
+                </div>
+                <div class="endpoint">
+                    <div class="method">GET</div>
+                    <div class="path">/smart-query</div>
+                    <div class="desc">Natural language weather query with activity advice</div>
+                </div>
+                <div class="endpoint">
+                    <div class="method">GET</div>
+                    <div class="path">/stations</div>
+                    <div class="desc">List of NEA weather stations with metadata</div>
+                </div>
+                <div class="endpoint">
+                    <div class="method">GET</div>
+                    <div class="path">/popular-searches</div>
+                    <div class="desc">Top searched locations from SQLite history</div>
+                </div>
+                <div class="endpoint">
+                    <div class="method">GET</div>
+                    <div class="path">/monitor/overview</div>
+                    <div class="desc">Training and system status dashboard</div>
+                </div>
+                <div class="endpoint">
+                    <div class="method">GET</div>
+                    <div class="path">/monitor/logs</div>
+                    <div class="desc">Service logs from S3</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ER Diagram -->
+        <div class="card">
+            <h2><span class="icon">🗂️</span> Data Model (ER Diagram)</h2>
+            <div class="mermaid">
+                erDiagram
+                NEA_API ||--o{ SENSOR_CSV : "5-min readings"
+                NEA_API {
+                string endpoint "api.data.gov.sg"
+                string types "rainfall temperature humidity pm25"
+                int stations "60+ across Singapore"
+                }
+
+                SENSOR_CSV {
+                datetime timestamp "5-min interval"
+                string sensor_id "e.g. S50 S94"
+                float temperature "Celsius"
+                float rainfall "mm"
+                float humidity "percent"
+                float pm25 "ug per m3"
+                }
+
+                JAXA_HIMAWARI ||--o{ SATELLITE_NC : "10-min snapshots"
+                JAXA_HIMAWARI {
+                string source "Himawari-9 L3 EQR"
+                string resolution "0.02 deg per pixel"
+                string coverage "60N-60S 70E-150W"
+                }
+
+                SATELLITE_NC {
+                string filename "NC_H09_YYYYMMDD_HHMM"
+                float tbb_07 "IR Brightness Temp ch7"
+                float tbb_14 "IR Brightness Temp ch14"
+                }
+
+                SATELLITE_NC ||--|| PROCESSED_NPY : "crop to Singapore"
+                PROCESSED_NPY {
+                int rows "18 pixels"
+                int cols "25 pixels"
+                float values "Brightness Temp Kelvin"
+                }
+
+                S3_BUCKET ||--|| MODEL_PTH : "models/latest.pth"
+                S3_BUCKET ||--|| SENSOR_CSV : "govdata/real_sensor_data.csv"
+                S3_BUCKET ||--o{ PROCESSED_NPY : "processed/satellite/"
+                S3_BUCKET ||--o{ TRAINING_STATE : "state/"
+                S3_BUCKET ||--o{ LOG_FILES : "logs/"
+
+                S3_BUCKET {
+                string name "weather-ai-models-de08370c"
+                string region "ap-southeast-1"
+                }
+
+                MODEL_PTH ||--|| WEATHER_FUSION_NET : "load weights"
+                WEATHER_FUSION_NET {
+                module SatelliteEncoder "CNN 3-layer to 128-dim"
+                module SensorEncoder "LSTM to 64-dim"
+                module FusionHead "Linear 192 to 1"
+                }
+
+                SENSOR_CSV ||--o{ PREDICT_ENGINE : "latest readings"
+                PROCESSED_NPY ||--o{ PREDICT_ENGINE : "latest satellite"
+                WEATHER_FUSION_NET ||--|| PREDICT_ENGINE : "inference"
+
+                PREDICT_ENGINE {
+                func predict_ensemble "spatial smoothing"
+                func find_nearest_n_sensors "Delaunay triangulation"
+                func geocode_location "OSM Nominatim"
+                }
+
+                PREDICT_ENGINE ||--o{ FORECAST_RESULT : "returns"
+                FORECAST_RESULT {
+                float rainfall_mm "next 10min prediction"
+                string description "Clear Cloudy Rain"
+                float confidence "0 to 1"
+                bool cloud_cover "satellite analysis"
+                string recommendation "activity advice"
+                }
+
+                SQLITE_DB ||--o{ SEARCH_HISTORY : "records"
+                SEARCH_HISTORY {
+                int id "auto increment"
+                string query "location or NL query"
+                string ip_address "client IP"
+                datetime timestamp "search time"
+                float response_time_ms "API latency"
+                text response_result "JSON summary"
+                }
+
+                SEARCH_HISTORY ||--o{ POPULAR_SEARCHES : "aggregate"
+                POPULAR_SEARCHES {
+                string name "location name"
+                int count "search frequency"
+                }
+            </div>
+        </div>
+
+        <!-- Prediction Logic Flow -->
+        <div class="card">
+            <h2><span class="icon">🧠</span> Prediction Logic Flow</h2>
+            <div class="mermaid">
+                flowchart TB
+                subgraph UserInput["User Input"]
+                LOC["Location Name\nor Lat/Lon"]
+                end
+
+                subgraph Geocoding["Location Resolution"]
+                GEO["geocode_location\nOSM Nominatim API"]
+                RGEO["reverse_geocode\nAddress lookup"]
+                end
+
+                subgraph SpatialSearch["Spatial Interpolation"]
+                DEL["Delaunay Triangulation\nBuild mesh from 60+ stations"]
+                FIND["find_nearest_n_sensors\n3 enclosing vertices"]
+                end
+
+                subgraph DataPrep["Data Preparation"]
+                SENS["Sensor Sequence\n6x 10-min readings\nper station"]
+                SAT["Satellite Image\nLatest .npy\n1x18x25"]
+                end
+
+                subgraph Inference["Model Inference"]
+                MODEL["WeatherFusionNet\nSatelliteEncoder + SensorEncoder\nFusion Head"]
+                ENS["predict_ensemble\nAverage 3 stations\nSpatial smoothing"]
+                end
+
+                subgraph CloudCheck["Cloud Analysis"]
+                CLD["Satellite brightness\nthreshold check"]
+                end
+
+                subgraph Response["API Response"]
+                RES["ForecastResult\nrainfall + status +\nconfidence + advice"]
+                DB["SQLite\nsearch_history"]
+                end
+
+                LOC --> GEO --> DEL
+                LOC -->|"lat/lon"| DEL
+                DEL --> FIND
+                FIND --> SENS
+                FIND --> SAT
+                SENS --> MODEL
+                SAT --> MODEL
+                SAT --> CLD
+                MODEL --> ENS
+                CLD --> ENS
+                ENS --> RES
+                RES --> DB
+            </div>
+        </div>
+
+        <!-- Smart Query Logic -->
+        <div class="card">
+            <h2><span class="icon">💬</span> Smart Query Logic Flow</h2>
+            <div class="mermaid">
+                flowchart LR
+                subgraph NLInput["Natural Language Input"]
+                Q["'Can I ride bicycle\nat Rail Corridor\n2 to 5pm?'"]
+                end
+
+                subgraph Parse["parse_query - Regex NLP"]
+                ACT["Activity Detection\nbicycle -> Cycling\ntolerance=0.5mm"]
+                PLACE["Location Extraction\n'rail corridor'"]
+                TIME["Time Parsing\n'2 to 5pm' -> 14:00-17:00"]
+                end
+
+                subgraph PathAnalysis["Path Weather Analysis"]
+                OSM["fetch_osm_path\nOpenStreetMap API"]
+                SAMPLE["process_and_sample_path\nSample every 2km"]
+                MULTI["predict_ensemble\nat each sample point"]
+                end
+
+                subgraph Advice["Activity Advice"]
+                RISK["Risk Assessment\nrisk_ratio = risky_pts / total"]
+                REC["Recommendation\nGO / CAUTION / NOT RECOMMENDED"]
+                end
+
+                Q --> ACT
+                Q --> PLACE
+                Q --> TIME
+                PLACE --> OSM --> SAMPLE --> MULTI
+                ACT --> RISK
+                MULTI --> RISK
+                RISK --> REC
+            </div>
+        </div>
+
+        <!-- Background Sync -->
+        <div class="card">
+            <h2><span class="icon">🔄</span> Background Data Sync</h2>
+            <div class="mermaid">
+                flowchart LR
+                subgraph S3["AWS S3"]
+                SMODEL["models/latest.pth"]
+                SCSV["govdata/real_sensor_data.csv"]
+                SSAT["processed/satellite/*.npy"]
+                SSTATE["state/training_state.json"]
+                end
+
+                subgraph SyncThread["sync_assets_thread\nevery 5 minutes"]
+                DL_MODEL["Download model\nif S3 newer"]
+                DL_CSV["Download sensor CSV\nif S3 newer"]
+                DL_SAT["Sync satellite data\nlast 3 hours"]
+                end
+
+                subgraph APIServer["FastAPI Server"]
+                MODEL_MEM["Model in memory"]
+                DF_MEM["DataFrame in memory"]
+                SAT_DIR["satellite_data/ on disk"]
+                end
+
+                SMODEL --> DL_MODEL --> MODEL_MEM
+                SCSV --> DL_CSV --> DF_MEM
+                SSAT --> DL_SAT --> SAT_DIR
+            </div>
+        </div>
+
+        <footer>
+            Weather AI Web Application &mdash; FastAPI + React + SQLite + S3 &mdash; Deployed on AWS EC2 + CloudFront
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+
+</html>

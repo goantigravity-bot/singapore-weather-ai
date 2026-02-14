@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singapore Weather AI — Performance Test Report</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --heading: #f0f6fc;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --yellow: #d29922;
+            --red: #f85149;
+            --blue-bg: #0d1d30;
+            --blue-border: #1f6feb;
+            --yellow-bg: #2b1d11;
+            --yellow-border: #d29922;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--heading);
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.8rem;
+        }
+
+        h2 {
+            color: var(--heading);
+            font-size: 1.35rem;
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h3 {
+            color: var(--heading);
+            font-size: 1.1rem;
+            margin: 1.5rem 0 0.6rem;
+        }
+
+        .meta {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .meta strong {
+            color: var(--text);
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.88rem;
+        }
+
+        th {
+            background: var(--surface);
+            color: var(--heading);
+            font-weight: 600;
+            text-align: left;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 0.45rem 0.8rem;
+            border: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: rgba(88, 166, 255, 0.04);
+        }
+
+        code {
+            background: var(--surface);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--accent);
+        }
+
+        pre {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 1rem 0;
+            color: var(--text);
+        }
+
+        .note,
+        .warning,
+        .important {
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .note {
+            background: var(--blue-bg);
+            border-left: 4px solid var(--blue-border);
+        }
+
+        .note .label {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .warning {
+            background: var(--yellow-bg);
+            border-left: 4px solid var(--yellow-border);
+        }
+
+        .warning .label {
+            color: var(--yellow);
+            font-weight: 600;
+        }
+
+        .important {
+            background: #1a0d2e;
+            border-left: 4px solid #a371f7;
+        }
+
+        .important .label {
+            color: #a371f7;
+            font-weight: 600;
+        }
+
+        ul,
+        ol {
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+
+        li {
+            margin: 0.3rem 0;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .kpi-card .value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--heading);
+        }
+
+        .kpi-card .value.green {
+            color: var(--green);
+        }
+
+        .kpi-card .value.accent {
+            color: var(--accent);
+        }
+
+        .kpi-card .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-green {
+            background: #0f291a;
+            color: var(--green);
+        }
+
+        .badge-yellow {
+            background: #2b1d11;
+            color: var(--yellow);
+        }
+
+        .badge-red {
+            background: #2d0f0f;
+            color: var(--red);
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.4rem;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🌦️ Singapore Weather AI — Performance Test Report</h1>
+    <div class="meta">
+        <strong>Date</strong>: 2026-02-12 &nbsp;|&nbsp;
+        <strong>Duration</strong>: 30 minutes &nbsp;|&nbsp;
+        <strong>Concurrency</strong>: 10 workers
+    </div>
+
+    <h2>System Under Test</h2>
+    <table>
+        <tr>
+            <th>Component</th>
+            <th>Spec</th>
+        </tr>
+        <tr>
+            <td><strong>Instance</strong></td>
+            <td>AWS EC2 (ap-southeast-1)</td>
+        </tr>
+        <tr>
+            <td><strong>CPU</strong></td>
+            <td>Intel Xeon Platinum 8259CL @ 2.50GHz, 1 core / 2 threads</td>
+        </tr>
+        <tr>
+            <td><strong>RAM</strong></td>
+            <td>3.7 GB (1.3 GB used, 2.2 GB available)</td>
+        </tr>
+        <tr>
+            <td><strong>Disk</strong></td>
+            <td>20 GB EBS (97% used)</td>
+        </tr>
+        <tr>
+            <td><strong>OS</strong></td>
+            <td>Ubuntu 22.04.5 LTS</td>
+        </tr>
+        <tr>
+            <td><strong>Python</strong></td>
+            <td>3.10.12</td>
+        </tr>
+        <tr>
+            <td><strong>Framework</strong></td>
+            <td>FastAPI + Uvicorn (2 workers)</td>
+        </tr>
+        <tr>
+            <td><strong>Load Avg</strong></td>
+            <td>0.23 / 0.18 / 0.67 (post-test)</td>
+        </tr>
+    </table>
+
+    <h3>Architecture</h3>
+    <pre>Client (10 concurrent) → Uvicorn Master
+                           ├── Worker 1 (5 threads)
+                           └── Worker 2 (5 threads)
+                                 ├── PyTorch inference (CPU)
+                                 ├── SQLite (weather.db)
+                                 └── LRU Cache (geocoding + OSM)</pre>
+
+    <hr>
+
+    <h2>Test Configuration</h2>
+    <table>
+        <tr>
+            <th>Parameter</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>Duration</td>
+            <td>30 minutes</td>
+        </tr>
+        <tr>
+            <td>Concurrency</td>
+            <td>10 workers</td>
+        </tr>
+        <tr>
+            <td>Locations</td>
+            <td>25 outdoor activity spots</td>
+        </tr>
+        <tr>
+            <td>Request delay</td>
+            <td>0.1 ~ 0.5s between requests</td>
+        </tr>
+        <tr>
+            <td>Endpoint weights</td>
+            <td>predict (50%), smart-query (15%), coords (15%), health (10%), stations (5%), popular (5%)</td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <h2>Overall Results</h2>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="value accent">31,184</div>
+            <div class="label">Total Requests</div>
+        </div>
+        <div class="kpi-card">
+            <div class="value green">100.0%</div>
+            <div class="label">Success Rate</div>
+        </div>
+        <div class="kpi-card">
+            <div class="value accent">17.25</div>
+            <div class="label">Throughput (req/s)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="value">276.8ms</div>
+            <div class="label">Avg Latency</div>
+        </div>
+        <div class="kpi-card">
+            <div class="value">680.0ms</div>
+            <div class="label">P95 Latency</div>
+        </div>
+        <div class="kpi-card">
+            <div class="value green">0</div>
+            <div class="label">Failed Requests</div>
+        </div>
+    </div>
+
+    <hr>
+
+    <h2>Endpoint Response Times</h2>
+    <div class="table-scroll">
+        <table>
+            <tr>
+                <th>Endpoint</th>
+                <th>Requests</th>
+                <th>Avg</th>
+                <th>Median</th>
+                <th>P95</th>
+                <th>P99</th>
+                <th>Max</th>
+            </tr>
+            <tr>
+                <td><code>/health</code></td>
+                <td>3,129</td>
+                <td>21ms</td>
+                <td>9ms</td>
+                <td>70ms</td>
+                <td>120ms</td>
+                <td>2,027ms</td>
+            </tr>
+            <tr>
+                <td><code>/stations</code></td>
+                <td>1,608</td>
+                <td>29ms</td>
+                <td>14ms</td>
+                <td>83ms</td>
+                <td>131ms</td>
+                <td>2,058ms</td>
+            </tr>
+            <tr>
+                <td><code>/popular-searches</code></td>
+                <td>1,507</td>
+                <td>52ms</td>
+                <td>37ms</td>
+                <td>133ms</td>
+                <td>195ms</td>
+                <td>1,817ms</td>
+            </tr>
+            <tr>
+                <td><code>/predict?coords</code></td>
+                <td>4,597</td>
+                <td>242ms</td>
+                <td>192ms</td>
+                <td>576ms</td>
+                <td>948ms</td>
+                <td>2,545ms</td>
+            </tr>
+            <tr>
+                <td><code>/predict?location</code></td>
+                <td>15,690</td>
+                <td>260ms</td>
+                <td>204ms</td>
+                <td>627ms</td>
+                <td>1,104ms</td>
+                <td>2,801ms</td>
+            </tr>
+            <tr>
+                <td><code>/smart-query</code></td>
+                <td>4,653</td>
+                <td>697ms</td>
+                <td>250ms</td>
+                <td>2,793ms</td>
+                <td>8,322ms</td>
+                <td>12,463ms</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="note">
+        <span class="label">ℹ️ NOTE</span><br>
+        <code>/smart-query</code> has a bimodal distribution: cache hits respond in ~250ms (median), while cache misses
+        (first-time locations) take 2-12s due to external API calls to Overpass/Nominatim.
+    </div>
+
+    <hr>
+
+    <h2>Service Availability</h2>
+    <table>
+        <tr>
+            <th>Endpoint</th>
+            <th>Success</th>
+            <th>Total</th>
+            <th>Availability</th>
+        </tr>
+        <tr>
+            <td><code>/health</code></td>
+            <td>3,129</td>
+            <td>3,129</td>
+            <td><span class="badge badge-green">100.0%</span></td>
+        </tr>
+        <tr>
+            <td><code>/stations</code></td>
+            <td>1,608</td>
+            <td>1,608</td>
+            <td><span class="badge badge-green">100.0%</span></td>
+        </tr>
+        <tr>
+            <td><code>/popular-searches</code></td>
+            <td>1,507</td>
+            <td>1,507</td>
+            <td><span class="badge badge-green">100.0%</span></td>
+        </tr>
+        <tr>
+            <td><code>/predict?coords</code></td>
+            <td>4,597</td>
+            <td>4,597</td>
+            <td><span class="badge badge-green">100.0%</span></td>
+        </tr>
+        <tr>
+            <td><code>/predict?location</code></td>
+            <td>15,690</td>
+            <td>15,690</td>
+            <td><span class="badge badge-green">100.0%</span></td>
+        </tr>
+        <tr>
+            <td><code>/smart-query</code></td>
+            <td>4,653</td>
+            <td>4,653</td>
+            <td><span class="badge badge-green">100.0%</span></td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <h2>Test Progression (Time Series)</h2>
+    <p style="color:var(--text-muted); font-size:0.9rem;">Data sampled every 1 minute during the 30-minute test run
+        (14:50 – 15:20 SGT)</p>
+
+    <div class="table-scroll">
+        <table>
+            <tr>
+                <th>Time</th>
+                <th>Elapsed</th>
+                <th>Cumulative Reqs</th>
+                <th>Interval Reqs</th>
+                <th>Throughput (req/s)</th>
+                <th>Avg Latency</th>
+            </tr>
+            <tr>
+                <td>14:50:44</td>
+                <td>0:15</td>
+                <td>280</td>
+                <td>280</td>
+                <td>18.7</td>
+                <td>222ms</td>
+            </tr>
+            <tr>
+                <td>14:51:29</td>
+                <td>1:00</td>
+                <td>1,033</td>
+                <td>753</td>
+                <td>16.7</td>
+                <td>278ms</td>
+            </tr>
+            <tr>
+                <td>14:52:29</td>
+                <td>2:00</td>
+                <td>2,063</td>
+                <td>1,030</td>
+                <td>17.2</td>
+                <td>280ms</td>
+            </tr>
+            <tr>
+                <td>14:53:29</td>
+                <td>3:00</td>
+                <td>3,033</td>
+                <td>970</td>
+                <td>16.2</td>
+                <td>295ms</td>
+            </tr>
+            <tr>
+                <td>14:54:30</td>
+                <td>4:00</td>
+                <td>4,139</td>
+                <td>1,106</td>
+                <td>18.4</td>
+                <td>279ms</td>
+            </tr>
+            <tr>
+                <td>14:55:30</td>
+                <td>5:00</td>
+                <td>5,213</td>
+                <td>1,074</td>
+                <td>17.9</td>
+                <td>276ms</td>
+            </tr>
+            <tr>
+                <td>14:56:30</td>
+                <td>6:00</td>
+                <td>6,289</td>
+                <td>1,076</td>
+                <td>17.9</td>
+                <td>272ms</td>
+            </tr>
+            <tr>
+                <td>14:57:30</td>
+                <td>7:00</td>
+                <td>7,363</td>
+                <td>1,074</td>
+                <td>17.9</td>
+                <td>269ms</td>
+            </tr>
+            <tr>
+                <td>14:58:30</td>
+                <td>8:00</td>
+                <td>8,421</td>
+                <td>1,058</td>
+                <td>17.6</td>
+                <td>270ms</td>
+            </tr>
+            <tr>
+                <td>14:59:30</td>
+                <td>9:00</td>
+                <td>9,504</td>
+                <td>1,083</td>
+                <td>18.1</td>
+                <td>267ms</td>
+            </tr>
+            <tr>
+                <td>15:00:30</td>
+                <td>10:00</td>
+                <td>10,555</td>
+                <td>1,051</td>
+                <td>17.5</td>
+                <td>268ms</td>
+            </tr>
+            <tr>
+                <td>15:01:30</td>
+                <td>11:00</td>
+                <td>11,641</td>
+                <td>1,086</td>
+                <td>18.1</td>
+                <td>267ms</td>
+            </tr>
+            <tr>
+                <td>15:02:31</td>
+                <td>12:00</td>
+                <td>12,738</td>
+                <td>1,097</td>
+                <td>18.3</td>
+                <td>266ms</td>
+            </tr>
+            <tr>
+                <td>15:03:31</td>
+                <td>13:00</td>
+                <td>13,746</td>
+                <td>1,008</td>
+                <td>16.8</td>
+                <td>268ms</td>
+            </tr>
+            <tr style="background:rgba(210,153,34,0.08)">
+                <td>14:04:31</td>
+                <td>14:00</td>
+                <td>14,420</td>
+                <td>674</td>
+                <td>11.2</td>
+                <td>283ms</td>
+            </tr>
+            <tr style="background:rgba(210,153,34,0.08)">
+                <td>15:05:31</td>
+                <td>15:00</td>
+                <td>15,063</td>
+                <td>643</td>
+                <td>10.7</td>
+                <td>298ms</td>
+            </tr>
+            <tr style="background:rgba(210,153,34,0.08)">
+                <td>15:06:31</td>
+                <td>16:00</td>
+                <td>15,723</td>
+                <td>660</td>
+                <td>11.0</td>
+                <td>311ms</td>
+            </tr>
+            <tr>
+                <td>15:07:31</td>
+                <td>17:00</td>
+                <td>16,783</td>
+                <td>1,060</td>
+                <td>17.7</td>
+                <td>309ms</td>
+            </tr>
+            <tr>
+                <td>15:08:31</td>
+                <td>18:00</td>
+                <td>17,901</td>
+                <td>1,118</td>
+                <td>18.6</td>
+                <td>304ms</td>
+            </tr>
+            <tr>
+                <td>15:09:31</td>
+                <td>19:00</td>
+                <td>19,071</td>
+                <td>1,170</td>
+                <td>19.5</td>
+                <td>298ms</td>
+            </tr>
+            <tr>
+                <td>15:10:32</td>
+                <td>20:00</td>
+                <td>20,137</td>
+                <td>1,066</td>
+                <td>17.8</td>
+                <td>296ms</td>
+            </tr>
+            <tr>
+                <td>15:11:32</td>
+                <td>21:00</td>
+                <td>21,296</td>
+                <td>1,159</td>
+                <td>19.3</td>
+                <td>292ms</td>
+            </tr>
+            <tr>
+                <td>15:12:32</td>
+                <td>22:00</td>
+                <td>22,352</td>
+                <td>1,056</td>
+                <td>17.6</td>
+                <td>291ms</td>
+            </tr>
+            <tr>
+                <td>15:13:32</td>
+                <td>23:00</td>
+                <td>23,474</td>
+                <td>1,122</td>
+                <td>18.7</td>
+                <td>288ms</td>
+            </tr>
+            <tr>
+                <td>15:14:33</td>
+                <td>24:00</td>
+                <td>24,647</td>
+                <td>1,173</td>
+                <td>19.6</td>
+                <td>285ms</td>
+            </tr>
+            <tr>
+                <td>15:15:33</td>
+                <td>25:00</td>
+                <td>25,764</td>
+                <td>1,117</td>
+                <td>18.6</td>
+                <td>283ms</td>
+            </tr>
+            <tr>
+                <td>15:16:33</td>
+                <td>26:00</td>
+                <td>26,861</td>
+                <td>1,097</td>
+                <td>18.3</td>
+                <td>281ms</td>
+            </tr>
+            <tr>
+                <td>15:17:33</td>
+                <td>27:00</td>
+                <td>27,856</td>
+                <td>995</td>
+                <td>16.6</td>
+                <td>282ms</td>
+            </tr>
+            <tr>
+                <td>15:18:33</td>
+                <td>28:00</td>
+                <td>28,988</td>
+                <td>1,132</td>
+                <td>18.9</td>
+                <td>280ms</td>
+            </tr>
+            <tr>
+                <td>15:19:34</td>
+                <td>29:00</td>
+                <td>30,105</td>
+                <td>1,117</td>
+                <td>18.6</td>
+                <td>278ms</td>
+            </tr>
+            <tr>
+                <td>15:20:19</td>
+                <td>29:50</td>
+                <td>30,971</td>
+                <td>866</td>
+                <td>19.2</td>
+                <td>277ms</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="note">
+        <span class="label">ℹ️ NOTE</span><br>
+        <strong>Throughput dip at 14–16 min</strong> (highlighted rows): Correlates with S3 sync thread downloading
+        satellite data, competing for I/O and causing elevated latency (283→311ms). Throughput recovered fully after ~17
+        min.
+    </div>
+
+    <h3>Key Observations</h3>
+    <ul>
+        <li><strong>Cache warm-up phase</strong> (0–3 min): Avg latency starts at 222ms, rises to ~295ms as new
+            locations trigger Overpass/Nominatim cache misses</li>
+        <li><strong>Steady state</strong> (4–13 min): Latency stabilizes at 265–280ms with ~18 req/s throughput as LRU
+            cache fully warmed</li>
+        <li><strong>S3 sync impact</strong> (14–16 min): Throughput drops ~40% due to background satellite data download
+        </li>
+        <li><strong>Recovery &amp; convergence</strong> (17–30 min): Latency gradually converges to 277ms, throughput
+            returns to 18+ req/s</li>
+    </ul>
+
+    <hr>
+
+    <h2>System Resource Utilization</h2>
+    <p style="color:var(--text-muted); font-size:0.9rem;">System metrics sampled every 15 seconds via <code>/proc</code>
+        during a follow-up 3-min validation test (5 concurrency)</p>
+
+    <h3>Summary</h3>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="value">41.9%</div>
+            <div class="label">CPU Avg</div>
+        </div>
+        <div class="kpi-card">
+            <div class="value">57.4%</div>
+            <div class="label">CPU Max</div>
+        </div>
+        <div class="kpi-card">
+            <div class="value">41.8%</div>
+            <div class="label">Memory Avg</div>
+        </div>
+        <div class="kpi-card">
+            <div class="value" style="color:var(--red)">97.0%</div>
+            <div class="label">Disk Usage</div>
+        </div>
+    </div>
+
+    <h3>Time Series (15s intervals)</h3>
+    <div class="table-scroll">
+        <table>
+            <tr>
+                <th>Time</th>
+                <th>CPU%</th>
+                <th>Mem (MB)</th>
+                <th>Mem%</th>
+                <th>Disk%</th>
+                <th>Net RX (KB/s)</th>
+                <th>Net TX (KB/s)</th>
+            </tr>
+            <tr>
+                <td>15:49:47</td>
+                <td>42.4</td>
+                <td>1,610</td>
+                <td>42.0</td>
+                <td>96.9</td>
+                <td>739.6</td>
+                <td>3,147.9</td>
+            </tr>
+            <tr>
+                <td>15:50:03</td>
+                <td>53.5</td>
+                <td>1,610</td>
+                <td>42.0</td>
+                <td>97.0</td>
+                <td>0.5</td>
+                <td>0.3</td>
+            </tr>
+            <tr>
+                <td>15:50:18</td>
+                <td>38.4</td>
+                <td>1,609</td>
+                <td>41.9</td>
+                <td>97.0</td>
+                <td>4.7</td>
+                <td>2.6</td>
+            </tr>
+            <tr>
+                <td>15:50:34</td>
+                <td>46.5</td>
+                <td>1,609</td>
+                <td>41.9</td>
+                <td>97.0</td>
+                <td>0.8</td>
+                <td>0.4</td>
+            </tr>
+            <tr>
+                <td>15:50:49</td>
+                <td>51.0</td>
+                <td>1,607</td>
+                <td>41.9</td>
+                <td>97.0</td>
+                <td>0.1</td>
+                <td>0.2</td>
+            </tr>
+            <tr>
+                <td>15:51:05</td>
+                <td>30.3</td>
+                <td>1,607</td>
+                <td>41.9</td>
+                <td>97.0</td>
+                <td>0.2</td>
+                <td>0.2</td>
+            </tr>
+            <tr>
+                <td>15:51:20</td>
+                <td>51.0</td>
+                <td>1,607</td>
+                <td>41.9</td>
+                <td>97.0</td>
+                <td>4.9</td>
+                <td>2.6</td>
+            </tr>
+            <tr>
+                <td>15:51:36</td>
+                <td>12.9</td>
+                <td>1,599</td>
+                <td>41.7</td>
+                <td>97.0</td>
+                <td>0.1</td>
+                <td>0.2</td>
+            </tr>
+            <tr>
+                <td>15:51:51</td>
+                <td>34.0</td>
+                <td>1,598</td>
+                <td>41.7</td>
+                <td>97.0</td>
+                <td>1.1</td>
+                <td>0.5</td>
+            </tr>
+            <tr>
+                <td>15:52:07</td>
+                <td>47.5</td>
+                <td>1,598</td>
+                <td>41.7</td>
+                <td>97.0</td>
+                <td>0.6</td>
+                <td>0.2</td>
+            </tr>
+            <tr>
+                <td>15:52:22</td>
+                <td>57.4</td>
+                <td>1,597</td>
+                <td>41.6</td>
+                <td>97.0</td>
+                <td>4.9</td>
+                <td>2.6</td>
+            </tr>
+            <tr>
+                <td>15:52:38</td>
+                <td>37.9</td>
+                <td>1,598</td>
+                <td>41.6</td>
+                <td>97.0</td>
+                <td>0.4</td>
+                <td>0.2</td>
+            </tr>
+        </table>
+    </div>
+
+    <h3>Key Insights</h3>
+    <ul>
+        <li><strong>CPU oscillates 13–57%</strong> — Driven by PyTorch inference bursts. Avg ~42% shows headroom for
+            higher concurrency.</li>
+        <li><strong>Memory stable</strong> at 1.6 GB (42%) — No memory leaks detected. LRU caches add negligible
+            overhead.</li>
+        <li><strong>Disk at 97%</strong> — Critical. Satellite data sync fills the 20 GB volume.</li>
+        <li><strong>Network bursts</strong> (740 KB/s RX, 3.1 MB/s TX) correspond to LRU cache misses hitting external
+            APIs.</li>
+    </ul>
+
+    <div class="warning">
+        <span class="label">⚠️ WARNING</span><br>
+        Disk usage at 97% is a reliability risk. The S3 satellite sync can fail if disk fills to 100%, which was
+        observed during the 30-min test period.
+    </div>
+
+    <hr>
+
+    <h2>Forecast Distribution</h2>
+    <table>
+        <tr>
+            <th>Category</th>
+            <th>Count</th>
+            <th>Percentage</th>
+        </tr>
+        <tr>
+            <td>Light Rain</td>
+            <td>10,293</td>
+            <td>50.7%</td>
+        </tr>
+        <tr>
+            <td>Cloudy</td>
+            <td>9,994</td>
+            <td>49.3%</td>
+        </tr>
+        <tr>
+            <td><strong>Total</strong></td>
+            <td><strong>20,287</strong></td>
+            <td><strong>100%</strong></td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <h2>Top Searched Places</h2>
+    <table>
+        <tr>
+            <th>Rank</th>
+            <th>Location</th>
+            <th>Searches</th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td>Marina Bay Sands</td>
+            <td>1,762</td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>West Coast Park</td>
+            <td>1,174</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>Changi Beach Park</td>
+            <td>1,149</td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td>East Coast Park</td>
+            <td>1,149</td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td>Sentosa Beach</td>
+            <td>1,143</td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td>Pasir Ris Park</td>
+            <td>1,126</td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td>Jurong Lake Gardens</td>
+            <td>950</td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td>Botanic Gardens</td>
+            <td>933</td>
+        </tr>
+        <tr>
+            <td>9</td>
+            <td>Hort Park</td>
+            <td>910</td>
+        </tr>
+        <tr>
+            <td>10</td>
+            <td>Gardens by the Bay</td>
+            <td>895</td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <h2>Optimization History</h2>
+    <p style="color:var(--text-muted); font-size:0.9rem;">Three optimizations applied incrementally, each validated with
+        identical 200-request tests (5 concurrency):</p>
+
+    <div class="table-scroll">
+        <table>
+            <tr>
+                <th>Optimization</th>
+                <th>/smart-query Avg</th>
+                <th>/predict?location Avg</th>
+                <th>Throughput</th>
+                <th>Change</th>
+            </tr>
+            <tr>
+                <td>Baseline (single worker, no cache)</td>
+                <td>6,130ms</td>
+                <td>189ms</td>
+                <td>3.87 req/s</td>
+                <td>—</td>
+            </tr>
+            <tr>
+                <td>+ Multi-worker Uvicorn (2 workers)</td>
+                <td>5,276ms</td>
+                <td>169ms</td>
+                <td>4.18 req/s</td>
+                <td><span class="badge badge-green">+8%</span></td>
+            </tr>
+            <tr>
+                <td>+ LRU Cache (geocoding + OSM)</td>
+                <td>2,256ms</td>
+                <td>112ms</td>
+                <td>5.84 req/s</td>
+                <td><span class="badge badge-green">+51%</span></td>
+            </tr>
+            <tr style="font-weight:600">
+                <td>30-min sustained load (10 concurrency)</td>
+                <td>697ms</td>
+                <td>260ms</td>
+                <td>17.25 req/s</td>
+                <td><span class="badge badge-green">+346%</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="important">
+        <span class="label">📌 IMPORTANT</span><br>
+        The 30-min test used 10 concurrency (vs 5 in benchmarks), so higher per-request latency is expected. The key
+        metric is throughput: <strong>17.25 req/s</strong> at 100% success rate demonstrates the system handles
+        sustained load well.
+    </div>
+
+    <hr>
+
+    <h2>Bottleneck Analysis</h2>
+
+    <h3>✅ Resolved</h3>
+    <ul>
+        <li><strong>External API I/O</strong> — <code>geocode_location()</code> and <code>fetch_osm_path()</code> now
+            cached via <code>functools.lru_cache</code>, reducing repeated calls from 2-5s to &lt;1ms</li>
+        <li><strong>Single worker</strong> — Uvicorn now runs 2 worker processes, utilizing both vCPUs</li>
+    </ul>
+
+    <h3>⏳ Remaining</h3>
+    <ul>
+        <li><strong>Disk pressure</strong> — Server disk at 97% (satellite data sync fills quickly). Requires cleanup
+            automation or volume expansion.</li>
+        <li><strong><code>/smart-query</code> cold path</strong> — First-time location queries still hit Overpass API
+            (~2-12s). Could be mitigated with cache warm-up at startup.</li>
+        <li><strong>SQLite write contention</strong> — <code>weather.db</code> grows with each search log. At 31K
+            writes/30min, may need periodic compaction.</li>
+    </ul>
+
+    <hr>
+
+    <h2>How to Reproduce</h2>
+    <pre><code># Deploy test files
+scp perf-test/perf-test.py perf-test/perf-test-locations.json ubuntu@3.0.28.161:~/
+
+# Run 30-min test (10 concurrency)
+ssh ubuntu@3.0.28.161 "cd ~ && python3 perf-test.py \
+  --base-url http://localhost:8000 \
+  --duration 30 \
+  --concurrency 10 \
+  --data perf-test-locations.json \
+  --output perf-report-30min.json"
+
+# Pull report
+scp ubuntu@3.0.28.161:~/perf-report-30min.json docs/perf-test/</code></pre>
+
+    <div style="text-align:center; color:var(--text-muted); margin-top:2rem; font-size:0.8rem;">
+        Generated on 2026-02-12 · Singapore Weather AI Performance Testing Suite
+    </div>
+
+</body>
+
+</html>

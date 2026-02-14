@@ -1,0 +1,201 @@
+{
+  "metadata": {
+    "base_url": "http://localhost:8000",
+    "test_time": "2026-02-12T15:20:36.719179",
+    "total_requests": 31184,
+    "total_duration_s": 1807.5,
+    "throughput_rps": 17.25
+  },
+  "overall": {
+    "total_requests": 31184,
+    "successful": 31184,
+    "failed": 0,
+    "success_rate_pct": 100.0,
+    "avg_response_ms": 276.8,
+    "p95_response_ms": 680.0
+  },
+  "service_availability": {
+    "/predict?location": {
+      "total_requests": 15690,
+      "successful": 15690,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/smart-query": {
+      "total_requests": 4653,
+      "successful": 4653,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/predict?coords": {
+      "total_requests": 4597,
+      "successful": 4597,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/health": {
+      "total_requests": 3129,
+      "successful": 3129,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/popular-searches": {
+      "total_requests": 1507,
+      "successful": 1507,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/stations": {
+      "total_requests": 1608,
+      "successful": 1608,
+      "failed": 0,
+      "availability_pct": 100.0
+    }
+  },
+  "response_times": {
+    "/predict?location": {
+      "avg_ms": 260.4,
+      "median_ms": 203.6,
+      "p95_ms": 627.2,
+      "p99_ms": 1103.5,
+      "min_ms": 44.3,
+      "max_ms": 2801.2,
+      "sample_count": 15690
+    },
+    "/smart-query": {
+      "avg_ms": 697.3,
+      "median_ms": 249.6,
+      "p95_ms": 2792.6,
+      "p99_ms": 8321.5,
+      "min_ms": 9.4,
+      "max_ms": 12462.9,
+      "sample_count": 4653
+    },
+    "/predict?coords": {
+      "avg_ms": 242.0,
+      "median_ms": 191.5,
+      "p95_ms": 575.8,
+      "p99_ms": 948.3,
+      "min_ms": 40.5,
+      "max_ms": 2545.0,
+      "sample_count": 4597
+    },
+    "/health": {
+      "avg_ms": 20.7,
+      "median_ms": 8.6,
+      "p95_ms": 69.5,
+      "p99_ms": 119.6,
+      "min_ms": 2.8,
+      "max_ms": 2026.9,
+      "sample_count": 3129
+    },
+    "/popular-searches": {
+      "avg_ms": 52.4,
+      "median_ms": 36.9,
+      "p95_ms": 133.3,
+      "p99_ms": 195.0,
+      "min_ms": 5.0,
+      "max_ms": 1817.3,
+      "sample_count": 1507
+    },
+    "/stations": {
+      "avg_ms": 28.7,
+      "median_ms": 13.7,
+      "p95_ms": 83.0,
+      "p99_ms": 130.5,
+      "min_ms": 4.4,
+      "max_ms": 2057.6,
+      "sample_count": 1608
+    }
+  },
+  "forecast_performance": {
+    "total_forecasts": 20287,
+    "distribution": {
+      "Light Rain": 10293,
+      "Cloudy": 9994
+    }
+  },
+  "popular_places": [
+    {
+      "name": "Marina Bay Sands",
+      "searches": 1762
+    },
+    {
+      "name": "West Coast Park",
+      "searches": 1174
+    },
+    {
+      "name": "Changi Beach Park",
+      "searches": 1149
+    },
+    {
+      "name": "East Coast Park",
+      "searches": 1149
+    },
+    {
+      "name": "Sentosa Beach",
+      "searches": 1143
+    },
+    {
+      "name": "Pasir Ris Park",
+      "searches": 1126
+    },
+    {
+      "name": "Jurong Lake Gardens",
+      "searches": 950
+    },
+    {
+      "name": "Botanic Gardens",
+      "searches": 933
+    },
+    {
+      "name": "Hort Park",
+      "searches": 910
+    },
+    {
+      "name": "Gardens by the Bay",
+      "searches": 895
+    },
+    {
+      "name": "Labrador Nature Reserve",
+      "searches": 738
+    },
+    {
+      "name": "Sungei Buloh Wetland Reserve",
+      "searches": 724
+    },
+    {
+      "name": "Southern Ridges",
+      "searches": 688
+    },
+    {
+      "name": "Rail Corridor",
+      "searches": 687
+    },
+    {
+      "name": "MacRitchie Reservoir",
+      "searches": 679
+    },
+    {
+      "name": "Bukit Timah Nature Reserve",
+      "searches": 666
+    },
+    {
+      "name": "Coney Island",
+      "searches": 658
+    },
+    {
+      "name": "Sembawang Hot Spring Park",
+      "searches": 589
+    },
+    {
+      "name": "Fort Canning Park",
+      "searches": 588
+    },
+    {
+      "name": "Upper Seletar Reservoir",
+      "searches": 565
+    }
+  ],
+  "error_analysis": "No errors"
+}

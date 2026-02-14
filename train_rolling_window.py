@@ -7,27 +7,9 @@ from weather_dataset import get_dataloaders
 import os
 import time
 import logging
-import json
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-
-class WeightedMSELoss(nn.Module):
-    """降雨数据极度不平衡(99%无雨)，普通MSE会让模型学到"永远预测均值"的捷径。
-    给有雨样本更高权重，迫使模型认真学习降雨特征。"""
-    def __init__(self, rain_threshold=0.1, rain_weight=10.0):
-        super().__init__()
-        self.rain_threshold = rain_threshold
-        self.rain_weight = rain_weight
-
-    def forward(self, pred, target):
-        weights = torch.where(
-            target > self.rain_threshold,
-            torch.tensor(self.rain_weight, device=pred.device),
-            torch.tensor(1.0, device=pred.device)
-        )
-        return torch.mean(weights * (pred - target) ** 2)
 
 # --- Hyperparameters ---
 LEARNING_RATE = 1e-3
@@ -43,7 +25,7 @@ else:
 
 # 🆕 动态Epochs配置
 EPOCHS_INITIAL = 30      # 首次训练
-EPOCHS_INCREMENTAL = 15  # 增量训练（Weighted Loss 需要更多轮数收敛）
+EPOCHS_INCREMENTAL = 5   # 增量训练（微调）
 
 # 支持环境变量覆盖
 EPOCHS_INITIAL = int(os.environ.get('EPOCHS_INITIAL', EPOCHS_INITIAL))
@@ -133,8 +115,7 @@ def train_model():
     model.to(DEVICE)
     
     # 3. Loss, Optimizer, Scheduler
-    RAIN_WEIGHT = float(os.environ.get('RAIN_WEIGHT', 10.0))
-    criterion = WeightedMSELoss(rain_threshold=0.1, rain_weight=RAIN_WEIGHT)
+    criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
     # LR Scheduler: val_loss 停滞时自动衰减学习率，帮助精细收敛
@@ -147,7 +128,7 @@ def train_model():
     scaler = GradScaler(enabled=use_amp)
     
     # Early Stopping: 避免 val_loss 不再下降后继续浪费算力
-    EARLY_STOPPING_PATIENCE = int(os.environ.get('EARLY_STOPPING_PATIENCE', 5))
+    EARLY_STOPPING_PATIENCE = int(os.environ.get('EARLY_STOPPING_PATIENCE', 3))
     no_improve_count = 0
     
     logger.info(f"\n{'='*60}")
@@ -156,7 +137,6 @@ def train_model():
     logger.info(f"  - Epochs: {EPOCHS} (Early Stop patience={EARLY_STOPPING_PATIENCE})")
     logger.info(f"  - Batch Size: {BATCH_SIZE}")
     logger.info(f"  - Learning Rate: {LEARNING_RATE}")
-    logger.info(f"  - Loss: WeightedMSE (rain_weight={RAIN_WEIGHT})")
     logger.info(f"  - Device: {DEVICE}")
     logger.info(f"  - AMP (Mixed Precision): {use_amp}")
     logger.info(f"{'='*60}")
@@ -249,6 +229,7 @@ def train_model():
     logger.info(f"Model saved to: {MODEL_SAVE_PATH}")
     
     # Save Metrics for Dashboard
+    import json
     metrics = {
         "best_val_loss": best_loss,
         "final_epoch": actual_epochs,
@@ -260,7 +241,6 @@ def train_model():
         "early_stopped": no_improve_count >= EARLY_STOPPING_PATIENCE,
         "device": str(DEVICE),
         "batch_size": BATCH_SIZE,
-        "rain_weight": RAIN_WEIGHT,
         "success": True
     }
     

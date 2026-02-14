@@ -1,0 +1,101 @@
+{
+  "timestamp": "2026-02-14T12:58:40.691322",
+  "base_url": "http://localhost:8000",
+  "single_request": {
+    "/accuracy/summary": {
+      "min": 3.9,
+      "avg": 4.0,
+      "p50": 4.0,
+      "p95": 4.3,
+      "max": 4.3
+    },
+    "/accuracy/by-hour": {
+      "min": 3.9,
+      "avg": 3.9,
+      "p50": 3.9,
+      "p95": 4.0,
+      "max": 4.0
+    },
+    "/accuracy/by-location": {
+      "min": 4.3,
+      "avg": 4.5,
+      "p50": 4.5,
+      "p95": 4.6,
+      "max": 4.6
+    },
+    "/accuracy/by-rain-level": {
+      "min": 4.0,
+      "avg": 4.1,
+      "p50": 4.1,
+      "p95": 4.2,
+      "max": 4.2
+    },
+    "/accuracy/by-distance": {
+      "min": 3.9,
+      "avg": 4.1,
+      "p50": 4.1,
+      "p95": 4.2,
+      "max": 4.2
+    }
+  },
+  "concurrent": {
+    "total_time_s": 0.16,
+    "throughput_rps": 310.5,
+    "errors": 0,
+    "per_endpoint": {
+      "/accuracy/summary": {
+        "count": 10,
+        "avg": 15.2,
+        "p50": 16.3,
+        "p95": 24.0,
+        "max": 24.0
+      },
+      "/accuracy/by-hour": {
+        "count": 10,
+        "avg": 12.2,
+        "p50": 10.8,
+        "p95": 28.2,
+        "max": 28.2
+      },
+      "/accuracy/by-location": {
+        "count": 10,
+        "avg": 17.0,
+        "p50": 18.1,
+        "p95": 24.3,
+        "max": 24.3
+      },
+      "/accuracy/by-rain-level": {
+        "count": 10,
+        "avg": 14.7,
+        "p50": 14.2,
+        "p95": 20.0,
+        "max": 20.0
+      },
+      "/accuracy/by-distance": {
+        "count": 10,
+        "avg": 14.6,
+        "p50": 13.2,
+        "p95": 29.8,
+        "max": 29.8
+      }
+    }
+  },
+  "sustained": {
+    "duration_s": 30,
+    "target_rps": 5,
+    "actual_rps": 15.0,
+    "total_requests": 450,
+    "errors": 0,
+    "latency": {
+      "min": 4.0,
+      "avg": 6.5,
+      "p50": 6.1,
+      "p95": 9.7,
+      "max": 21.3
+    }
+  },
+  "validation": {
+    "passed": 11,
+    "total": 11
+  }
+}

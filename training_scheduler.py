@@ -150,9 +150,7 @@ def upload_history_to_s3(date_str, metrics):
         
         history.append(new_record)
         
-        # 只保留最近 50 条
-        if len(history) > 50:
-            history = history[-50:]
+        # 保留全部历史记录
         
         # 上传
         s3.put_object(
@@ -198,38 +196,82 @@ def check_data_available(date_str):
         return False
 
 
+def _check_processed_available(date_fmt):
+    """检查 S3 上是否有该日期的预处理 .npy 文件"""
+    try:
+        s3 = boto3.client('s3')
+        response = s3.list_objects_v2(
+            Bucket=S3_BUCKET,
+            Prefix=f"processed/satellite/{date_fmt}/",
+            MaxKeys=5
+        )
+        npy_files = [
+            obj for obj in response.get('Contents', [])
+            if obj['Key'].endswith('.npy')
+        ]
+        return len(npy_files) > 0
+    except Exception:
+        return False
+
+
 def download_from_s3(date_str):
-    """从 S3 下载指定日期的数据到本地"""
+    """从 S3 下载指定日期的数据到本地。
+    
+    优先使用 S3 上的预处理 .npy（~2MB/天），避免下载原始 .nc（~100GB/天）。
+    
+    Returns:
+        dict: {"success": bool, "skip_preprocess": bool}
+              skip_preprocess=True 表示已下载 .npy，无需再跑 preprocess_images.py
+    """
     date_fmt = date_str.replace("-", "")
     
     satellite_dir = WORK_DIR / "satellite_data"
+    processed_dir = WORK_DIR / "processed_data"
     govdata_dir = WORK_DIR / "govdata"
     
     satellite_dir.mkdir(exist_ok=True)
+    processed_dir.mkdir(exist_ok=True)
     govdata_dir.mkdir(exist_ok=True)
     
-    logger.info(f"📥 下载卫星数据: {date_str}")
+    skip_preprocess = False
     
-    # 下载卫星数据
-    result = subprocess.run([
-        "aws", "s3", "sync",
-        f"s3://{S3_BUCKET}/{SATELLITE_PREFIX}/{date_fmt}/",
-        str(satellite_dir) + "/",
-        "--exclude", ".complete"
-    ], capture_output=True, text=True)
-    
-    # aws s3 sync 遇到临时文件（下载服务器上传产生的 .BfF2D0eF 等后缀）时
-    # 返回 warning + 非零 exit code，但实际 .nc 文件已下载成功
-    if result.returncode != 0:
-        stderr = result.stderr
-        # 只有 "Skipping file" 类的 warning 是非致命的，可以忽略
-        if "Skipping file" in stderr and "error" not in stderr.lower():
-            logger.warning(f"卫星数据下载有非致命警告（已忽略）: {stderr.strip()}")
+    # 优先检查 S3 是否有预处理好的 .npy（节省 ~99.99% 带宽）
+    if _check_processed_available(date_fmt):
+        logger.info(f"⚡ 发现预处理数据，直接下载 .npy: {date_str}")
+        result = subprocess.run([
+            "aws", "s3", "sync",
+            f"s3://{S3_BUCKET}/processed/satellite/{date_fmt}/",
+            str(processed_dir) + "/"
+        ], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            # 统计下载的 .npy 数量
+            npy_count = len(list(processed_dir.glob(f"*{date_fmt}*.npy")))
+            logger.info(f"✅ 已下载 {npy_count} 个预处理文件（跳过原始 .nc 下载和预处理）")
+            skip_preprocess = True
         else:
-            logger.error(f"卫星数据下载失败: {stderr}")
-            return False
+            logger.warning(f"预处理数据下载失败，回退到原始 .nc: {result.stderr}")
     
-    # 下载政府数据
+    # 回退：下载原始 .nc 卫星数据（首次训练或 .npy 不可用时）
+    if not skip_preprocess:
+        logger.info(f"📥 下载卫星数据: {date_str}")
+        result = subprocess.run([
+            "aws", "s3", "sync",
+            f"s3://{S3_BUCKET}/{SATELLITE_PREFIX}/{date_fmt}/",
+            str(satellite_dir) + "/",
+            "--exclude", ".complete"
+        ], capture_output=True, text=True)
+        
+        # aws s3 sync 遇到临时文件时返回非致命 warning，可忽略
+        if result.returncode != 0:
+            stderr = result.stderr
+            if "Skipping file" in stderr and "error" not in stderr.lower():
+                logger.warning(f"卫星数据下载有非致命警告（已忽略）: {stderr.strip()}")
+            else:
+                logger.error(f"卫星数据下载失败: {stderr}")
+                return {"success": False, "skip_preprocess": False}
+    
+    # 下载政府数据（不论是否跳过预处理，传感器数据始终需要）
     logger.info(f"📥 下载政府数据: {date_str}")
     for api in ["rainfall", "temperature", "humidity", "pm25"]:
         s3_key = f"{GOVDATA_PREFIX}/{api}_{date_str}.json"
@@ -241,7 +283,7 @@ def download_from_s3(date_str):
             str(local_file)
         ], capture_output=True)
     
-    return True
+    return {"success": True, "skip_preprocess": skip_preprocess}
 
 
 def download_model_from_s3():
@@ -502,18 +544,22 @@ def run_scheduler(max_batches=None, wait_for_data=True):
             if not download_model_from_s3():
                 raise Exception("模型下载/备份失败")
 
-            # 1. 下载数据 (增量下载，已存在的文件会跳过)
+            # 1. 下载数据（优先使用 S3 预处理 .npy，回退到原始 .nc）
             import time
             start_time = time.time()
-            if not download_from_s3(next_date):
+            dl_result = download_from_s3(next_date)
+            if not dl_result["success"]:
                 raise Exception("下载失败")
             logger.info(f"⏱️ 数据下载耗时: {time.time() - start_time:.1f}s")
             
-            # 2. 预处理
-            start_time = time.time()
-            if not preprocess_data():
-                raise Exception("预处理失败")
-            logger.info(f"⏱️ 预处理耗时: {time.time() - start_time:.1f}s")
+            # 2. 预处理（如果已下载 .npy 则跳过）
+            if dl_result["skip_preprocess"]:
+                logger.info("⏩ 跳过预处理（已使用 S3 预处理数据）")
+            else:
+                start_time = time.time()
+                if not preprocess_data():
+                    raise Exception("预处理失败")
+                logger.info(f"⏱️ 预处理耗时: {time.time() - start_time:.1f}s")
             
             # 3. 训练 (传入日期参数)
             start_time = time.time()

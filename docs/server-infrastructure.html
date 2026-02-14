@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather AI Server Infrastructure</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.3rem; color: var(--text-muted); }
+        strong { color: var(--text); }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="weather-ai-server-infrastructure">Weather AI Server Infrastructure</h1>
+<blockquote>
+<p>Last updated: 2026-02-14</p>
+</blockquote>
+<h2 id="architecture-overview">Architecture Overview</h2>
+<div class="mermaid">
+graph LR
+    subgraph AWS ap-southeast-1
+        DL[Download Server<br/>t3.micro<br/>18.142.90.30]
+        TR[Training Server<br/>t3.large<br/>46.137.236.8]
+        API[API Server<br/>t3.medium<br/>3.0.28.161]
+        S3[(S3<br/>weather-ai-models-de08370c)]
+    end
+
+    JAXA[JAXA Himawari] -->|satellite .nc| DL
+    GOV[data.gov.sg] -->|sensor JSON| DL
+    DL -->|raw .nc + .npy + JSON| S3
+    S3 -->|.nc / .npy + CSV| TR
+    S3 -->|model .pth + .npy + CSV| API
+    TR -->|trained model .pth| S3
+    API -->|predictions| Users
+</div>
+
+<hr />
+<h2 id="servers">Servers</h2>
+<h3 id="1-download-server-181429030">1. Download Server — <code>18.142.90.30</code></h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Instance</td>
+<td>t3.micro (1 vCPU, 1GB RAM)</td>
+</tr>
+<tr>
+<td>Disk</td>
+<td>8GB EBS</td>
+</tr>
+<tr>
+<td>Hostname</td>
+<td>ip-172-31-12-162</td>
+</tr>
+<tr>
+<td>IAM Role</td>
+<td>weather-ai-download-role</td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.10.12 (venv)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>职责</strong>: 实时下载 JAXA Himawari 卫星数据 + data.gov.sg 传感器数据，预处理后上传 S3。</p>
+<p><strong>Systemd Service</strong>:</p>
+<div class="highlight"><pre><span></span><code>weather-download.service  (Restart=always, RestartSec=30)
+ExecStart: venv/bin/python3 download_manager.py
+Log: ~/download_manager.log
+</code></pre></div>
+
+<p><strong>Crontab</strong>:</p>
+<div class="highlight"><pre><span></span><code>* * * * * ~/push_download_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1
+</code></pre></div>
+
+<p><strong>关键文件</strong>:
+| File | Purpose |
+|------|---------|
+| <code>download_manager.py</code> | 主调度器 — 实时下载 + 历史回填 + 政府数据 |
+| <code>download_jaxa_data.py</code> | JAXA FTP 卫星数据下载 |
+| <code>fetch_and_process_gov_data.py</code> | data.gov.sg API 数据采集+处理 |
+| <code>cleanup_storage.py</code> | 本地磁盘清理 |
+| <code>notification.py</code> | 邮件通知 |
+| <code>bulk_download_to_s3_parallel.sh</code> | 批量并行下载脚本 |</p>
+<p><strong>目录结构</strong>:</p>
+<div class="highlight"><pre><span></span><code>~/weather-ai/
+├── *.py, *.sh          # 脚本
+├── .env                # 环境变量 (JAXA credentials, S3 config)
+├── real_sensor_data.csv # 传感器数据
+├── venv/               # Python 虚拟环境
+├── Dockerfile          # 容器化配置
+└── requirements.txt
+</code></pre></div>
+
+<hr />
+<h3 id="2-training-server-461372368">2. Training Server — <code>46.137.236.8</code></h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Instance</td>
+<td>t3.large (2 vCPU, 8GB RAM)</td>
+</tr>
+<tr>
+<td>Disk</td>
+<td>200GB EBS</td>
+</tr>
+<tr>
+<td>Hostname</td>
+<td>ip-172-31-20-248</td>
+</tr>
+<tr>
+<td>IAM Role</td>
+<td>weather-ai-training-role</td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.10.12 (venv)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>职责</strong>: 按天训练 WeatherFusionNet 模型（从 S3 下载数据 → 预处理 → 训练 → 上传模型到 S3）。</p>
+<p><strong>Systemd Service</strong>: 无（通过 crontab 触发 <code>training_scheduler.py</code>，或手动运行）</p>
+<p><strong>Crontab</strong>:</p>
+<div class="highlight"><pre><span></span><code>*/5 * * * * ~/push_training_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1
+</code></pre></div>
+
+<p><strong>关键文件</strong>:
+| File | Purpose |
+|------|---------|
+| <code>training_scheduler.py</code> | 主调度器 — 按日期检查 S3 数据 → 下载 → 预处理 → 训练 → 上传 |
+| <code>train_rolling_window.py</code> | 滚动窗口训练逻辑 |
+| <code>weather_dataset.py</code> | PyTorch Dataset — 传感器+卫星数据对齐 |
+| <code>weather_fusion_model.py</code> | WeatherFusionNet 模型定义 |
+| <code>preprocess_images.py</code> | 原始 .nc → 裁剪新加坡区域 → .npy |
+| <code>process_gov_data_from_s3.py</code> | 政府 JSON → real_sensor_data.csv |
+| <code>sync_model_to_s3.sh</code> | 训练后上传模型到 S3 |
+| <code>notification.py</code> | 训练成功/失败邮件通知 |</p>
+<p><strong>目录结构</strong>:</p>
+<div class="highlight"><pre><span></span><code>~/weather-ai/
+├── *.py, *.sh            # 脚本
+├── .env.production       # 生产环境变量
+├── training_state.json   # 调度器状态 (last_processed_date, total_epochs 等)
+├── training_metrics.json # 最近一批的训练指标
+├── weather_fusion_model.pth  # 当前模型
+├── satellite_data/       # 原始 .nc (训练时下载，训练后清理)
+├── processed_data/       # 预处理 .npy (训练时生成，训练后清理)
+├── govdata/              # 政府数据 JSON
+├── model_backups/        # 模型备份 (每次训练前)
+└── venv/
+</code></pre></div>
+
+<hr />
+<h3 id="3-api-server-3028161">3. API Server — <code>3.0.28.161</code></h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Instance</td>
+<td>t3.medium (2 vCPU, 4GB RAM)</td>
+</tr>
+<tr>
+<td>Disk</td>
+<td>20GB EBS</td>
+</tr>
+<tr>
+<td>Hostname</td>
+<td>ip-172-31-13-229</td>
+</tr>
+<tr>
+<td>IAM Role</td>
+<td>weather-ai-api-role</td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.10.12 (venv)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>职责</strong>: 提供天气预测 REST API + 前端静态文件服务。</p>
+<p><strong>Systemd Service</strong>:</p>
+<div class="highlight"><pre><span></span><code>weather-api.service  (Restart=always, RestartSec=10)
+ExecStart: venv/bin/python3 api.py
+Port: 8000
+</code></pre></div>
+
+<p><strong>Nginx</strong>: 反向代理 80/443 → 8000</p>
+<p><strong>Crontab</strong>:</p>
+<div class="highlight"><pre><span></span><code>*/10 * * * * cd ~/weather-ai &amp;&amp; ./fetch_latest_model.sh &gt;&gt; /var/log/model_sync.log 2&gt;&amp;1
+</code></pre></div>
+
+<p><strong>关键文件</strong>:
+| File | Purpose |
+|------|---------|
+| <code>api.py</code> | FastAPI 主服务 — 预测、搜索、监控、数据同步 |
+| <code>predict.py</code> | 推理逻辑 — 集成预测 + Delaunay 三角化 + 云层分析 |
+| <code>weather_fusion_model.py</code> | 模型定义 (与 training 共用) |
+| <code>weather_dataset.py</code> | Dataset 工具函数 (latlon2xy) |
+| <code>db.py</code> | SQLite 数据层 — 缓存、用户活动、预测记录 |
+| <code>smart_query.py</code> | NLU 自然语言查询解析 |
+| <code>geocoding.py</code> | 地理编码 (Nominatim + OneMap) |
+| <code>monitor_api.py</code> | 监控仪表盘 API |
+| <code>actual_collector.py</code> | 实际天气数据采集（对比预测准确性） |
+| <code>perf-test.py</code> | 性能测试脚本 |</p>
+<p><strong>目录结构</strong>:</p>
+<div class="highlight"><pre><span></span><code>~/weather-ai/
+├── *.py                    # 脚本
+├── .env                    # 环境变量
+├── weather_fusion_model.pth  # 从 S3 同步的最新模型
+├── real_sensor_data.csv    # 传感器数据
+├── processed_data/         # 预处理卫星 .npy (从 S3 同步)
+├── satellite_data/         # 已弃用 (不再下载 raw .nc)
+├── frontend/dist/          # React 前端构建产物
+└── venv/
+</code></pre></div>
+
+<hr />
+<h2 id="s3-bucket-structure">S3 Bucket Structure</h2>
+<div class="highlight"><pre><span></span><code>s3://weather-ai-models-de08370c/
+├── satellite/{YYYYMMDD}/        # 原始卫星 .nc (~700MB/file, 144 files/day)
+├── processed/satellite/{YYYYMMDD}/  # 预处理 .npy (~16KB/file)
+├── govdata/                     # 政府数据 JSON (rainfall, temperature, humidity, pm25)
+├── models/latest.pth            # 最新训练模型
+├── state/training_state.json    # 训练进度状态
+├── history/training_history.json # 训练历史记录
+└── archived/                    # 已归档数据
+</code></pre></div>
+
+<hr />
+<h2 id="data-flow">Data Flow</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant JAXA
+    participant DL as Download Server
+    participant S3
+    participant TR as Training Server
+    participant API as API Server
+
+    Note over DL: 每10分钟
+    JAXA->>DL: Himawari .nc (FTP)
+    DL->>DL: 裁剪新加坡区域 → .npy
+    DL->>S3: 上传 .nc + .npy
+
+    Note over DL: 每5分钟
+    DL->>DL: 采集 data.gov.sg API
+    DL->>S3: 上传传感器 JSON
+
+    Note over TR: 按需/手动触发
+    S3->>TR: 下载 .nc/.npy + JSON
+    TR->>TR: 预处理 + 训练 (100 epochs/batch)
+    TR->>S3: 上传 latest.pth
+
+    Note over API: 每5分钟
+    S3->>API: 同步 .npy + model + CSV
+    API->>API: 多模态推理
+</div>
+
+<hr />
+<h2 id="ssh-access">SSH Access</h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Download Server</span>
+ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@18.142.90.30
+
+<span class="c1"># Training Server</span>
+ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@46.137.236.8
+
+<span class="c1"># API Server</span>
+ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@3.0.28.161
+</code></pre></div>
+        <footer>Weather AI — Weather AI Server Infrastructure — Generated 2026-02-14</footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

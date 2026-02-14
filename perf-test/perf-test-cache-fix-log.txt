@@ -1,0 +1,67 @@
+05:44:14 [INFO] 📂 Loaded 25 locations from perf-test-locations.json
+05:44:14 [INFO] ============================================================
+05:44:14 [INFO] 🚀 Singapore Weather AI — Performance Test
+05:44:14 [INFO] ============================================================
+05:44:14 [INFO] Target:       http://3.0.28.161:8000
+05:44:14 [INFO] Mode:         1 minutes
+05:44:14 [INFO] Concurrency:  10
+05:44:14 [INFO] Locations:    25
+05:44:14 [INFO] Delay:        0.1~0.5s
+05:44:14 [INFO] ------------------------------------------------------------
+05:44:14 [INFO] 🔍 Pre-flight health check...
+05:44:14 [INFO] ✅ Service is up (61ms)
+05:44:14 [INFO] 📈 System metrics collector started (15s interval)
+05:44:14 [INFO] ------------------------------------------------------------
+05:44:14 [INFO] 🏃 Running tests...
+05:44:29 [INFO] [00:44 left] 100 reqs | ✓ 96 ✗ 4 | Avg: 893ms
+05:44:44 [INFO] [00:29 left] 262 reqs | ✓ 258 ✗ 4 | Avg: 703ms
+05:44:59 [INFO] [00:14 left] 407 reqs | ✓ 403 ✗ 4 | Avg: 684ms
+05:45:14 [INFO] ⏳ Finishing remaining requests...
+05:45:19 [INFO] 📈 Collected 5 system metric samples
+05:45:19 [INFO] ------------------------------------------------------------
+05:45:19 [INFO] 📊 Generating report...
+05:45:19 [INFO] 💾 Report saved to: perf-report-cache-fix.json
+05:45:19 [INFO] ============================================================
+05:45:19 [INFO] 📊 RESULTS SUMMARY
+05:45:19 [INFO] ============================================================
+05:45:19 [INFO] Total:        599 requests in 64.9s
+05:45:19 [INFO] Success Rate: 99.33%
+05:45:19 [INFO] Throughput:   9.23 req/s
+05:45:19 [INFO] Avg Latency:  718.7ms
+05:45:19 [INFO] P95 Latency:  4895.2ms
+05:45:19 [INFO] ----------------------------------------
+05:45:19 [INFO] 🏥 Service Availability:
+05:45:19 [INFO]   /health                    100.0% (61/61)
+05:45:19 [INFO]   /predict?coords            100.0% (84/84)
+05:45:19 [INFO]   /popular-searches          100.0% (24/24)
+05:45:19 [INFO]   /predict?location           98.7% (303/307)
+05:45:19 [INFO]   /stations                  100.0% (29/29)
+05:45:19 [INFO]   /smart-query               100.0% (94/94)
+05:45:19 [INFO] ----------------------------------------
+05:45:19 [INFO] ⏱️  Response Times:
+05:45:19 [INFO]   /health                   avg=     43ms  p95=     55ms  max=     86ms
+05:45:19 [INFO]   /predict?coords           avg=    144ms  p95=    282ms  max=    332ms
+05:45:19 [INFO]   /popular-searches         avg=     73ms  p95=    124ms  max=    153ms
+05:45:19 [INFO]   /predict?location         avg=    312ms  p95=    880ms  max=   5105ms
+05:45:19 [INFO]   /stations                 avg=     41ms  p95=     47ms  max=     50ms
+05:45:19 [INFO]   /smart-query              avg=   3356ms  p95=   9977ms  max=  10668ms
+05:45:19 [INFO] ----------------------------------------
+05:45:19 [INFO] 🌦️  Forecast Distribution:
+05:45:19 [INFO]   Cloudy               387
+05:45:19 [INFO] ----------------------------------------
+05:45:19 [INFO] 📍 Top Searched Places:
+05:45:19 [INFO]   Marina Bay Sands               36 searches
+05:45:19 [INFO]   Sentosa Beach                  28 searches
+05:45:19 [INFO]   East Coast Park                28 searches
+05:45:19 [INFO]   West Coast Park                27 searches
+05:45:19 [INFO]   Gardens by the Bay             22 searches
+05:45:19 [INFO]   Pasir Ris Park                 22 searches
+05:45:19 [INFO]   Southern Ridges                19 searches
+05:45:19 [INFO]   Hort Park                      19 searches
+05:45:19 [INFO]   Botanic Gardens                18 searches
+05:45:19 [INFO]   Bukit Timah Nature Reserve     17 searches
+05:45:19 [INFO] ----------------------------------------
+05:45:19 [INFO] ❌ Errors:
+05:45:19 [INFO]   /predict?location -> 404: 4
+05:45:19 [INFO] ============================================================
+05:45:19 [INFO] ✅ Performance test complete!

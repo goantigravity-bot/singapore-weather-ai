@@ -77,7 +77,7 @@ class WeatherDataset(Dataset):
         processed_dir = "processed_data"
         if os.path.exists(processed_dir):
             for f in os.listdir(processed_dir):
-                if f.startswith("NC_H09_") and f.endswith(".npy"):
+                if (f.startswith("NC_H09_") or f.startswith("NC_H08_")) and f.endswith(".npy"):
                     parts = f.split("_")
                     if len(parts) >= 4:
                         ts_str = f"{parts[2]}_{parts[3]}"
@@ -90,7 +90,7 @@ class WeatherDataset(Dataset):
 
         if os.path.exists(sat_dir):
             for f in os.listdir(sat_dir):
-                 if f.startswith("NC_H09_") and f.endswith(".nc"):
+                 if (f.startswith("NC_H09_") or f.startswith("NC_H08_")) and f.endswith(".nc"):
                      parts = f.split("_")
                      if len(parts) >= 4:
                         ts_str = f"{parts[2]}_{parts[3]}"

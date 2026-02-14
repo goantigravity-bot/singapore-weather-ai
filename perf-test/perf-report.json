@@ -1,0 +1,201 @@
+{
+  "metadata": {
+    "base_url": "http://localhost:8000",
+    "test_time": "2026-02-12T14:13:31.058377",
+    "total_requests": 2360,
+    "total_duration_s": 609.2,
+    "throughput_rps": 3.87
+  },
+  "overall": {
+    "total_requests": 2360,
+    "successful": 2360,
+    "failed": 0,
+    "success_rate_pct": 100.0,
+    "avg_response_ms": 988.2,
+    "p95_response_ms": 7096.9
+  },
+  "service_availability": {
+    "/popular-searches": {
+      "total_requests": 121,
+      "successful": 121,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/predict?coords": {
+      "total_requests": 345,
+      "successful": 345,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/predict?location": {
+      "total_requests": 1204,
+      "successful": 1204,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/health": {
+      "total_requests": 235,
+      "successful": 235,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/smart-query": {
+      "total_requests": 338,
+      "successful": 338,
+      "failed": 0,
+      "availability_pct": 100.0
+    },
+    "/stations": {
+      "total_requests": 117,
+      "successful": 117,
+      "failed": 0,
+      "availability_pct": 100.0
+    }
+  },
+  "response_times": {
+    "/popular-searches": {
+      "avg_ms": 7.6,
+      "median_ms": 5.0,
+      "p95_ms": 21.2,
+      "p99_ms": 32.2,
+      "min_ms": 4.2,
+      "max_ms": 35.6,
+      "sample_count": 121
+    },
+    "/predict?coords": {
+      "avg_ms": 85.8,
+      "median_ms": 78.4,
+      "p95_ms": 171.4,
+      "p99_ms": 231.5,
+      "min_ms": 40.9,
+      "max_ms": 261.6,
+      "sample_count": 345
+    },
+    "/predict?location": {
+      "avg_ms": 189.2,
+      "median_ms": 148.9,
+      "p95_ms": 387.2,
+      "p99_ms": 867.9,
+      "min_ms": 98.6,
+      "max_ms": 2790.6,
+      "sample_count": 1204
+    },
+    "/health": {
+      "avg_ms": 5.5,
+      "median_ms": 3.7,
+      "p95_ms": 15.5,
+      "p99_ms": 29.2,
+      "min_ms": 3.2,
+      "max_ms": 54.5,
+      "sample_count": 235
+    },
+    "/smart-query": {
+      "avg_ms": 6129.5,
+      "median_ms": 6648.2,
+      "p95_ms": 9849.4,
+      "p99_ms": 11625.7,
+      "min_ms": 932.9,
+      "max_ms": 12908.1,
+      "sample_count": 338
+    },
+    "/stations": {
+      "avg_ms": 7.2,
+      "median_ms": 5.3,
+      "p95_ms": 18.4,
+      "p99_ms": 22.8,
+      "min_ms": 4.7,
+      "max_ms": 26.5,
+      "sample_count": 117
+    }
+  },
+  "forecast_performance": {
+    "total_forecasts": 1549,
+    "distribution": {
+      "Cloudy": 116,
+      "Light Rain": 1433
+    }
+  },
+  "popular_places": [
+    {
+      "name": "Marina Bay Sands",
+      "searches": 135
+    },
+    {
+      "name": "Changi Beach Park",
+      "searches": 102
+    },
+    {
+      "name": "Sentosa Beach",
+      "searches": 96
+    },
+    {
+      "name": "Pasir Ris Park",
+      "searches": 93
+    },
+    {
+      "name": "West Coast Park",
+      "searches": 92
+    },
+    {
+      "name": "East Coast Park",
+      "searches": 88
+    },
+    {
+      "name": "Jurong Lake Gardens",
+      "searches": 76
+    },
+    {
+      "name": "Botanic Gardens",
+      "searches": 68
+    },
+    {
+      "name": "Hort Park",
+      "searches": 63
+    },
+    {
+      "name": "Fort Canning Park",
+      "searches": 63
+    },
+    {
+      "name": "Gardens by the Bay",
+      "searches": 60
+    },
+    {
+      "name": "Coney Island",
+      "searches": 55
+    },
+    {
+      "name": "MacRitchie Reservoir",
+      "searches": 52
+    },
+    {
+      "name": "Southern Ridges",
+      "searches": 51
+    },
+    {
+      "name": "Rail Corridor",
+      "searches": 50
+    },
+    {
+      "name": "Bukit Timah Nature Reserve",
+      "searches": 49
+    },
+    {
+      "name": "Labrador Nature Reserve",
+      "searches": 46
+    },
+    {
+      "name": "Sembawang Hot Spring Park",
+      "searches": 44
+    },
+    {
+      "name": "Bishan-Ang Mo Kio Park",
+      "searches": 43
+    },
+    {
+      "name": "Sungei Buloh Wetland Reserve",
+      "searches": 41
+    }
+  ],
+  "error_analysis": "No errors"
+}
