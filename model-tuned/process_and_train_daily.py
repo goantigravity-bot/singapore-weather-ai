@@ -19,25 +19,33 @@ import sys
 import json
 import logging
 import argparse
-import tempfile
 import time
 import numpy as np
-import xarray as xr
 import torch
-import torch.nn.functional as F
 import boto3
 from pathlib import Path
 from datetime import datetime
 
-# 将项目根目录加入 path
+# 将项目根目录和 training 目录加入 path
 PROJECT_ROOT = Path(__file__).parent.parent
+TRAINING_DIR = PROJECT_ROOT / "services" / "training"
+sys.path.insert(0, str(TRAINING_DIR))
 sys.path.insert(0, str(PROJECT_ROOT))
+
+# 复用独立预处理模块
+from satellite_preprocessor import (
+    crop_nc_to_npy,
+    upload_npy_to_s3,
+    check_s3_processed_exists,
+    list_raw_nc_keys,
+    ensure_h09_symlinks,
+    S3_BUCKET,
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ── 配置 ──
-S3_BUCKET = "weather-ai-models-de08370c"
+# ── 路径配置 ──
 S3_REGION = "ap-southeast-1"
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -45,16 +53,6 @@ SATELLITE_DIR = DATA_DIR / "satellite"   # processed .npy 保留在本地
 RAW_DIR = Path(__file__).parent / "raw-data"  # 临时存放 S3 下载的 raw .nc
 TIMESTAMPS_FILE = DATA_DIR / "rainy_timestamps.json"
 STATE_FILE = DATA_DIR / "daily_process_state.json"
-
-# 卫星裁剪参数（与 preprocess_images.py 一致）
-TARGET_SIZE = (64, 64)
-
-# 需要从 weather_dataset.py 导入
-from weather_dataset import latlon2xy
-SG_LAT_MAX, SG_LON_MIN = 1.50, 103.6
-C1, L1 = latlon2xy(SG_LAT_MAX, SG_LON_MIN)
-SG_LAT_MIN, SG_LON_MAX = 1.15, 104.1
-C2, L2 = latlon2xy(SG_LAT_MIN, SG_LON_MAX)
 
 # 训练参数
 EPOCHS_PER_DAY = 50
@@ -77,37 +75,7 @@ def save_state(state):
         json.dump(state, f, indent=2)
 
 
-def process_nc_to_npy(nc_path):
-    """将单个 .nc 文件裁剪为 SG 区域 64x64 .npy（和 preprocess_images.py 一致）。"""
-    try:
-        ds = xr.open_dataset(nc_path, decode_timedelta=False)
-
-        var_name = 'tbb'
-        if 'tbb_13' in ds:
-            var_name = 'tbb_13'
-
-        if var_name not in ds:
-            ds.close()
-            return None
-
-        # Full Disk → 裁剪新加坡区域
-        if ds[var_name].shape[0] > 1000:
-            r_min, r_max = min(L1, L2), max(L1, L2)
-            c_min, c_max = min(C1, C2), max(C1, C2)
-            data = ds[var_name][r_min:r_max, c_min:c_max].values
-        else:
-            data = ds[var_name].values
-
-        # 缩放到 64x64
-        tensor = torch.tensor(data, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-        resized = F.interpolate(tensor, size=TARGET_SIZE, mode='bilinear', align_corners=False)
-        final_arr = resized.squeeze().numpy()
-
-        ds.close()
-        return final_arr
-    except Exception as e:
-        logger.error(f"Error processing {nc_path}: {e}")
-        return None
+# process_nc_to_npy 已迁移到 satellite_preprocessor.crop_nc_to_npy
 
 
 def process_single_day(s3, day_info):
@@ -121,26 +89,15 @@ def process_single_day(s3, day_info):
     skipped_count = 0
 
     for slot in rainy_slots:
-        # S3 raw .nc: NC_H08_YYYYMMDD_HHMM_*.nc (Himawari-8) 或 NC_H09_* (Himawari-9)
-        # 要兼容两种命名
         slot_prefix = f"{date_compact}_{slot}"
 
-        # 先检查 S3 是否已有 processed（通用前缀匹配）
-        proc_prefix = f"processed/satellite/{date_compact}/"
-        resp = s3.list_objects_v2(Bucket=S3_BUCKET, Prefix=proc_prefix)
-        existing_npys = [o['Key'] for o in resp.get('Contents', []) if slot_prefix in o['Key']]
-        if existing_npys:
+        # 先检查 S3 是否已有 processed
+        if check_s3_processed_exists(s3, date_compact, slot_prefix):
             skipped_count += 1
             continue
 
         # 列出该时间点的 raw .nc（兼容 H08/H09）
-        raw_prefix = f"satellite/{date_compact}/"
-        resp = s3.list_objects_v2(Bucket=S3_BUCKET, Prefix=raw_prefix)
-        nc_keys = [
-            obj['Key'] for obj in resp.get('Contents', [])
-            if obj['Key'].endswith('.nc') and slot_prefix in obj['Key']
-        ]
-
+        nc_keys = list_raw_nc_keys(s3, date_compact, slot_prefix)
         if not nc_keys:
             continue
 
@@ -152,7 +109,7 @@ def process_single_day(s3, day_info):
             # 本地已有 .npy？跳过
             local_npy = SATELLITE_DIR / npy_fname
             if local_npy.exists():
-                _upload_npy(s3, local_npy, npy_fname, date_compact)
+                upload_npy_to_s3(str(local_npy), date_compact, s3=s3)
                 skipped_count += 1
                 continue
 
@@ -168,9 +125,9 @@ def process_single_day(s3, day_info):
                 t_download = time.time() - t0
                 logger.info(f"    ⬇️  Downloaded {nc_fname} ({file_size_mb:.0f}MB) in {t_download:.1f}s")
 
-                # 2. 裁剪
+                # 2. 裁剪（复用 satellite_preprocessor）
                 t0 = time.time()
-                arr = process_nc_to_npy(tmp_path)
+                arr = crop_nc_to_npy(tmp_path)
                 t_crop = time.time() - t0
 
                 if arr is not None:
@@ -181,7 +138,7 @@ def process_single_day(s3, day_info):
 
                     # 4. 上传到 S3
                     t0 = time.time()
-                    _upload_npy(s3, local_npy, npy_fname, date_compact)
+                    upload_npy_to_s3(str(local_npy), date_compact, s3=s3, skip_if_exists=False)
                     t_upload = time.time() - t0
                     logger.info(f"    ⬆️  Uploaded .npy to S3 in {t_upload:.1f}s")
 
@@ -202,29 +159,7 @@ def process_single_day(s3, day_info):
     return processed_count
 
 
-def _upload_npy(s3, local_path, npy_fname, date_compact):
-    """上传 .npy 到 S3 processed/ 目录。"""
-    s3_key = f"processed/satellite/{date_compact}/{npy_fname}"
-    try:
-        s3.upload_file(str(local_path), S3_BUCKET, s3_key)
-    except Exception as e:
-        logger.warning(f"S3 upload failed for {npy_fname}: {e}")
-
-
-def _ensure_h09_symlinks(sat_dir):
-    """WeatherDataset hardcodes NC_H09_ prefix for loading .npy files.
-    For older Himawari-8 data (NC_H08_), create H09 symlinks.
-    """
-    sat_path = Path(sat_dir)
-    created = 0
-    for f in sat_path.glob("NC_H08_*.npy"):
-        h09_name = f.name.replace("NC_H08_", "NC_H09_")
-        h09_path = sat_path / h09_name
-        if not h09_path.exists():
-            h09_path.symlink_to(f)
-            created += 1
-    if created > 0:
-        logger.info(f"  Created {created} H09 symlinks for H08 files")
+# _upload_npy 和 _ensure_h09_symlinks 已迁移到 satellite_preprocessor 模块
 
 
 def train_on_accumulated_data(day_info):
@@ -251,7 +186,7 @@ def train_on_accumulated_data(day_info):
     try:
         # WeatherDataset 内部 hardcodes NC_H09_ 前缀，
         # 需要为 H08 文件创建 H09 符号链接以兼容
-        _ensure_h09_symlinks(SATELLITE_DIR)
+        ensure_h09_symlinks(str(SATELLITE_DIR))
 
         sensor_csv = DATA_DIR / "real_sensor_data.csv"
         if not sensor_csv.exists():
