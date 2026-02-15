@@ -63,7 +63,7 @@ print(f"Using device: {DEVICE}")
 # --- Paths ---
 # Docker environment uses /app/data
 HOME_DIR = os.path.expanduser("~")
-WORK_DIR = os.environ.get("WORK_DIR", os.path.join(HOME_DIR, "weather-ai"))
+WORK_DIR = os.environ.get("WORK_DIR", os.path.join(HOME_DIR, "training"))
 
 # Docker Path Overrides
 if os.path.exists("/app/data"):
@@ -96,7 +96,7 @@ def train_model():
 
     
     # 2. Model
-    model = WeatherFusionNet(sat_channels=1, sensor_features=4, prediction_dim=1)
+    model = WeatherFusionNet(sat_channels=1, sensor_features=7, prediction_dim=1)
     
     # 增量学习: 检查是否存在已训练模型
     if os.path.exists(MODEL_SAVE_PATH):

@@ -39,9 +39,9 @@ class SensorEncoder(nn.Module):
     Input: (Batch, Seq_Len, Features)
     Output: (Batch, Feature_Dim)
     """
-    def __init__(self, input_size=5, hidden_size=64, feature_dim=64):
+    def __init__(self, input_size=7, hidden_size=128, feature_dim=64):
         super(SensorEncoder, self).__init__()
-        # LSTM to overlook time dependencies
+        # LSTM to capture time dependencies in sensor sequences
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
         self.fc = nn.Linear(hidden_size, feature_dim)
 
@@ -56,7 +56,7 @@ class WeatherFusionNet(nn.Module):
     """
     Fusion Network combining Satellite and Sensor data.
     """
-    def __init__(self, sat_channels=3, sensor_features=5, prediction_dim=1):
+    def __init__(self, sat_channels=3, sensor_features=7, prediction_dim=1):
         super(WeatherFusionNet, self).__init__()
         
         self.sat_encoder = SatelliteEncoder(in_channels=sat_channels, feature_dim=128)
@@ -93,11 +93,11 @@ if __name__ == "__main__":
     # 1. Satellite Data: 4 images, 3 channels (RGB/IR), 64x64 pixels
     dummy_sat_img = torch.randn(BATCH_SIZE, 3, 64, 64)
     
-    # 2. Sensor Data: 4 sequences, past 10 timesteps, 5 features (Temp, Humidity, Pressure, WindSpd, WindDir)
-    dummy_sensor_data = torch.randn(BATCH_SIZE, 10, 5)
+    # 2. Sensor Data: 7 features (Temp, Rainfall, Humidity, PM2.5, WindSpd, WindDirSin, WindDirCos)
+    dummy_sensor_data = torch.randn(BATCH_SIZE, 10, 7)
     
     # Initialize Model
-    model = WeatherFusionNet(sat_channels=3, sensor_features=5, prediction_dim=1)
+    model = WeatherFusionNet(sat_channels=3, sensor_features=7, prediction_dim=1)
     
     # Forward Pass
     prediction = model(dummy_sat_img, dummy_sensor_data)

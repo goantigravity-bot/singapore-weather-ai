@@ -81,8 +81,28 @@ def process_single_json(s3, key, station_region_map):
         elif 'temperature' in key: dtype = 'temperature'
         elif 'humidity' in key: dtype = 'humidity'
         elif 'pm25' in key: dtype = 'pm25'
+        elif 'wind-speed' in key: dtype = 'wind_speed'
+        elif 'wind-direction' in key: dtype = 'wind_direction'
         
         records = []
+
+        # Wind v2 格式: {code, data: {readings: [{timestamp, data: [{stationId, value}]}]}}
+        if dtype in ('wind_speed', 'wind_direction'):
+            inner = data.get('data', {})
+            if not isinstance(inner, dict):
+                return []
+            for reading in inner.get('readings', []):
+                timestamp = reading.get('timestamp')
+                for entry in reading.get('data', []):
+                    records.append({
+                        "timestamp": timestamp,
+                        "sensor_id": entry['stationId'],
+                        "type": dtype,
+                        "value": entry['value']
+                    })
+            return records
+
+        # v1 格式: {items: [{timestamp, readings: [{station_id, value}]}]}
         if not data or 'items' not in data:
             return []
 
@@ -195,7 +215,7 @@ def main():
     ).reset_index()
     
     # Standardize Columns
-    required = ['temperature', 'rainfall', 'humidity', 'pm25']
+    required = ['temperature', 'rainfall', 'humidity', 'pm25', 'wind_speed', 'wind_direction']
     for col in required:
         if col not in new_pivot.columns:
             new_pivot[col] = 0.0

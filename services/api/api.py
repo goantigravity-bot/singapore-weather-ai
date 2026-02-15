@@ -192,6 +192,8 @@ def fetch_realtime_sensor_data():
         "temperature": "https://api.data.gov.sg/v1/environment/air-temperature",
         "rainfall":    "https://api.data.gov.sg/v1/environment/rainfall",
         "humidity":    "https://api.data.gov.sg/v1/environment/relative-humidity",
+        "wind_speed":  "https://api.data.gov.sg/v1/environment/wind-speed",
+        "wind_direction": "https://api.data.gov.sg/v1/environment/wind-direction",
     }
 
     raw: dict[str, dict[str, float]] = {}  # station_id -> {field: value}
@@ -267,6 +269,8 @@ def fetch_realtime_sensor_data():
             "pm25": vals.get("pm25", 15.0),
             "rainfall": vals.get("rainfall", 0.0),
             "temperature": vals.get("temperature", 28.0),
+            "wind_speed": vals.get("wind_speed", 0.0),
+            "wind_direction": vals.get("wind_direction", 0.0),
         })
 
     new_df = pd.DataFrame(rows)

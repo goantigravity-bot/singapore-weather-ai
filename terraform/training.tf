@@ -88,20 +88,24 @@ resource "aws_security_group" "training_sg" {
 
 # ========== EC2 Instance ==========
 resource "aws_instance" "training_server" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = "t3.large" # More RAM for training
+  # Deep Learning AMI with NVIDIA drivers pre-installed (PyTorch 2.9, Ubuntu 24.04)
+  ami           = "ami-081296c6e1ebbba80"
+  instance_type = "g4dn.xlarge"  # Tesla T4 GPU, 4 vCPU, 16GB RAM
   key_name      = aws_key_pair.weather_api.key_name
   
   vpc_security_group_ids = [aws_security_group.training_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.training_profile.name
 
-  # 实例初始化脚本：安装依赖、创建 python symlink、配置防火墙等
-  user_data = templatefile("${path.module}/user-data.sh", {
-    project_name = var.project_name
-  })
+  # Spot Instance — 比 On-Demand 便宜 ~60%
+  instance_market_options {
+    market_type = "spot"
+    spot_options {
+      spot_instance_type = "one-time"
+    }
+  }
 
   root_block_device {
-    volume_size = 50 # Larger disk for datasets
+    volume_size = 200  # 容纳卫星原始 .nc 和预处理 .npy
     volume_type = "gp3"
     encrypted   = true
     tags = {
@@ -110,7 +114,7 @@ resource "aws_instance" "training_server" {
   }
 
   tags = {
-    Name = "${var.project_name}-training-server"
+    Name = "${var.project_name}-gpu-training"
     Role = "training"
   }
 }

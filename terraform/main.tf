@@ -152,6 +152,29 @@ resource "aws_instance" "weather_api" {
   }
 }
 
+# 下载服务器 — 卫星/传感器数据下载+预处理
+resource "aws_instance" "download_server" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = "t3.small"
+  key_name      = aws_key_pair.weather_api.key_name
+
+  vpc_security_group_ids = [aws_security_group.weather_api.id]
+
+  root_block_device {
+    volume_size = var.download_volume_size
+    volume_type = "gp3"
+    encrypted   = true
+
+    tags = {
+      Name = "${var.project_name}-download-volume"
+    }
+  }
+
+  tags = {
+    Name = "${var.project_name}-download-server"
+  }
+}
+
 # 弹性IP（可选，用于固定IP）
 resource "aws_eip" "weather_api" {
   count    = var.use_elastic_ip ? 1 : 0

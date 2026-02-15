@@ -98,10 +98,10 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
     features = recent_data[['temperature', 'rainfall', 'humidity', 'pm25']].values.astype(np.float32)
     
     # NORMALIZATION (Must match weather_dataset.py)
-    features[:, 0] = (features[:, 0] - 28.0) / 5.0  
-    features[:, 1] = features[:, 1] / 10.0          
-    features[:, 2] = (features[:, 2] - 80.0) / 20.0 
-    features[:, 3] = (features[:, 3] - 20.0) / 20.0 
+    features[:, 0] = (features[:, 0] - 28.0) / 5.0   # Temp
+    features[:, 1] = features[:, 1] / 10.0            # Rain
+    features[:, 2] = (features[:, 2] - 80.0) / 20.0   # Humidity
+    features[:, 3] = (features[:, 3] - 20.0) / 20.0   # PM2.5
     
     sensor_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0) # Batch dim
     

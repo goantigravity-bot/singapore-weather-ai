@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import os
 import logging
+import math
 from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
@@ -119,13 +120,21 @@ class WeatherDataset(Dataset):
         # 2. Resample Sensor Data (All at once)
         print("Resampling and Aligning data...")
         resampled_dfs = []
+        # 确保风数据列存在（旧CSV可能没有，用默认值填充以保持兼容）
+        if 'wind_speed' not in self.sensor_df.columns:
+            self.sensor_df['wind_speed'] = 0.0
+        if 'wind_direction' not in self.sensor_df.columns:
+            self.sensor_df['wind_direction'] = 0.0
+
         for sensor_id, group in self.sensor_df.groupby('sensor_id'):
             group = group.sort_values('timestamp').set_index('timestamp')
             r = group.resample('10min').agg({
                 'temperature': 'mean',
                 'humidity': 'mean',
                 'rainfall': 'sum',
-                'pm25': 'mean'
+                'pm25': 'mean',
+                'wind_speed': 'mean',
+                'wind_direction': 'mean'
             }).dropna().reset_index()
             r['sensor_id'] = sensor_id
             resampled_dfs.append(r)
@@ -176,16 +185,29 @@ class WeatherDataset(Dataset):
         sample_info = self.samples[idx]
         group = sample_info['group_data']
         
-        # 1. Get Sensor Data
-        feature_cols = ['temperature', 'rainfall', 'humidity', 'pm25']
-        sensor_seq = group.iloc[sample_info['input_idx_start'] : sample_info['input_idx_end']][feature_cols].values
+        # 1. Get Sensor Data (7维: temp, rain, humidity, pm25, wind_speed, wind_dir_sin, wind_dir_cos)
+        base_cols = ['temperature', 'rainfall', 'humidity', 'pm25', 'wind_speed', 'wind_direction']
+        raw_seq = group.iloc[sample_info['input_idx_start'] : sample_info['input_idx_end']][base_cols].values.astype(np.float32)
+        
+        # 风向 sin/cos 编码 — 角度是循环量，0° 和 360° 应等价
+        wind_dir_rad = np.radians(raw_seq[:, 5])
+        wind_dir_sin = np.sin(wind_dir_rad)
+        wind_dir_cos = np.cos(wind_dir_rad)
+        
+        # 构建 7 维特征: [temp, rain, humidity, pm25, wind_speed, wind_dir_sin, wind_dir_cos]
+        sensor_seq = np.column_stack([
+            raw_seq[:, :5],   # temp, rain, humidity, pm25, wind_speed
+            wind_dir_sin,
+            wind_dir_cos
+        ])
         
         # NORMALIZATION (Simple Manual Scaling)
-        sensor_seq = sensor_seq.astype(np.float32)
-        sensor_seq[:, 0] = (sensor_seq[:, 0] - 28.0) / 5.0  # Temp
-        sensor_seq[:, 1] = sensor_seq[:, 1] / 10.0          # Rain
-        sensor_seq[:, 2] = (sensor_seq[:, 2] - 80.0) / 20.0 # Humidity
-        sensor_seq[:, 3] = (sensor_seq[:, 3] - 20.0) / 20.0 # PM2.5 (Mean~10-50?) - Rough norm
+        sensor_seq[:, 0] = (sensor_seq[:, 0] - 28.0) / 5.0   # Temp: mean~28°C, std~5°C
+        sensor_seq[:, 1] = sensor_seq[:, 1] / 10.0            # Rain: 0~10mm range
+        sensor_seq[:, 2] = (sensor_seq[:, 2] - 80.0) / 20.0   # Humidity: mean~80%, std~20%
+        sensor_seq[:, 3] = (sensor_seq[:, 3] - 20.0) / 20.0   # PM2.5: mean~20, range 0-60
+        sensor_seq[:, 4] = sensor_seq[:, 4] / 10.0            # Wind speed: 0~10 m/s
+        # sin/cos 已在 [-1, 1] 范围，无需额外归一化
         
         sensor_tensor = torch.tensor(sensor_seq, dtype=torch.float32)
         

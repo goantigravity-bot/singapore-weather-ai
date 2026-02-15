@@ -2,8 +2,10 @@
 Step 1: 扫描 S3 NEA 数据，找出每天哪些 10-min 时段有雨 (> 0.10mm)。
 输出 data/rainy_timestamps.json，供 process_and_train_daily.py 使用。
 
-只处理【缺少 processed .npy 但有 raw .nc】的日期。
+默认只处理【缺少 processed .npy 但有 raw .nc】的日期。
+加 --skip-satellite-check 可扫描所有日期（先识别雨天，再按需下载卫星数据）。
 """
+import argparse
 import boto3
 import json
 import logging
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 S3_BUCKET = "weather-ai-models-de08370c"
 # 每 5-min slot 内任何站点读数 > 此阈值即视为"有雨"
-RAIN_THRESHOLD = 0.10
+RAIN_THRESHOLD = 5.0
 OUTPUT_DIR = Path(__file__).parent / "data"
 
 
@@ -83,10 +85,16 @@ def extract_rainy_slots(s3, date_str):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="扫描 S3 雨天时间戳")
+    parser.add_argument("--skip-satellite-check", action="store_true",
+                        help="跳过卫星数据检查，扫描所有雨天（先识别雨天再下载卫星）")
+    args = parser.parse_args()
+
     s3 = boto3.client('s3', region_name='ap-southeast-1')
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info("Scanning S3 for rainfall data...")
+    logger.info(f"Mode: {'ALL dates' if args.skip_satellite_check else 'only dates with raw satellite'}")
     dates = list_rainfall_dates(s3)
     logger.info(f"Found {len(dates)} dates")
 
@@ -94,13 +102,14 @@ def main():
     total_need_process = 0
 
     for i, date_str in enumerate(dates):
-        has_processed, has_raw = check_satellite_status(s3, date_str)
-
-        # 只关注：未处理 + 有 raw .nc 的日期
-        if has_processed or not has_raw:
-            status = "✅ already processed" if has_processed else "⚠️ no raw satellite"
-            logger.info(f"  [{i+1}/{len(dates)}] {date_str}: {status} — SKIP")
-            continue
+        # 带 --skip-satellite-check 时不检查卫星状态
+        if not args.skip_satellite_check:
+            has_processed, has_raw = check_satellite_status(s3, date_str)
+            if has_processed or not has_raw:
+                status = "✅ already processed" if has_processed else "⚠️ no raw satellite"
+                if (i + 1) % 50 == 0:
+                    logger.info(f"  [{i+1}/{len(dates)}] {date_str}: {status} — SKIP")
+                continue
 
         rainy_slots, total_mm = extract_rainy_slots(s3, date_str)
 

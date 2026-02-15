@@ -32,9 +32,15 @@ variable "instance_type" {
 }
 
 variable "root_volume_size" {
-  description = "根卷大小（GB）"
+  description = "API 服务器根卷大小（GB）"
   type        = number
   default     = 20
+}
+
+variable "download_volume_size" {
+  description = "下载服务器根卷大小（GB）— 需容纳卫星 .nc 临时文件"
+  type        = number
+  default     = 50
 }
 
 variable "ssh_public_key_path" {
