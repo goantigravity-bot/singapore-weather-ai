@@ -10,6 +10,10 @@ interface ConfigState {
     toggleShowTriangle: () => void;
     showStations: boolean;
     toggleShowStations: () => void;
+    showWind: boolean;
+    toggleShowWind: () => void;
+    showCloud: boolean;
+    toggleShowCloud: () => void;
     geocodingProvider: GeocodingProvider;
     setGeocodingProvider: (p: GeocodingProvider) => void;
     psiThreshold: number;
@@ -42,6 +46,16 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [showStations, setShowStations] = useState<boolean>(() => {
         const saved = localStorage.getItem('show_stations');
         return saved ? JSON.parse(saved) : true;
+    });
+
+    const [showWind, setShowWind] = useState<boolean>(() => {
+        const saved = localStorage.getItem('show_wind');
+        return saved ? JSON.parse(saved) : false;
+    });
+
+    const [showCloud, setShowCloud] = useState<boolean>(() => {
+        const saved = localStorage.getItem('show_cloud');
+        return saved ? JSON.parse(saved) : false;
     });
 
     const [geocodingProvider, setGeocodingProviderState] = useState<GeocodingProvider>(() => {
@@ -79,6 +93,14 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         localStorage.setItem('show_stations', JSON.stringify(showStations));
     }, [showStations]);
 
+    useEffect(() => {
+        localStorage.setItem('show_wind', JSON.stringify(showWind));
+    }, [showWind]);
+
+    useEffect(() => {
+        localStorage.setItem('show_cloud', JSON.stringify(showCloud));
+    }, [showCloud]);
+
     const toggleMetric = (m: Metric) => {
         setMetrics(prev => {
             const next = new Set(prev);
@@ -97,6 +119,14 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const toggleShowStations = () => {
         setShowStations(prev => !prev);
+    };
+
+    const toggleShowWind = () => {
+        setShowWind(prev => !prev);
+    };
+
+    const toggleShowCloud = () => {
+        setShowCloud(prev => !prev);
     };
 
     // 切换 provider 时同步到后端
@@ -120,6 +150,8 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             metrics, toggleMetric,
             showTriangle, toggleShowTriangle,
             showStations, toggleShowStations,
+            showWind, toggleShowWind,
+            showCloud, toggleShowCloud,
             geocodingProvider, setGeocodingProvider,
             psiThreshold, setPsiThreshold,
         }}>

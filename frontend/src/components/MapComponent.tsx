@@ -5,6 +5,8 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { API_BASE_URL } from '../config';
 import { useConfig } from '../context/ConfigContext';
+import WindLayer from './WindLayer';
+import CloudLayer from './CloudLayer';
 
 // ... (icons code) ...
 
@@ -94,7 +96,7 @@ const MapComponent: React.FC<Props & {
     } | null
 }> = ({ onStationClick, flyToCoords, contributingStationIds, pathData }) => {
     const [stations, setStations] = useState<Station[]>([]);
-    const { showTriangle, showStations } = useConfig();
+    const { showTriangle, showStations, showWind, showCloud } = useConfig();
 
     useEffect(() => {
         // Fetch stations on load
@@ -207,6 +209,12 @@ const MapComponent: React.FC<Props & {
                     </Marker>
                 );
             })}
+
+            {/* 3. Wind Direction Arrows */}
+            {showWind && <WindLayer />}
+
+            {/* 4. Satellite Cloud Overlay */}
+            {showCloud && <CloudLayer />}
         </MapContainer>
     );
 };

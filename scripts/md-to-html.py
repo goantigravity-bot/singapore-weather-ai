@@ -148,6 +148,37 @@ def extract_mermaid_blocks(md_text):
     return result
 
 
+def fix_table_spacing(md_text):
+    """Remove blank lines between table rows.
+
+    Many editors (e.g. Doubao) export Markdown with blank lines between
+    pipe-delimited table rows, which breaks the Python markdown parser.
+    This collapses those blank lines so tables render correctly.
+    """
+    lines = md_text.split('\n')
+    result = []
+    i = 0
+    while i < len(lines):
+        result.append(lines[i])
+        # If current line is a table row, skip any immediately following blank lines
+        # before the next table row
+        if lines[i].strip().startswith('|') and lines[i].strip().endswith('|'):
+            j = i + 1
+            while j < len(lines) and lines[j].strip() == '':
+                # Peek ahead: only skip blank line if next non-empty line is also a table row
+                k = j + 1
+                while k < len(lines) and lines[k].strip() == '':
+                    k += 1
+                if k < len(lines) and lines[k].strip().startswith('|'):
+                    j += 1  # skip this blank line
+                else:
+                    break
+            i = j
+        else:
+            i += 1
+    return '\n'.join(result)
+
+
 def convert_md_to_html(md_path, html_path):
     """Convert a markdown file to dark-themed HTML."""
     with open(md_path, 'r', encoding='utf-8') as f:
@@ -156,6 +187,9 @@ def convert_md_to_html(md_path, html_path):
     # Extract title from first H1
     title_match = re.search(r'^#\s+(.+)$', md_text, re.MULTILINE)
     title = title_match.group(1) if title_match else os.path.basename(md_path)
+
+    # Fix table spacing (remove blank lines between table rows)
+    md_text = fix_table_spacing(md_text)
 
     # Handle mermaid blocks before markdown conversion
     md_text = extract_mermaid_blocks(md_text)

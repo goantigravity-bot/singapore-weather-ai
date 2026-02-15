@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { LABELS } from '../i18n/labels';
 
 const SettingsPage: React.FC = () => {
-    const { metrics, toggleMetric, showTriangle, toggleShowTriangle, showStations, toggleShowStations, geocodingProvider, setGeocodingProvider, psiThreshold, setPsiThreshold } = useConfig();
+    const { metrics, toggleMetric, showTriangle, toggleShowTriangle, showStations, toggleShowStations, showWind, toggleShowWind, showCloud, toggleShowCloud, geocodingProvider, setGeocodingProvider, psiThreshold, setPsiThreshold } = useConfig();
     const navigate = useNavigate();
 
     const renderToggle = (metric: Metric, label: string, icon: string) => {
@@ -194,6 +194,42 @@ const SettingsPage: React.FC = () => {
                             </div>
                             <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: showStations ? 'var(--accent-green)' : 'gray' }}>
                                 {showStations ? '☑' : '☐'}
+                            </div>
+                        </div>
+
+                        {/* Wind Direction Arrows Toggle */}
+                        <div
+                            className="metric-card"
+                            style={{ cursor: 'pointer', borderColor: showWind ? 'var(--accent-cyan)' : 'transparent', opacity: showWind ? 1 : 0.6 }}
+                            onClick={toggleShowWind}
+                        >
+                            <div className="metric-icon">🌬️</div>
+                            <div className="metric-info">
+                                <div className="metric-label">Wind Direction</div>
+                                <div className="metric-value" style={{ fontSize: '1rem', color: showWind ? 'var(--accent-cyan)' : 'gray' }}>
+                                    {showWind ? LABELS.settings.visible : LABELS.settings.hidden}
+                                </div>
+                            </div>
+                            <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: showWind ? 'var(--accent-green)' : 'gray' }}>
+                                {showWind ? '☑' : '☐'}
+                            </div>
+                        </div>
+
+                        {/* Satellite Cloud Layer Toggle */}
+                        <div
+                            className="metric-card"
+                            style={{ cursor: 'pointer', borderColor: showCloud ? 'var(--accent-cyan)' : 'transparent', opacity: showCloud ? 1 : 0.6 }}
+                            onClick={toggleShowCloud}
+                        >
+                            <div className="metric-icon">🛰️</div>
+                            <div className="metric-info">
+                                <div className="metric-label">{LABELS.settings.toggles.cloud}</div>
+                                <div className="metric-value" style={{ fontSize: '1rem', color: showCloud ? 'var(--accent-cyan)' : 'gray' }}>
+                                    {showCloud ? LABELS.settings.visible : LABELS.settings.hidden}
+                                </div>
+                            </div>
+                            <div style={{ alignSelf: 'center', fontSize: '1.5rem', color: showCloud ? 'var(--accent-green)' : 'gray' }}>
+                                {showCloud ? '☑' : '☐'}
                             </div>
                         </div>
                     </div>

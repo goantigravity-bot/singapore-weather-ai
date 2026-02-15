@@ -1,6 +1,6 @@
 # Weather AI Server Infrastructure
 
-> Last updated: 2026-02-14
+> Last updated: 2026-02-15
 
 ## Architecture Overview
 
@@ -11,11 +11,14 @@ graph LR
         TR[Training Server<br/>g4dn.xlarge Spot<br/>18.141.177.127]
         API[API Server<br/>t3.medium<br/>3.0.28.161]
         S3[(S3<br/>weather-ai-models-de08370c)]
+        SNS[SNS<br/>download-complete]
     end
 
     JAXA[JAXA Himawari] -->|satellite .nc| DL
     GOV[data.gov.sg] -->|sensor JSON| DL
     DL -->|raw .nc + .npy + JSON| S3
+    S3 -->|.complete event| SNS
+    SNS -->|email| Users
     S3 -->|.nc / .npy + CSV| TR
     S3 -->|model .pth + .npy + CSV| API
     TR -->|trained model .pth| S3
@@ -46,7 +49,7 @@ The bulk download script uses a streaming pipeline architecture where satellite 
 curl -s --ftp-ssl <JAXA_FTP_URL> | aws s3 cp - s3://<bucket>/<key>
 ```
 
-This design eliminates disk I/O bottlenecks and allows the download server to operate with minimal disk space (8GB EBS). The `PARALLEL_JOBS=4` setting enables 4 concurrent streaming transfers, balancing throughput against JAXA FTP connection limits.
+This design eliminates disk I/O bottlenecks and allows the download server to operate with minimal disk space (8GB EBS). The `PARALLEL_JOBS=12` setting enables 12 concurrent streaming transfers, maximizing throughput within JAXA FTP bandwidth limits.
 
 **Systemd Service**:
 ```
@@ -80,6 +83,40 @@ Log: ~/download_manager.log
 ├── Dockerfile          # Container config
 └── requirements.txt
 ```
+
+**Network Performance Benchmark** (measured 2026-02-15):
+
+| Metric | Value | Note |
+|--------|-------|------|
+| Inbound bandwidth | ~15 MB/s (120 Mbps) | JAXA FTP → Server |
+| Outbound bandwidth | ~15 MB/s (120 Mbps) | Server → S3 |
+| Concurrent downloads | 12 (`PARALLEL_JOBS=12`) | curl + aws s3 cp pipeline |
+| Per-file download time | ~2s | Each .nc file ≈ 30MB |
+| Per-day download time | ~5 min | ~137 files/day |
+| t3.small network baseline | ~32 MB/s (Up to 5 Gbps burst) | ~50% utilized |
+
+> **Bottleneck**: JAXA FTP server throttles per-user total bandwidth to ~120 Mbps regardless of concurrency (tested with 4, 8, and 12 parallel jobs — identical throughput). Upgrading instance type or increasing parallelism will not improve download speed.
+
+**Concurrency Comparison** (S3 upload timestamps, 2026-02-15):
+
+| Metric | `-P 4` (date 0129) | `-P 8→12` (date 0130) |
+|--------|--------------------|-----------------------|
+| First batch (files) | 4 files in ~1s | 8 files in ~12s |
+| First 16 files | ~15 min (1.1 files/min) | ~11 min (1.5 files/min) |
+| Sustained rate | ~0.9 files/min | ~0.9 files/min |
+
+> Short-burst throughput improves with higher concurrency (~27% faster for first 16 files), but sustained download rate converges to ~0.9 files/min regardless of parallelism, confirming JAXA FTP as the bottleneck.
+
+**Download Completion Notification (SNS)**:
+
+When each day's download completes, the script creates a `.complete` marker in S3. An S3 Event Notification triggers SNS to send an email alert.
+
+| Item | Value |
+|------|-------|
+| SNS Topic | `arn:aws:sns:ap-southeast-1:105506693880:weather-ai-download-complete` |
+| Trigger | S3 `ObjectCreated` on `satellite/*.complete` |
+| Subscriber | `jinhui.sg@gmail.com` |
+| Known Issue | Overlapping download processes may create duplicate `.complete` writes, causing duplicate emails. Planned fix: add Lambda for dedup + formatted emails. |
 
 ---
 
@@ -191,6 +228,7 @@ Port: 8000
 ```
 s3://weather-ai-models-de08370c/
 ├── satellite/{YYYYMMDD}/        # Raw satellite .nc (~700MB/file, 144 files/day)
+│   └── .complete                # Download completion marker (triggers SNS notification)
 ├── processed/satellite/{YYYYMMDD}/  # Preprocessed .npy (~16KB/file)
 ├── govdata/                     # Government data JSON (rainfall, temperature, humidity, pm25)
 ├── models/latest.pth            # Latest trained model

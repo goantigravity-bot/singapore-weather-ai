@@ -1153,6 +1153,85 @@ def accuracy_by_distance():
     return weather_db.get_accuracy_by_distance()
 
 
+# ── 卫星云图帧动画 API ──
+
+# 新加坡裁剪框（与 satellite_preprocessor.py 保持一致）
+SG_BOUNDS = [[1.15, 103.6], [1.50, 104.1]]
+
+def _npy_to_base64_png(npy_path: str) -> str | None:
+    """将 64×64 TBB .npy 转为 RGBA PNG（白色=云，透明=晴空）并返回 base64。
+
+    颜色映射逻辑：红外亮温(TBB) 越低意味着云越高越厚。
+    - TBB ≤ 200K：最浓厚的云（白色，完全不透明）
+    - TBB ~ 260K：中等厚度的云（半透明白色）
+    - TBB ≥ 290K：晴空（完全透明）
+    """
+    import io
+    import base64
+    from PIL import Image
+
+    try:
+        arr = np.load(npy_path)  # float32, 64×64, Kelvin
+        # 线性映射：TBB → alpha（低温=高不透明度）
+        tbb_min, tbb_max = 200.0, 290.0
+        alpha = np.clip((tbb_max - arr) / (tbb_max - tbb_min), 0.0, 1.0)
+        # RGBA：全白 + alpha 通道控制可见度
+        rgba = np.zeros((*arr.shape, 4), dtype=np.uint8)
+        rgba[:, :, 0] = 255  # R
+        rgba[:, :, 1] = 255  # G
+        rgba[:, :, 2] = 255  # B
+        rgba[:, :, 3] = (alpha * 220).astype(np.uint8)  # 最高 220 而非 255，保留底图可见性
+
+        img = Image.fromarray(rgba, 'RGBA')
+        # 上采样到 256×256，双线性插值让云图更平滑
+        img = img.resize((256, 256), Image.BILINEAR)
+
+        buf = io.BytesIO()
+        img.save(buf, format='PNG', optimize=True)
+        return base64.b64encode(buf.getvalue()).decode('ascii')
+    except Exception as e:
+        logger.warning(f"Failed to convert {npy_path} to PNG: {e}")
+        return None
+
+
+@api_router.get("/satellite/frames")
+def get_satellite_frames():
+    """返回最近 3 小时的卫星云图帧（用于前端动画播放）。
+
+    每帧包含 base64 PNG 和 UTC 时间戳。帧按时间排序，
+    前端逐帧切换 ImageOverlay 实现动画效果。
+    """
+    local_dir = "processed_data"
+    if not os.path.isdir(local_dir):
+        return {"frames": [], "bounds": SG_BOUNDS}
+
+    # 扫描并按时间排序
+    entries = []
+    for f in os.listdir(local_dir):
+        if not f.endswith(".npy"):
+            continue
+        try:
+            parts = f.split("_")
+            file_dt = datetime.strptime(f"{parts[2]}_{parts[3]}", "%Y%m%d_%H%M")
+            entries.append((file_dt, os.path.join(local_dir, f)))
+        except (ValueError, IndexError):
+            continue
+
+    entries.sort(key=lambda x: x[0])
+
+    frames = []
+    for dt, path in entries:
+        b64 = _npy_to_base64_png(path)
+        if b64:
+            frames.append({
+                "image": f"data:image/png;base64,{b64}",
+                "time": dt.strftime("%H:%M"),
+                "timestamp": dt.isoformat(),
+            })
+
+    return {"frames": frames, "bounds": SG_BOUNDS}
+
+
 # Register Router (Match both /api prefix and root for dev convenience)
 app.include_router(api_router)
 app.include_router(api_router, prefix="/api")

@@ -99,7 +99,8 @@ export const LABELS = {
         },
         toggles: {
             triangle: "Interpolation Triangle",
-            stations: "Weather Station Markers"
+            stations: "Weather Station Markers",
+            cloud: "Satellite Cloud (IR)"
         },
         integration: {
             title: "Integration",

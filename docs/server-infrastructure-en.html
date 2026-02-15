@@ -44,6 +44,7 @@
             margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #38bdf8, #a78bfa);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -96,6 +97,10 @@
             margin: 1rem 0;
             border-radius: 0 8px 8px 0;
             color: var(--text-muted);
+        }
+
+        blockquote strong {
+            color: var(--warn);
         }
 
         code {
@@ -198,11 +203,13 @@
 
 <body>
     <div class="container">
-        <h1 id="weather-ai-server-infrastructure">Weather AI Server Infrastructure</h1>
+        <h1>Weather AI Server Infrastructure</h1>
         <blockquote>
-            <p>Last updated: 2026-02-14</p>
+            <p>Last updated: 2026-02-15</p>
         </blockquote>
-        <h2 id="architecture-overview">Architecture Overview</h2>
+
+        <!-- ==================== Architecture Overview ==================== -->
+        <h2>Architecture Overview</h2>
         <div class="mermaid">
             graph LR
             subgraph AWS ap-southeast-1
@@ -222,8 +229,12 @@
         </div>
 
         <hr />
-        <h2 id="servers">Servers</h2>
-        <h3 id="1-download-server-132142031730">1. Download Server — <code>13.214.203.173</code></h3>
+
+        <!-- ==================== Servers ==================== -->
+        <h2>Servers</h2>
+
+        <!-- ==================== Download Server ==================== -->
+        <h3>1. Download Server — <code>13.214.203.173</code></h3>
         <table>
             <thead>
                 <tr>
@@ -254,55 +265,158 @@
                 </tr>
             </tbody>
         </table>
+
         <p><strong>Role</strong>: Real-time download of JAXA Himawari satellite data + data.gov.sg sensor data,
             preprocessing and upload to S3.</p>
+
         <h4>Design: Streaming Pipeline (Zero Local Storage)</h4>
         <p>The bulk download script uses a streaming pipeline architecture where satellite data is <strong>never written
                 to local disk</strong>. Data flows directly from the JAXA FTP source to S3 via a Unix pipe:</p>
-        <div class="highlight">
-            <pre><span></span><code>curl -s --ftp-ssl &lt;JAXA_FTP_URL&gt; | aws s3 cp - s3://&lt;bucket&gt;/&lt;key&gt;
-</code></pre>
-        </div>
+        <pre><code>curl -s --ftp-ssl &lt;JAXA_FTP_URL&gt; | aws s3 cp - s3://&lt;bucket&gt;/&lt;key&gt;</code></pre>
         <p>This design eliminates disk I/O bottlenecks and allows the download server to operate with minimal disk space
-            (8GB EBS). The <code>PARALLEL_JOBS=4</code> setting enables 4 concurrent streaming transfers, balancing
-            throughput against JAXA FTP connection limits.</p>
+            (8GB EBS). The <code>PARALLEL_JOBS=12</code> setting enables 12 concurrent streaming transfers, maximizing
+            throughput within JAXA FTP bandwidth limits.</p>
+
         <p><strong>Systemd Service</strong>:</p>
-        <div class="highlight">
-            <pre><span></span><code>weather-download.service  (Restart=always, RestartSec=30)
+        <pre><code>weather-download.service  (Restart=always, RestartSec=30)
 ExecStart: venv/bin/python3 download_manager.py
-Log: ~/download_manager.log
-</code></pre>
-        </div>
+Log: ~/download_manager.log</code></pre>
 
         <p><strong>Crontab</strong>:</p>
-        <div class="highlight">
-            <pre><span></span><code>* * * * * ~/push_download_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1
-</code></pre>
-        </div>
+        <pre><code>* * * * * ~/push_download_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1</code></pre>
 
-        <p><strong>Key Files</strong>:
-            | File | Purpose |
-            |------|---------|
-            | <code>download_manager.py</code> | Main scheduler — real-time download + historical backfill + gov data |
-            | <code>download_jaxa_data.py</code> | JAXA FTP satellite data download |
-            | <code>fetch_and_process_gov_data.py</code> | data.gov.sg API data collection + processing |
-            | <code>cleanup_storage.py</code> | Local disk cleanup |
-            | <code>notification.py</code> | Email notifications |
-            | <code>bulk_download_to_s3_parallel.sh</code> | Bulk parallel download script |</p>
+        <p><strong>Key Files</strong>:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>download_manager.py</code></td>
+                    <td>Main scheduler — real-time download + historical backfill + gov data</td>
+                </tr>
+                <tr>
+                    <td><code>download_jaxa_data.py</code></td>
+                    <td>JAXA FTP satellite data download</td>
+                </tr>
+                <tr>
+                    <td><code>fetch_and_process_gov_data.py</code></td>
+                    <td>data.gov.sg API data collection + processing</td>
+                </tr>
+                <tr>
+                    <td><code>cleanup_storage.py</code></td>
+                    <td>Local disk cleanup</td>
+                </tr>
+                <tr>
+                    <td><code>notification.py</code></td>
+                    <td>Email notifications</td>
+                </tr>
+                <tr>
+                    <td><code>bulk_download_to_s3_parallel.sh</code></td>
+                    <td>Bulk parallel download script</td>
+                </tr>
+            </tbody>
+        </table>
+
         <p><strong>Directory Structure</strong>:</p>
-        <div class="highlight">
-            <pre><span></span><code>~/weather-ai/
+        <pre><code>~/weather-ai/
 ├── *.py, *.sh          # Scripts
 ├── .env                # Environment variables (JAXA credentials, S3 config)
 ├── real_sensor_data.csv # Sensor data
 ├── venv/               # Python virtual environment
 ├── Dockerfile          # Container config
-└── requirements.txt
-</code></pre>
-        </div>
+└── requirements.txt</code></pre>
+
+        <h4>Network Performance Benchmark <span
+                style="color: var(--text-muted); font-weight: 400; font-size: 0.85em;">(measured 2026-02-15)</span></h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Inbound bandwidth</td>
+                    <td>~15 MB/s (120 Mbps)</td>
+                    <td>JAXA FTP → Server</td>
+                </tr>
+                <tr>
+                    <td>Outbound bandwidth</td>
+                    <td>~15 MB/s (120 Mbps)</td>
+                    <td>Server → S3</td>
+                </tr>
+                <tr>
+                    <td>Concurrent downloads</td>
+                    <td>12 (<code>PARALLEL_JOBS=12</code>)</td>
+                    <td>curl + aws s3 cp pipeline</td>
+                </tr>
+                <tr>
+                    <td>Per-file download time</td>
+                    <td>~2s</td>
+                    <td>Each .nc file ≈ 30MB</td>
+                </tr>
+                <tr>
+                    <td>Per-day download time</td>
+                    <td>~5 min</td>
+                    <td>~137 files/day</td>
+                </tr>
+                <tr>
+                    <td>t3.small network baseline</td>
+                    <td>~32 MB/s (Up to 5 Gbps burst)</td>
+                    <td>~50% utilized</td>
+                </tr>
+            </tbody>
+        </table>
+        <blockquote>
+            <p><strong>Bottleneck</strong>: JAXA FTP server throttles per-user total bandwidth to ~120 Mbps regardless
+                of concurrency (tested with 4, 8, and 12 parallel jobs — identical throughput). Upgrading instance type
+                or increasing parallelism will not improve download speed.</p>
+        </blockquote>
+
+        <h4>Concurrency Comparison <span style="color: var(--text-muted); font-weight: 400; font-size: 0.85em;">(S3
+                upload timestamps, 2026-02-15)</span></h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th><code>-P 4</code> (date 0129)</th>
+                    <th><code>-P 8→12</code> (date 0130)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>First batch (files)</td>
+                    <td>4 files in ~1s</td>
+                    <td>8 files in ~12s</td>
+                </tr>
+                <tr>
+                    <td>First 16 files</td>
+                    <td>~15 min (1.1 files/min)</td>
+                    <td>~11 min (1.5 files/min)</td>
+                </tr>
+                <tr>
+                    <td>Sustained rate</td>
+                    <td>~0.9 files/min</td>
+                    <td>~0.9 files/min</td>
+                </tr>
+            </tbody>
+        </table>
+        <blockquote>
+            <p>Short-burst throughput improves with higher concurrency (~27% faster for first 16 files), but sustained
+                download rate converges to ~0.9 files/min regardless of parallelism, confirming JAXA FTP as the
+                bottleneck.</p>
+        </blockquote>
 
         <hr />
-        <h3 id="2-training-server-18141177127">2. Training Server — <code>18.141.177.127</code></h3>
+
+        <!-- ==================== Training Server ==================== -->
+        <h3>2. Training Server — <code>18.141.177.127</code></h3>
         <table>
             <thead>
                 <tr>
@@ -333,31 +447,62 @@ Log: ~/download_manager.log
                 </tr>
             </tbody>
         </table>
+
         <p><strong>Role</strong>: GPU-accelerated training of WeatherFusionNet model (download data from S3 → preprocess
             → train → upload model to S3). ~8x faster per epoch vs CPU (2.8s vs 22s).</p>
+
         <p><strong>Systemd Service</strong>: None (triggered via crontab <code>training_scheduler.py</code> or manually)
         </p>
-        <p><strong>Crontab</strong>:</p>
-        <div class="highlight">
-            <pre><span></span><code>*/5 * * * * ~/push_training_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1
-</code></pre>
-        </div>
 
-        <p><strong>Key Files</strong>:
-            | File | Purpose |
-            |------|---------|
-            | <code>training_scheduler.py</code> | Main scheduler — check S3 data by date → download → preprocess →
-            train → upload |
-            | <code>train_rolling_window.py</code> | Rolling window training logic |
-            | <code>weather_dataset.py</code> | PyTorch Dataset — sensor + satellite data alignment |
-            | <code>weather_fusion_model.py</code> | WeatherFusionNet model definition |
-            | <code>preprocess_images.py</code> | Raw .nc → crop Singapore region → .npy |
-            | <code>process_gov_data_from_s3.py</code> | Gov JSON → real_sensor_data.csv |
-            | <code>sync_model_to_s3.sh</code> | Upload model to S3 after training |
-            | <code>notification.py</code> | Training success/failure email notifications |</p>
+        <p><strong>Crontab</strong>:</p>
+        <pre><code>*/5 * * * * ~/push_training_log.sh &gt;&gt; /tmp/push_log.log 2&gt;&amp;1</code></pre>
+
+        <p><strong>Key Files</strong>:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>training_scheduler.py</code></td>
+                    <td>Main scheduler — check S3 data by date → download → preprocess → train → upload</td>
+                </tr>
+                <tr>
+                    <td><code>train_rolling_window.py</code></td>
+                    <td>Rolling window training logic</td>
+                </tr>
+                <tr>
+                    <td><code>weather_dataset.py</code></td>
+                    <td>PyTorch Dataset — sensor + satellite data alignment</td>
+                </tr>
+                <tr>
+                    <td><code>weather_fusion_model.py</code></td>
+                    <td>WeatherFusionNet model definition</td>
+                </tr>
+                <tr>
+                    <td><code>preprocess_images.py</code></td>
+                    <td>Raw .nc → crop Singapore region → .npy</td>
+                </tr>
+                <tr>
+                    <td><code>process_gov_data_from_s3.py</code></td>
+                    <td>Gov JSON → real_sensor_data.csv</td>
+                </tr>
+                <tr>
+                    <td><code>sync_model_to_s3.sh</code></td>
+                    <td>Upload model to S3 after training</td>
+                </tr>
+                <tr>
+                    <td><code>notification.py</code></td>
+                    <td>Training success/failure email notifications</td>
+                </tr>
+            </tbody>
+        </table>
+
         <p><strong>Directory Structure</strong>:</p>
-        <div class="highlight">
-            <pre><span></span><code>~/weather-ai/
+        <pre><code>~/weather-ai/
 ├── *.py, *.sh            # Scripts
 ├── .env                  # Environment variables
 ├── training_state.json   # Scheduler state (last_processed_date, total_epochs, etc.)
@@ -367,12 +512,12 @@ Log: ~/download_manager.log
 ├── processed_data/       # Preprocessed .npy (generated during training, cleaned after)
 ├── govdata/              # Government data JSON
 ├── model_backups/        # Model backups (before each training)
-└── venv/
-</code></pre>
-        </div>
+└── venv/</code></pre>
 
         <hr />
-        <h3 id="3-api-server-3028161">3. API Server — <code>3.0.28.161</code></h3>
+
+        <!-- ==================== API Server ==================== -->
+        <h3>3. API Server — <code>3.0.28.161</code></h3>
         <table>
             <thead>
                 <tr>
@@ -403,39 +548,73 @@ Log: ~/download_manager.log
                 </tr>
             </tbody>
         </table>
+
         <p><strong>Role</strong>: Weather prediction REST API + frontend static file serving.</p>
+
         <p><strong>Systemd Service</strong>:</p>
-        <div class="highlight">
-            <pre><span></span><code>weather-api.service  (Restart=always, RestartSec=10)
+        <pre><code>weather-api.service  (Restart=always, RestartSec=10)
 ExecStart: venv/bin/python3 api.py
-Port: 8000
-</code></pre>
-        </div>
+Port: 8000</code></pre>
 
         <p><strong>Nginx</strong>: Reverse proxy 80/443 → 8000</p>
-        <p><strong>Crontab</strong>:</p>
-        <div class="highlight">
-            <pre><span></span><code>*/10 * * * * cd ~/weather-ai &amp;&amp; ./fetch_latest_model.sh &gt;&gt; /var/log/model_sync.log 2&gt;&amp;1
-</code></pre>
-        </div>
 
-        <p><strong>Key Files</strong>:
-            | File | Purpose |
-            |------|---------|
-            | <code>api.py</code> | FastAPI main service — prediction, search, monitoring, data sync |
-            | <code>predict.py</code> | Inference logic — ensemble prediction + Delaunay triangulation + cloud analysis
-            |
-            | <code>weather_fusion_model.py</code> | Model definition (shared with training) |
-            | <code>weather_dataset.py</code> | Dataset utilities (latlon2xy) |
-            | <code>db.py</code> | SQLite data layer — caching, user activity, prediction records |
-            | <code>smart_query.py</code> | NLU natural language query parsing |
-            | <code>geocoding.py</code> | Geocoding (Nominatim + OneMap) |
-            | <code>monitor_api.py</code> | Monitoring dashboard API |
-            | <code>actual_collector.py</code> | Actual weather data collection (for prediction accuracy comparison) |
-            | <code>perf-test.py</code> | Performance test script |</p>
+        <p><strong>Crontab</strong>:</p>
+        <pre><code>*/10 * * * * cd ~/weather-ai &amp;&amp; ./fetch_latest_model.sh &gt;&gt; /var/log/model_sync.log 2&gt;&amp;1</code></pre>
+
+        <p><strong>Key Files</strong>:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>api.py</code></td>
+                    <td>FastAPI main service — prediction, search, monitoring, data sync</td>
+                </tr>
+                <tr>
+                    <td><code>predict.py</code></td>
+                    <td>Inference logic — ensemble prediction + Delaunay triangulation + cloud analysis</td>
+                </tr>
+                <tr>
+                    <td><code>weather_fusion_model.py</code></td>
+                    <td>Model definition (shared with training)</td>
+                </tr>
+                <tr>
+                    <td><code>weather_dataset.py</code></td>
+                    <td>Dataset utilities (latlon2xy)</td>
+                </tr>
+                <tr>
+                    <td><code>db.py</code></td>
+                    <td>SQLite data layer — caching, user activity, prediction records</td>
+                </tr>
+                <tr>
+                    <td><code>smart_query.py</code></td>
+                    <td>NLU natural language query parsing</td>
+                </tr>
+                <tr>
+                    <td><code>geocoding.py</code></td>
+                    <td>Geocoding (Nominatim + OneMap)</td>
+                </tr>
+                <tr>
+                    <td><code>monitor_api.py</code></td>
+                    <td>Monitoring dashboard API</td>
+                </tr>
+                <tr>
+                    <td><code>actual_collector.py</code></td>
+                    <td>Actual weather data collection (for prediction accuracy comparison)</td>
+                </tr>
+                <tr>
+                    <td><code>perf-test.py</code></td>
+                    <td>Performance test script</td>
+                </tr>
+            </tbody>
+        </table>
+
         <p><strong>Directory Structure</strong>:</p>
-        <div class="highlight">
-            <pre><span></span><code>~/weather-ai/
+        <pre><code>~/weather-ai/
 ├── *.py                    # Scripts
 ├── .env                    # Environment variables
 ├── weather_fusion_model.pth  # Latest model synced from S3
@@ -443,26 +622,25 @@ Port: 8000
 ├── processed_data/         # Preprocessed satellite .npy (synced from S3)
 ├── satellite_data/         # Deprecated (no longer downloads raw .nc)
 ├── frontend/dist/          # React frontend build artifacts
-└── venv/
-</code></pre>
-        </div>
+└── venv/</code></pre>
 
         <hr />
-        <h2 id="s3-bucket-structure">S3 Bucket Structure</h2>
-        <div class="highlight">
-            <pre><span></span><code>s3://weather-ai-models-de08370c/
+
+        <!-- ==================== S3 Bucket ==================== -->
+        <h2>S3 Bucket Structure</h2>
+        <pre><code>s3://weather-ai-models-de08370c/
 ├── satellite/{YYYYMMDD}/        # Raw satellite .nc (~700MB/file, 144 files/day)
 ├── processed/satellite/{YYYYMMDD}/  # Preprocessed .npy (~16KB/file)
 ├── govdata/                     # Government data JSON (rainfall, temperature, humidity, pm25)
 ├── models/latest.pth            # Latest trained model
 ├── state/training_state.json    # Training progress state
 ├── history/training_history.json # Training history records
-└── archived/                    # Archived data
-</code></pre>
-        </div>
+└── archived/                    # Archived data</code></pre>
 
         <hr />
-        <h2 id="data-flow">Data Flow</h2>
+
+        <!-- ==================== Data Flow ==================== -->
+        <h2>Data Flow</h2>
         <div class="mermaid">
             sequenceDiagram
             participant JAXA
@@ -491,32 +669,31 @@ Port: 8000
         </div>
 
         <hr />
-        <h2 id="ssh-access">SSH Access</h2>
-        <div class="highlight">
-            <pre><span></span><code><span class="c1"># Download Server</span>
-ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@13.214.203.173
 
-<span class="c1"># Training Server (Spot — IP may change)</span>
-ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@18.141.177.127
+        <!-- ==================== SSH Access ==================== -->
+        <h2>SSH Access</h2>
+        <pre><code># Download Server
+ssh -i ~/.ssh/id_rsa ubuntu@13.214.203.173
 
-<span class="c1"># API Server</span>
-ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/id_rsa<span class="w"> </span>ubuntu@3.0.28.161
-</code></pre>
-        </div>
+# Training Server (Spot — IP may change)
+ssh -i ~/.ssh/id_rsa ubuntu@18.141.177.127
+
+# API Server
+ssh -i ~/.ssh/id_rsa ubuntu@3.0.28.161</code></pre>
 
         <hr />
-        <h2 id="health-check">Health Check</h2>
-        <div class="highlight">
-            <pre><span></span><code><span class="c1"># Check all servers</span>
-./scripts/server-health-check.sh<span class="w"> </span>all
 
-<span class="c1"># Check individual server</span>
-./scripts/server-health-check.sh<span class="w"> </span>download
-./scripts/server-health-check.sh<span class="w"> </span>training
-./scripts/server-health-check.sh<span class="w"> </span>api
-</code></pre>
-        </div>
-        <footer>Weather AI — Weather AI Server Infrastructure — Generated 2026-02-14</footer>
+        <!-- ==================== Health Check ==================== -->
+        <h2>Health Check</h2>
+        <pre><code># Check all servers
+./scripts/server-health-check.sh all
+
+# Check individual server
+./scripts/server-health-check.sh download
+./scripts/server-health-check.sh training
+./scripts/server-health-check.sh api</code></pre>
+
+        <footer>Weather AI — Server Infrastructure — Generated 2026-02-15</footer>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
     <script>

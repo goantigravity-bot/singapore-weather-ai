@@ -159,6 +159,7 @@ while [[ "$current" < "$END_DATE" ]] || [[ "$current" == "$END_DATE" ]]; do
     # 定义政府数据下载函数
     download_govdata() {
         local current_date="$1"
+        # v1 API: rainfall, temperature, humidity, pm25
         for api in "rainfall" "temperature" "humidity" "pm25"; do
             s3_key="$GOVDATA_PREFIX/${api}_${current_date}.json"
             
@@ -174,6 +175,17 @@ while [[ "$current" < "$END_DATE" ]] || [[ "$current" == "$END_DATE" ]]; do
             esac
             
             curl -s "$url?date=$current_date" | aws s3 cp - "s3://$S3_BUCKET/$s3_key" --quiet 2>/dev/null || true
+        done
+        # v2 API: wind-speed, wind-direction (不同的 endpoint 格式)
+        for api in "wind-speed" "wind-direction"; do
+            s3_key="$GOVDATA_PREFIX/${api}_${current_date}.json"
+            
+            if aws s3 ls "s3://$S3_BUCKET/$s3_key" > /dev/null 2>&1; then
+                continue
+            fi
+            
+            curl -s "https://api-open.data.gov.sg/v2/real-time/api/${api}?date=${current_date}" | \
+                aws s3 cp - "s3://$S3_BUCKET/$s3_key" --quiet 2>/dev/null || true
         done
         echo "   ✅ 政府数据完成: $current_date"
     }
