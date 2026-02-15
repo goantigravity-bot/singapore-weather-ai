@@ -66,7 +66,7 @@ deploy_backend() {
     echo "📦 上传代码到EC2..."
     rsync -avz --exclude 'node_modules' --exclude 'frontend/node_modules' --exclude 'frontend/dist' \
       --exclude '.git' --exclude 'satellite_data' --exclude '*.log' \
-      --exclude 'docs' --exclude 'venv' --exclude '__pycache__' --exclude '.DS_Store' \
+      --exclude 'docs' --exclude 'terraform' --exclude 'venv' --exclude '__pycache__' --exclude '.DS_Store' \
       -e "ssh -i $EC2_KEY" \
       ./ $EC2_HOST:$REMOTE_DIR/
     
