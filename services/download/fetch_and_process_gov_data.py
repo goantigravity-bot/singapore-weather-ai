@@ -9,14 +9,8 @@ import time
 # 1. Single datetime.date objects: datetime.date(2026, 1, 22)
 # 2. Dictionaries with 'start' and 'end' keys: {'start': ..., 'end': ...}
 FETCH_CONFIG = [
-    # 1. Single date: 1 Jan 2026
-    datetime.date(2026, 1, 1),
-    
-    # 2. First Date range: 13 Jan to 16 Jan
-    {'start': datetime.date(2026, 1, 14), 'end': datetime.date(2026, 1, 15)},
-
-    # 3. First Date range: 18 Jan to 21 Jan
-    {'start': datetime.date(2026, 1, 17), 'end': datetime.date(2026, 1, 20)},
+    # 2023 ~ 2025 全量历史数据
+    {'start': datetime.date(2023, 1, 1), 'end': datetime.date(2025, 12, 31)},
 ]
 
 # 🆕 Check Environment Variables (Override/Append)
@@ -191,8 +185,6 @@ def process_day(date_obj):
     return df_pivot
 
 def main():
-    all_dfs = []
-    
     # Collect all unique dates to process
     dates_to_process = set()
     
@@ -208,46 +200,52 @@ def main():
         else:
             print(f"Warning: Invalid config item: {item}")
 
-    # Sort dates to process in order
     sorted_dates = sorted(list(dates_to_process))
     
     if not sorted_dates:
         print("No dates configured to fetch.")
         return
 
-    print(f"Scheduled to fetch {len(sorted_dates)} days: {[d.isoformat() for d in sorted_dates]}")
+    print(f"Scheduled to fetch {len(sorted_dates)} days: {sorted_dates[0]} ~ {sorted_dates[-1]}")
 
-    for current_date in sorted_dates:
-        df_day = process_day(current_date)
-        if not df_day.empty:
-            all_dfs.append(df_day)
+    # 逐批处理（每 30 天写一次 CSV），避免大规模数据内存溢出
+    BATCH_SIZE = 30
+    total_rows = 0
+    header_written = os.path.exists(OUTPUT_FILE)
+
+    for i in range(0, len(sorted_dates), BATCH_SIZE):
+        batch = sorted_dates[i:i + BATCH_SIZE]
+        print(f"\n--- Batch {i // BATCH_SIZE + 1}: {batch[0]} ~ {batch[-1]} ({len(batch)} days) ---")
         
-    if not all_dfs:
-        print("No data fetched.")
-        return
+        batch_dfs = []
+        for current_date in batch:
+            df_day = process_day(current_date)
+            if not df_day.empty:
+                batch_dfs.append(df_day)
 
-    print("Merging all days...")
-    final_df = pd.concat(all_dfs, ignore_index=True)
-    
-    # Clean up
-    final_df = final_df.sort_values(['sensor_id', 'timestamp'])
-    
-    # Rename type columns to match our Dataset (if needed)
-    # Our code expects: temperature, rainfall, humidity, pm25
-    # Check if columns exist
-    required = ['temperature', 'rainfall', 'humidity', 'pm25']
-    for col in required:
-        if col not in final_df.columns:
-            print(f"Warning: Column '{col}' missing (maybe no data returned). Filling 0.")
-            final_df[col] = 0.0
+        if not batch_dfs:
+            continue
 
-    # Fill NaNs
-    final_df = final_df.ffill().fillna(0.0)
+        batch_df = pd.concat(batch_dfs, ignore_index=True)
+        batch_df = batch_df.sort_values(['sensor_id', 'timestamp'])
 
-    print(f"Saving {len(final_df)} rows to {OUTPUT_FILE}...")
-    final_df.to_csv(OUTPUT_FILE, index=False)
-    print("Done! You can now use this file in train.py")
-    print(f"Example:\n{final_df.head()}")
+        required = ['temperature', 'rainfall', 'humidity', 'pm25']
+        for col in required:
+            if col not in batch_df.columns:
+                batch_df[col] = 0.0
+
+        batch_df = batch_df.ffill().fillna(0.0)
+
+        # 追加写入 CSV
+        batch_df.to_csv(OUTPUT_FILE, mode="a", header=not header_written, index=False)
+        header_written = True
+        total_rows += len(batch_df)
+        print(f"  ✅ Batch written: {len(batch_df)} rows (total: {total_rows})")
+        
+        # 释放内存
+        del batch_dfs, batch_df
+
+    print(f"\nDone! Total {total_rows} rows saved to {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()

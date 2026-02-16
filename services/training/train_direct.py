@@ -57,13 +57,14 @@ def train(epochs: int, batch_size: int, lr: float, model_path: str):
         model.train()
         train_loss_sum = 0.0
         train_count = 0
-        for sat, sensor, target in train_loader:
+        for sat, sensor, coord, target in train_loader:
             sat = sat.to(device)
             sensor = sensor.to(device)
+            coord = coord.to(device)
             target = target.to(device)
 
             optimizer.zero_grad()
-            output = model(sat, sensor)
+            output = model(sat, sensor, coord)
             loss = criterion(output, target)
             loss.backward()
             optimizer.step()
@@ -79,12 +80,13 @@ def train(epochs: int, batch_size: int, lr: float, model_path: str):
         val_count = 0
         val_mae_sum = 0.0
         with torch.no_grad():
-            for sat, sensor, target in val_loader:
+            for sat, sensor, coord, target in val_loader:
                 sat = sat.to(device)
                 sensor = sensor.to(device)
+                coord = coord.to(device)
                 target = target.to(device)
 
-                output = model(sat, sensor)
+                output = model(sat, sensor, coord)
                 loss = criterion(output, target)
                 val_loss_sum += loss.item() * sat.size(0)
                 val_mae_sum += torch.abs(output - target).sum().item()

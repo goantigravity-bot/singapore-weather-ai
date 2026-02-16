@@ -2,7 +2,7 @@
 卫星数据预处理模块 — 独立可复用
 
 职责：
-  1. 将 Himawari .nc 裁剪为新加坡区域 64×64 .npy
+  1. 将 Himawari .nc 裁剪为新加坡区域 128×128 .npy
   2. 上传/检查 S3 processed/ 目录
   3. 提取文件名中的日期/时间元数据
 
@@ -19,14 +19,24 @@ import torch
 import torch.nn.functional as F
 import boto3
 from botocore.exceptions import ClientError
-from weather_dataset import latlon2xy
 
 logger = logging.getLogger(__name__)
 
-# ── 裁剪参数 ──
-TARGET_SIZE = (64, 64)
+# ── EQR 投影常量（Himawari 全盘，用于 JAXA .nc 裁剪）──
+_LAT_MAX = 60.0
+_LON_MIN = 70.0
+_RES = 0.02
 
-# 新加坡裁剪框（与 weather_dataset.py 保持一致）
+def latlon2xy(lat: float, lon: float) -> tuple[int, int]:
+    """经纬度 → 像素坐标（EQR L3 投影）。"""
+    y = int(round((_LAT_MAX - lat) / _RES))
+    x = int(round((lon - _LON_MIN) / _RES))
+    return x, y
+
+# ── 裁剪参数 ──
+TARGET_SIZE = (128, 128)
+
+# 新加坡裁剪框（JAXA EQR 格式用）
 SG_LAT_MAX, SG_LON_MIN = 1.50, 103.6
 C1, L1 = latlon2xy(SG_LAT_MAX, SG_LON_MIN)
 SG_LAT_MIN, SG_LON_MAX = 1.15, 104.1
@@ -53,7 +63,7 @@ def extract_date_from_filename(fname: str) -> str | None:
 
 def crop_nc_to_npy(nc_path: str) -> np.ndarray | None:
     """
-    将单个 .nc 文件裁剪为新加坡区域 64×64 numpy 数组。
+    将单个 .nc 文件裁剪为新加坡区域 128×128 numpy 数组。
 
     处理 Full Disk（>1000 行）和已裁剪两种格式，
     兼容 tbb / tbb_13 变量名。
@@ -78,7 +88,7 @@ def crop_nc_to_npy(nc_path: str) -> np.ndarray | None:
         else:
             data = ds[var_name].values
 
-        # 缩放到 64×64
+        # 缩放到 128×128
         tensor = torch.tensor(data, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
         resized = F.interpolate(tensor, size=TARGET_SIZE, mode='bilinear', align_corners=False)
         final_arr = resized.squeeze().numpy()

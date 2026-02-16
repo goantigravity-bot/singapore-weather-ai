@@ -34,9 +34,33 @@ C1, L1 = latlon2xy(SG_LAT_MAX, SG_LON_MIN)
 SG_LAT_MIN, SG_LON_MAX = 1.15, 104.1
 C2, L2 = latlon2xy(SG_LAT_MIN, SG_LON_MAX)
 
+# R4: 局部 Patch 裁剪参数
+IMG_SIZE = 128   # 裁剪后的新加坡区域尺寸
+PATCH_SIZE = 32  # 基站局部 patch 尺寸
+
+def _latlon_to_pixel(lat, lon):
+    """基站经纬度 → 128×128 卫星图的像素坐标 (px, py)。"""
+    py = int((SG_LAT_MAX - lat) / (SG_LAT_MAX - SG_LAT_MIN) * IMG_SIZE)
+    px = int((lon - SG_LON_MIN) / (SG_LON_MAX - SG_LON_MIN) * IMG_SIZE)
+    return px, py
+
+def _crop_patch(sat_full, px, py):
+    """从 128×128 全图以 (px, py) 为中心裁剪 PATCH_SIZE×PATCH_SIZE patch。"""
+    half = PATCH_SIZE // 2
+    y1, y2 = max(0, py - half), min(IMG_SIZE, py + half)
+    x1, x2 = max(0, px - half), min(IMG_SIZE, px + half)
+    patch = sat_full[:, y1:y2, x1:x2]
+    # 边界处 pad 到 PATCH_SIZE×PATCH_SIZE
+    if patch.shape[1] < PATCH_SIZE or patch.shape[2] < PATCH_SIZE:
+        padded = torch.zeros(1, PATCH_SIZE, PATCH_SIZE)
+        padded[:, :patch.shape[1], :patch.shape[2]] = patch
+        patch = padded
+    return patch
+
 def load_system():
     print("Loading Model...")
-    model = WeatherFusionNet(sat_channels=1, sensor_features=4, prediction_dim=1)
+    # R4: 7 维传感器 + 2 维坐标嵌入
+    model = WeatherFusionNet(sat_channels=1, sensor_features=7, coord_dim=2, prediction_dim=1)
     if not os.path.exists(MODEL_PATH):
         print(f"Warning: Model file {MODEL_PATH} not found. Starting with initialized model (random weights).")
     else:
@@ -56,7 +80,7 @@ def load_system():
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     return model, df
 
-def get_input_data(df, sensor_id, target_time, seq_len=6):
+def get_input_data(df, sensor_id, target_time, station_lat=None, station_lon=None, seq_len=6):
     """
     Prepare inputs for the model for a specific sensor at a specific time.
     We need:
@@ -85,35 +109,57 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
          print(f"Warning: No recent data for {sensor_id}")
          return None, None
          
-    # Resample to 10min
-    recent_resampled = recent_raw.set_index('timestamp').resample('10min').agg({
+    # Resample to 10min（含风速/风向，缺失时填 0）
+    agg_dict = {
         'temperature': 'mean',
         'humidity': 'mean',
         'rainfall': 'sum',
-        'pm25': 'mean'
-    }).dropna()
+        'pm25': 'mean',
+    }
+    # 风速/风向可能在实时数据中缺失
+    if 'wind_speed' in recent_raw.columns:
+        agg_dict['wind_speed'] = 'mean'
+    if 'wind_direction' in recent_raw.columns:
+        agg_dict['wind_direction'] = 'mean'
+
+    recent_resampled = recent_raw.set_index('timestamp').resample('10min').agg(agg_dict).dropna(subset=['temperature'])
+    
+    # 确保风速/风向列存在，缺失时填 0
+    if 'wind_speed' not in recent_resampled.columns:
+        recent_resampled['wind_speed'] = 0.0
+    if 'wind_direction' not in recent_resampled.columns:
+        recent_resampled['wind_direction'] = 0.0
+    recent_resampled = recent_resampled.fillna(0.0)
     
     # We need exactly the last `seq_len` steps
     recent_data = recent_resampled.tail(seq_len)
     
     if len(recent_data) < seq_len:
         # 不足 seq_len 步时，用最早一行向前填充（pad），而非直接失败
-        # 这样在实时数据初始拉取阶段也能出预测结果
         if len(recent_data) == 0:
             print(f"Warning: No resampled data for {sensor_id}")
-            return None, None
+            return None, None, None
         deficit = seq_len - len(recent_data)
         pad_row = recent_data.iloc[[0]]
         padding = pd.concat([pad_row] * deficit, ignore_index=False)
         recent_data = pd.concat([padding, recent_data])
 
-    features = recent_data[['temperature', 'rainfall', 'humidity', 'pm25']].values.astype(np.float32)
+    # R4: 7 维传感器特征 [temp, rain, humidity, pm25, wind_speed, wind_dir_sin, wind_dir_cos]
+    raw = recent_data[['temperature', 'rainfall', 'humidity', 'pm25', 'wind_speed', 'wind_direction']].values.astype(np.float32)
+    wind_dir_rad = np.radians(raw[:, 5])
+    features = np.column_stack([
+        raw[:, :5],           # temp, rain, humidity, pm25, wind_speed
+        np.sin(wind_dir_rad), # wind_dir_sin
+        np.cos(wind_dir_rad)  # wind_dir_cos
+    ])
     
     # NORMALIZATION (Must match weather_dataset.py)
     features[:, 0] = (features[:, 0] - 28.0) / 5.0   # Temp
     features[:, 1] = features[:, 1] / 10.0            # Rain
     features[:, 2] = (features[:, 2] - 80.0) / 20.0   # Humidity
     features[:, 3] = (features[:, 3] - 20.0) / 20.0   # PM2.5
+    features[:, 4] = features[:, 4] / 10.0             # Wind speed
+    # sin/cos 已在 [-1, 1]，无需归一化
     
     sensor_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0) # Batch dim
     
@@ -163,7 +209,8 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
             files = [dpath]
             use_npy = False
             
-    sat_tensor = torch.zeros(1, 1, 64, 64)
+    # R4: 全图 128×128，后续由调用方按基站坐标裁剪 32×32 patch
+    sat_tensor = torch.zeros(1, 1, IMG_SIZE, IMG_SIZE)
     
     if files:
         try:
@@ -189,12 +236,12 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
                      var_name = 'tbb_13'
                      
                 if ds[var_name].shape[0] > 1000:
-                    # Full Disk -> Crop
+                    # Full Disk -> Crop to Singapore region
                     r_min, r_max = min(L1, L2), max(L1, L2)
                     c_min, c_max = min(C1, C2), max(C1, C2)
                     data = ds[var_name][r_min:r_max, c_min:c_max].values
                     temp_tensor = torch.tensor(data, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-                    sat_tensor = torch.nn.functional.interpolate(temp_tensor, size=(64, 64), mode='bilinear', align_corners=False)
+                    sat_tensor = torch.nn.functional.interpolate(temp_tensor, size=(IMG_SIZE, IMG_SIZE), mode='bilinear', align_corners=False)
                 else:
                     data = ds[var_name].values
                     sat_tensor = torch.tensor(data, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
@@ -208,7 +255,21 @@ def get_input_data(df, sensor_id, target_time, seq_len=6):
     else:
         print(f"Satellite image missing for {sat_ts}")
 
-    return sat_tensor, sensor_tensor
+    # R4: 裁剪基站上方的 32×32 patch + 生成坐标特征
+    coord_tensor = None
+    if station_lat is not None and station_lon is not None:
+        px, py = _latlon_to_pixel(station_lat, station_lon)
+        patch = _crop_patch(sat_tensor[0], px, py)  # (1, 32, 32)
+        sat_tensor = patch.unsqueeze(0)  # (1, 1, 32, 32)
+        coord_tensor = torch.tensor([[px / IMG_SIZE, py / IMG_SIZE]], dtype=torch.float32)
+    else:
+        # 无坐标时用中心 patch
+        cx, cy = IMG_SIZE // 2, IMG_SIZE // 2
+        patch = _crop_patch(sat_tensor[0], cx, cy)
+        sat_tensor = patch.unsqueeze(0)
+        coord_tensor = torch.tensor([[0.5, 0.5]], dtype=torch.float32)
+
+    return sat_tensor, sensor_tensor, coord_tensor
 
 def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size=3):
     """
@@ -246,23 +307,28 @@ def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size
         # Weight inverse to distance (plus epsilon)
         w = 1.0 / (dist_km + 1.0)
         
-        sat_in, sensor_in = get_input_data(df, sensor_id, time_obj)
+        # 获取基站坐标用于 patch 裁剪
+        s_lat, s_lon = None, None
+        for s in stations_meta:
+            if s['id'] == sensor_id:
+                s_lat = s['location']['latitude']
+                s_lon = s['location']['longitude']
+                break
+
+        sat_in, sensor_in, coord_in = get_input_data(df, sensor_id, time_obj, station_lat=s_lat, station_lon=s_lon)
         
         if sat_in is None or sensor_in is None:
             continue
             
         # Capture TBB from the first (closest) valid sensor for cloud analysis
         if tbb_val is None and sat_in is not None:
-             # sat_in is (1, 1, 64, 64) normalized (val - 200)/100
-             # We want the center pixel approx.
-             # In a real system, we'd map lat/lon to pixel. 
-             # Here, we take the mean of the center 16x16 crop as "local cloudiness"
-             center_crop = sat_in[0, 0, 24:40, 24:40] 
+             # sat_in is (1, 1, 32, 32) normalized (val - 200)/100
+             center_crop = sat_in[0, 0, 12:20, 12:20] 
              mean_norm = center_crop.mean().item()
              tbb_val = mean_norm * 100.0 + 200.0 # De-normalize
         
         with torch.no_grad():
-            pred = model(sat_in.to(DEVICE), sensor_in.to(DEVICE)).item()
+            pred = model(sat_in.to(DEVICE), sensor_in.to(DEVICE), coord_in.to(DEVICE)).item()
             
         predictions.append(pred)
         weights.append(w)

@@ -52,7 +52,7 @@ RES = 0.02
 # 新加坡裁剪框
 SG_LAT_MAX, SG_LON_MIN = 1.50, 103.6
 SG_LAT_MIN, SG_LON_MAX = 1.15, 104.1
-TARGET_SIZE = (64, 64)
+TARGET_SIZE = (128, 128)
 
 
 def _latlon2xy(lat: float, lon: float) -> tuple[int, int]:

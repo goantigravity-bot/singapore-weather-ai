@@ -329,16 +329,20 @@ def sync_satellite_data(s3, bucket):
         except Exception as e:
             logger.warning(f"Error syncing processed satellite data: {e}")
 
-    # Cleanup: remove .npy files older than 3 hours
-    # File naming: NC_H09_YYYYMMDD_HHMM_R21_FLDK.*.npy
+    # Cleanup: remove files older than 24 hours (keep full day for cloud animation)
+    # SAT_128_YYYYMMDD_HHMM.npy — timestamp is SGT, need -8h to compare with UTC
+    # NC_H09_YYYYMMDD_HHMM_* — timestamp is UTC
     cleanup_count = 0
-    cutoff = now_utc - timedelta(hours=3)
+    cutoff = now_utc - timedelta(hours=24)
     for f in os.listdir(local_dir):
         if not f.endswith(".npy"):
             continue
         try:
             parts = f.split("_")
             file_dt = datetime.strptime(f"{parts[2]}_{parts[3]}", "%Y%m%d_%H%M")
+            # SAT_128_* 文件名是 SGT 时间，需转 UTC
+            if f.startswith("SAT_128_"):
+                file_dt = file_dt - timedelta(hours=8)
             if file_dt < cutoff:
                 os.remove(os.path.join(local_dir, f))
                 cleanup_count += 1
@@ -346,6 +350,52 @@ def sync_satellite_data(s3, bucket):
             pass
     if cleanup_count:
         logger.info(f"🧹 Cleaned {cleanup_count} old processed satellite files")
+
+    # 将 npy 转为 PNG（供前端云图展示），放到 processed_data/png/
+    png_dir = os.path.join(local_dir, "png")
+    os.makedirs(png_dir, exist_ok=True)
+    convert_count = 0
+    for f in os.listdir(local_dir):
+        if not f.endswith(".npy"):
+            continue
+        png_name = f.replace(".npy", ".png")
+        png_path = os.path.join(png_dir, png_name)
+        if os.path.exists(png_path):
+            continue
+        npy_path = os.path.join(local_dir, f)
+        try:
+            arr = np.load(npy_path)
+            # 与 _npy_to_base64_png 渲染逻辑一致
+            tbb_min, tbb_max = 200.0, 290.0
+            alpha = np.clip((tbb_max - arr) / (tbb_max - tbb_min), 0.0, 1.0)
+            rgba = np.zeros((*arr.shape, 4), dtype=np.uint8)
+            rgba[:, :, 0] = 255
+            rgba[:, :, 1] = 255
+            rgba[:, :, 2] = 255
+            rgba[:, :, 3] = (alpha * 220).astype(np.uint8)
+            from PIL import Image
+            img = Image.fromarray(rgba, 'RGBA')
+            img = img.resize((512, 512), Image.BILINEAR)
+            img.save(png_path, format='PNG', optimize=True)
+            convert_count += 1
+        except Exception as e:
+            logger.warning(f"Failed to convert {f} to PNG: {e}")
+    if convert_count:
+        logger.info(f"🎨 Converted {convert_count} npy → PNG for cloud animation")
+
+    # Cleanup old PNGs
+    for f in os.listdir(png_dir):
+        if not f.endswith(".png"):
+            continue
+        try:
+            parts = f.replace(".png", "").split("_")
+            file_dt = datetime.strptime(f"{parts[2]}_{parts[3]}", "%Y%m%d_%H%M")
+            if f.startswith("SAT_128_"):
+                file_dt = file_dt - timedelta(hours=8)
+            if file_dt < cutoff:
+                os.remove(os.path.join(png_dir, f))
+        except (ValueError, IndexError):
+            pass
 
 def sync_assets_thread():
     """Background thread to sync model and data from S3"""
@@ -476,7 +526,7 @@ def set_geocoding_config(body: dict):
 
 @api_router.get("/health")
 def health():
-    return {"status": "ok", "version": "0.9.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
+    return {"status": "ok", "version": "0.10.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
 
 @api_router.get("/stations")
 def get_stations():
@@ -1159,11 +1209,11 @@ def accuracy_by_distance():
 
 # ── 卫星云图帧动画 API ──
 
-# 新加坡裁剪框（与 satellite_preprocessor.py 保持一致）
-SG_BOUNDS = [[1.15, 103.6], [1.50, 104.1]]
+# 新加坡+周边区域裁剪框 (128×128, 覆盖 SG+JB+巴淡岛)
+SG_BOUNDS = [[0.05, 102.5], [2.65, 105.1]]
 
 def _npy_to_base64_png(npy_path: str) -> str | None:
-    """将 64×64 TBB .npy 转为 RGBA PNG（白色=云，透明=晴空）并返回 base64。
+    """将 128×128 TBB .npy 转为 RGBA PNG（白色=云，透明=晴空）并返回 base64。
 
     颜色映射逻辑：红外亮温(TBB) 越低意味着云越高越厚。
     - TBB ≤ 200K：最浓厚的云（白色，完全不透明）
@@ -1175,7 +1225,7 @@ def _npy_to_base64_png(npy_path: str) -> str | None:
     from PIL import Image
 
     try:
-        arr = np.load(npy_path)  # float32, 64×64, Kelvin
+        arr = np.load(npy_path)  # float32, 128×128 or 64×64, Kelvin
         # 线性映射：TBB → alpha（低温=高不透明度）
         tbb_min, tbb_max = 200.0, 290.0
         alpha = np.clip((tbb_max - arr) / (tbb_max - tbb_min), 0.0, 1.0)
@@ -1187,8 +1237,8 @@ def _npy_to_base64_png(npy_path: str) -> str | None:
         rgba[:, :, 3] = (alpha * 220).astype(np.uint8)  # 最高 220 而非 255，保留底图可见性
 
         img = Image.fromarray(rgba, 'RGBA')
-        # 上采样到 256×256，双线性插值让云图更平滑
-        img = img.resize((256, 256), Image.BILINEAR)
+        # 上采样到 512×512，双线性插值让云图更平滑
+        img = img.resize((512, 512), Image.BILINEAR)
 
         buf = io.BytesIO()
         img.save(buf, format='PNG', optimize=True)
@@ -1200,38 +1250,76 @@ def _npy_to_base64_png(npy_path: str) -> str | None:
 
 @api_router.get("/satellite/frames")
 def get_satellite_frames():
-    """返回最近 3 小时的卫星云图帧（用于前端动画播放）。
+    """返回最近 18 帧预渲染 PNG 云图（用于前端动画播放）。
 
-    每帧包含 base64 PNG 和 UTC 时间戳。帧按时间排序，
-    前端逐帧切换 ImageOverlay 实现动画效果。
+    优先读取 processed_data/png/ 下的预渲染 PNG；
+    若无 PNG 则 fallback 到 npy 实时转换。
     """
-    local_dir = "processed_data"
-    if not os.path.isdir(local_dir):
-        return {"frames": [], "bounds": SG_BOUNDS}
+    png_dir = os.path.join("processed_data", "png")
+    npy_dir = "processed_data"
 
-    # 扫描并按时间排序
     entries = []
-    for f in os.listdir(local_dir):
-        if not f.endswith(".npy"):
-            continue
-        try:
-            parts = f.split("_")
-            file_dt = datetime.strptime(f"{parts[2]}_{parts[3]}", "%Y%m%d_%H%M")
-            entries.append((file_dt, os.path.join(local_dir, f)))
-        except (ValueError, IndexError):
-            continue
+
+    # 优先扫描 PNG 目录
+    if os.path.isdir(png_dir):
+        for f in os.listdir(png_dir):
+            if not f.endswith(".png"):
+                continue
+            try:
+                base = f.replace(".png", "")
+                parts = base.split("_")
+                file_dt = datetime.strptime(f"{parts[2]}_{parts[3]}", "%Y%m%d_%H%M")
+                entries.append((file_dt, os.path.join(png_dir, f), "png"))
+            except (ValueError, IndexError):
+                continue
+
+    # 如果没有 PNG，fallback 到 npy
+    if not entries and os.path.isdir(npy_dir):
+        for f in os.listdir(npy_dir):
+            if not f.endswith(".npy"):
+                continue
+            try:
+                if f.startswith("SAT_128_"):
+                    parts = f.replace(".npy", "").split("_")
+                    file_dt = datetime.strptime(f"{parts[2]}_{parts[3]}", "%Y%m%d_%H%M")
+                elif f.startswith("NC_H0"):
+                    parts = f.split("_")
+                    file_dt = datetime.strptime(f"{parts[2]}_{parts[3]}", "%Y%m%d_%H%M")
+                else:
+                    continue
+                entries.append((file_dt, os.path.join(npy_dir, f), "npy"))
+            except (ValueError, IndexError):
+                continue
 
     entries.sort(key=lambda x: x[0])
 
+    # 全天展示（PNG 预渲染后每帧 ~50KB，144 帧 ≈ 7MB）
+    MAX_FRAMES = 144
+    entries = entries[-MAX_FRAMES:]
+
     frames = []
-    for dt, path in entries:
-        b64 = _npy_to_base64_png(path)
-        if b64:
-            frames.append({
-                "image": f"data:image/png;base64,{b64}",
-                "time": dt.strftime("%H:%M"),
-                "timestamp": dt.isoformat(),
-            })
+    for dt, path, fmt in entries:
+        if fmt == "png":
+            # 直接读 PNG 转 base64，无需 numpy
+            try:
+                import base64
+                with open(path, "rb") as fh:
+                    b64 = base64.b64encode(fh.read()).decode("ascii")
+                frames.append({
+                    "image": f"data:image/png;base64,{b64}",
+                    "time": dt.strftime("%H:%M"),
+                    "timestamp": dt.isoformat(),
+                })
+            except Exception as e:
+                logger.warning(f"Failed to read PNG {path}: {e}")
+        else:
+            b64 = _npy_to_base64_png(path)
+            if b64:
+                frames.append({
+                    "image": f"data:image/png;base64,{b64}",
+                    "time": dt.strftime("%H:%M"),
+                    "timestamp": dt.isoformat(),
+                })
 
     return {"frames": frames, "bounds": SG_BOUNDS}
 

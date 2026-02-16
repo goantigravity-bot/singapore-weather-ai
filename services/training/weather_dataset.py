@@ -5,9 +5,41 @@ import numpy as np
 import os
 import logging
 import math
+import json
+import requests
 from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
+
+# --- 基站坐标映射（方案 A: 局部裁剪 32×32 patch）---
+PATCH_SIZE = 32
+IMG_SIZE = 128
+_STATION_COORD_CACHE = os.path.join(os.path.dirname(__file__), 'station_coords.json')
+
+def _load_station_coords():
+    """从缓存或 API 获取基站经纬度，返回 {sensor_id: (lat, lon)}。"""
+    if os.path.exists(_STATION_COORD_CACHE):
+        with open(_STATION_COORD_CACHE) as f:
+            return json.load(f)
+
+    # 首次运行时从 API 拉取并缓存
+    try:
+        resp = requests.get('https://api.data.gov.sg/v1/environment/rainfall', timeout=10)
+        stations = resp.json().get('metadata', {}).get('stations', [])
+        coords = {s['id']: {'lat': s['location']['latitude'], 'lon': s['location']['longitude']} for s in stations}
+        with open(_STATION_COORD_CACHE, 'w') as f:
+            json.dump(coords, f, indent=2)
+        logger.info(f"Cached {len(coords)} station coordinates to {_STATION_COORD_CACHE}")
+        return coords
+    except Exception as e:
+        logger.warning(f"Failed to load station coords: {e}, using empty map")
+        return {}
+
+def _latlon_to_pixel(lat, lon):
+    """基站经纬度 → 128×128 卫星图的像素坐标 (px, py)。"""
+    py = int((SG_LAT_MAX - lat) / (SG_LAT_MAX - SG_LAT_MIN) * IMG_SIZE)
+    px = int((lon - SG_LON_MIN) / (SG_LON_MAX - SG_LON_MIN) * IMG_SIZE)
+    return px, py
 
 # --- Himawari-9 Constants & Projection Utils (EQR L3) ---
 # Projection: Equirectangular (EQR)
@@ -52,7 +84,7 @@ class WeatherDataset(Dataset):
         
         # 🆕 滑动窗口优化: 只使用最近N天的数据
         # MAX_TRAINING_DAYS = 30  # 原逻辑：只取最新30天
-        MAX_TRAINING_DAYS = 365  # 临时修改：扩大窗口以支持历史数据回放训练 (Oct -> Dec)
+        MAX_TRAINING_DAYS = 999  # 使用全部历史数据
         
         if len(self.sensor_df) > 0:
             max_date = self.sensor_df['timestamp'].max()
@@ -70,6 +102,14 @@ class WeatherDataset(Dataset):
         else:
             print("⚠️  数据集为空")
         
+        # --- 基站坐标 → 像素映射（局部裁剪用）---
+        raw_coords = _load_station_coords()
+        self._station_pixel = {}  # {sensor_id: (px, py)}
+        for sid, c in raw_coords.items():
+            px, py = _latlon_to_pixel(c['lat'], c['lon'])
+            self._station_pixel[sid] = (px, py)
+        logger.info(f"Station pixel map: {len(self._station_pixel)} stations mapped")
+
         # --- 一次性预加载所有卫星 .npy 到内存（约 5MB，完全放得下内存）---
         # 避免 __getitem__ 中每次 glob+np.load 磁盘 IO
         self._sat_cache = {}
@@ -78,16 +118,28 @@ class WeatherDataset(Dataset):
         processed_dir = "processed_data"
         if os.path.exists(processed_dir):
             for f in os.listdir(processed_dir):
-                if (f.startswith("NC_H09_") or f.startswith("NC_H08_")) and f.endswith(".npy"):
-                    parts = f.split("_")
-                    if len(parts) >= 4:
-                        ts_str = f"{parts[2]}_{parts[3]}"
-                        self.available_sat_timestamps.add(ts_str)
-                        # 预加载到内存
-                        try:
-                            self._sat_cache[ts_str] = np.load(os.path.join(processed_dir, f))
-                        except Exception:
-                            pass
+                if f.endswith(".npy"):
+                    # 兼容 NC_H09_YYYYMMDD_HHMM_... 和 SAT_YYYYMMDD_HHMM 两种格式
+                    ts_str = None
+                    if f.startswith("SAT_128_"):
+                        # SAT_128_YYYYMMDD_HHMM.npy
+                        base = f.replace(".npy", "")
+                        parts = base.split("_")
+                        if len(parts) >= 4:
+                            ts_str = f"{parts[2]}_{parts[3]}"
+                    elif f.startswith("NC_H0"):
+                        parts = f.split("_")
+                        if len(parts) >= 4:
+                            ts_str = f"{parts[2]}_{parts[3]}"
+
+                    if ts_str is None:
+                        continue
+
+                    self.available_sat_timestamps.add(ts_str)
+                    try:
+                        self._sat_cache[ts_str] = np.load(os.path.join(processed_dir, f))
+                    except Exception:
+                        pass
 
         if os.path.exists(sat_dir):
             for f in os.listdir(sat_dir):
@@ -231,14 +283,36 @@ class WeatherDataset(Dataset):
         # 直接从内存字典取，O(1) 哈希查找
         data = self._sat_cache.get(utc_str)
         if data is not None:
-            sat_tensor = torch.tensor(data, dtype=torch.float32)
-            if sat_tensor.ndim == 2:
-                sat_tensor = sat_tensor.unsqueeze(0)
-            sat_tensor = (sat_tensor - 200) / 100.0
+            sat_full = torch.tensor(data, dtype=torch.float32)
+            if sat_full.ndim == 2:
+                sat_full = sat_full.unsqueeze(0)  # (1, 128, 128)
+            sat_full = (sat_full - 200) / 100.0
         else:
-            sat_tensor = torch.zeros(1, 64, 64)
+            sat_full = torch.zeros(1, IMG_SIZE, IMG_SIZE)
         
-        return sat_tensor, sensor_tensor, target_tensor
+        # 4. 以基站为中心裁剪 32×32 patch
+        sensor_id = sample_info['sensor_id']
+        px, py = self._station_pixel.get(sensor_id, (IMG_SIZE // 2, IMG_SIZE // 2))
+        half = PATCH_SIZE // 2
+        
+        # 边界安全：clamp 到图像范围内
+        y1 = max(0, py - half)
+        y2 = min(IMG_SIZE, py + half)
+        x1 = max(0, px - half)
+        x2 = min(IMG_SIZE, px + half)
+        
+        patch = sat_full[:, y1:y2, x1:x2]
+        
+        # 边界处 patch 可能不足 32×32，用 0 填充
+        if patch.shape[1] != PATCH_SIZE or patch.shape[2] != PATCH_SIZE:
+            padded = torch.zeros(1, PATCH_SIZE, PATCH_SIZE)
+            padded[:, :patch.shape[1], :patch.shape[2]] = patch
+            patch = padded
+        
+        # 5. 归一化坐标特征 (0~1)
+        coord_tensor = torch.tensor([px / IMG_SIZE, py / IMG_SIZE], dtype=torch.float32)
+        
+        return patch, sensor_tensor, coord_tensor, target_tensor
 
 def _build_weighted_sampler(subset, rain_threshold=0.1):
     """
@@ -253,7 +327,7 @@ def _build_weighted_sampler(subset, rain_threshold=0.1):
     rain_flags = []
     dataset = subset.dataset
     for idx in subset.indices:
-        _, _, target = dataset[idx]
+        _, _, _, target = dataset[idx]
         rain_flags.append(target.item() > rain_threshold)
 
     n_rain = sum(rain_flags)
