@@ -15,13 +15,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-# 将脚本所在目录加入 path 以复用 satellite_preprocessor
-SCRIPT_DIR = Path(__file__).parent
-sys.path.insert(0, str(SCRIPT_DIR))
-# fallback: 也检查 training 目录
-TRAINING_DIR = SCRIPT_DIR.parent / "services" / "training"
-if TRAINING_DIR.exists():
-    sys.path.insert(0, str(TRAINING_DIR))
+# satellite_preprocessor 在同目录，直接 import
 
 from satellite_preprocessor import (
     crop_nc_to_npy,

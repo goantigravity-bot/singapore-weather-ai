@@ -38,5 +38,11 @@ evaluation_plot.png
 # IDEs
 .vscode/
 .idea/
-api.log
+
+# Logs
+*.log
+
+# Runtime data
+*.csv
 weather.db
+model_backups/
