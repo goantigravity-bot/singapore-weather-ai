@@ -42,6 +42,7 @@ PARALLEL_JOBS = int(os.environ.get("PARALLEL_JOBS", "12"))
 S3_BUCKET = os.environ.get("S3_BUCKET", "weather-ai-models-de08370c")
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 S3_PROCESSED_PREFIX = "processed/satellite"
+S3_RAW_PREFIX = "satellite"
 
 # ── Himawari EQR 投影常量（60N~60S, 70E~150W, 0.02° 分辨率）──
 LAT_MAX = 60.0
@@ -138,6 +139,21 @@ def check_s3_npy_exists(s3, date_compact: str, filename_hint: str) -> bool:
         return False
 
 
+def list_s3_raw_files(s3, date_compact: str) -> list[str]:
+    """列出 S3 satellite/{date}/ 中的 raw .nc 文件 key。"""
+    prefix = f"{S3_RAW_PREFIX}/{date_compact}/"
+    keys = []
+    try:
+        paginator = s3.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=prefix):
+            for obj in page.get('Contents', []):
+                if obj['Key'].endswith('.nc'):
+                    keys.append(obj['Key'])
+    except Exception as e:
+        logger.warning(f"Failed to list S3 raw files for {date_compact}: {e}")
+    return keys
+
+
 def list_ftp_files(date_compact: str) -> list[str]:
     """列出 JAXA FTP 指定日期的所有卫星文件名。"""
     year_month = date_compact[:6]
@@ -174,22 +190,54 @@ def list_ftp_files(date_compact: str) -> list[str]:
     return list(selected.values())
 
 
-def download_crop_upload(filename: str, date_compact: str, s3, tmp_dir: str) -> str:
+def _crop_and_upload(local_nc: str, filename: str, date_compact: str,
+                     s3, tmp_dir: str) -> str:
+    """对本地 .nc 文件执行 crop → upload .npy → 清理。"""
+    npy_data = crop_nc_to_npy(local_nc)
+    if npy_data is None:
+        return "failed"
+
+    npy_name = filename.replace(".nc", ".npy")
+    local_npy = os.path.join(tmp_dir, npy_name)
+    np.save(local_npy, npy_data)
+
+    s3_key = f"{S3_PROCESSED_PREFIX}/{date_compact}/{npy_name}"
+    s3.upload_file(local_npy, S3_BUCKET, s3_key)
+    logger.info(f"📤 {npy_name} → s3://{S3_BUCKET}/{s3_key}")
+
+    os.remove(local_npy)
+    return "uploaded"
+
+
+def download_crop_upload(filename: str, date_compact: str, s3, tmp_dir: str,
+                         s3_raw_key: str | None = None) -> str:
     """
     单文件处理：download .nc → crop → upload .npy → delete .nc
+    优先从 S3 raw 下载（同区域快），回退到 JAXA FTP。
     返回: 'uploaded' | 'skipped' | 'failed'
     """
-    # 检查 S3 是否已有 .npy
     if check_s3_npy_exists(s3, date_compact, filename):
         return "skipped"
 
-    year_month = date_compact[:6]
-    day = date_compact[6:8]
-    ftp_url = f"{FTP_BASE}/jma/netcdf/{year_month}/{day}/{filename}"
     local_nc = os.path.join(tmp_dir, filename)
 
     try:
-        # 下载 .nc 到本地
+        # 优先从 S3 下载已有的 raw .nc（同区域，速度快）
+        if s3_raw_key:
+            try:
+                s3.download_file(S3_BUCKET, s3_raw_key, local_nc)
+                if os.path.getsize(local_nc) > 1_000_000:
+                    return _crop_and_upload(local_nc, filename, date_compact, s3, tmp_dir)
+            except Exception as e:
+                logger.warning(f"S3 raw download failed, trying FTP: {e}")
+                if os.path.exists(local_nc):
+                    os.remove(local_nc)
+
+        # 回退到 JAXA FTP 下载
+        year_month = date_compact[:6]
+        day = date_compact[6:8]
+        ftp_url = f"{FTP_BASE}/jma/netcdf/{year_month}/{day}/{filename}"
+
         result = subprocess.run(
             ["curl", "-s", "--ftp-ssl",
              "--user", f"{JAXA_USER}:{JAXA_PASS}",
@@ -199,36 +247,15 @@ def download_crop_upload(filename: str, date_compact: str, s3, tmp_dir: str) -> 
 
         if result.returncode != 0 or not os.path.exists(local_nc):
             return "failed"
-
-        # 检查大小是否合理 (>1MB)
         if os.path.getsize(local_nc) < 1_000_000:
-            os.remove(local_nc)
             return "failed"
 
-        # Crop → .npy
-        npy_data = crop_nc_to_npy(local_nc)
-        if npy_data is None:
-            return "failed"
-
-        # 保存 .npy 到本地临时文件
-        npy_name = filename.replace(".nc", ".npy")
-        local_npy = os.path.join(tmp_dir, npy_name)
-        np.save(local_npy, npy_data)
-
-        # 上传 .npy 到 S3
-        s3_key = f"{S3_PROCESSED_PREFIX}/{date_compact}/{npy_name}"
-        s3.upload_file(local_npy, S3_BUCKET, s3_key)
-        logger.info(f"📤 {npy_name} → s3://{S3_BUCKET}/{s3_key}")
-
-        # 清理本地文件
-        os.remove(local_npy)
-        return "uploaded"
+        return _crop_and_upload(local_nc, filename, date_compact, s3, tmp_dir)
 
     except Exception as e:
         logger.error(f"❌ {filename}: {e}")
         return "failed"
     finally:
-        # 确保删除 .nc
         if os.path.exists(local_nc):
             os.remove(local_nc)
 
@@ -236,6 +263,7 @@ def download_crop_upload(filename: str, date_compact: str, s3, tmp_dir: str) -> 
 def process_day(date_str: str, s3=None) -> dict:
     """
     处理一天的所有卫星文件。
+    优先从 S3 已有的 raw .nc crop，没有的再从 JAXA FTP 下载。
 
     Args:
         date_str: 'YYYY-MM-DD' 格式日期
@@ -248,21 +276,33 @@ def process_day(date_str: str, s3=None) -> dict:
     if s3 is None:
         s3 = get_s3_client()
 
+    # 先检查 S3 是否有已有的 raw .nc（backfill 场景，避免重新从 FTP 下载）
+    s3_raw_keys = list_s3_raw_files(s3, date_compact)
+    # 建立 filename → s3_key 映射
+    s3_raw_map = {key.split("/")[-1]: key for key in s3_raw_keys}
+
     files = list_ftp_files(date_compact)
     result = {"date": date_str, "total": len(files), "uploaded": 0, "skipped": 0, "failed": 0}
 
-    if not files:
-        logger.warning(f"⚠️ {date_str}: no files found on FTP")
+    if not files and not s3_raw_map:
+        logger.warning(f"⚠️ {date_str}: no files found on FTP or S3")
         return result
+
+    # 如果 FTP 为空但 S3 有 raw，用 S3 的文件名列表
+    if not files and s3_raw_map:
+        files = list(s3_raw_map.keys())
+        result["total"] = len(files)
 
     with tempfile.TemporaryDirectory(prefix="sat_") as tmp_dir:
         for filename in files:
-            status = download_crop_upload(filename, date_compact, s3, tmp_dir)
+            s3_key = s3_raw_map.get(filename)
+            status = download_crop_upload(filename, date_compact, s3, tmp_dir, s3_raw_key=s3_key)
             result[status] += 1
 
+    source = "S3" if s3_raw_map else "FTP"
     icon = "✅" if result["failed"] == 0 else "⚠️"
     logger.info(
-        f"{icon} {date_str}: {result['uploaded']}↑ {result['skipped']}⏭ "
+        f"{icon} {date_str} [{source}]: {result['uploaded']}↑ {result['skipped']}⏭ "
         f"{result['failed']}❌ ({result['total']} files)"
     )
     return result
