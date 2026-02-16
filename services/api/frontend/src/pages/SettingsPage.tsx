@@ -75,12 +75,16 @@ const SettingsPage: React.FC = () => {
 
     return (
         <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
             width: '100%',
-            minHeight: '100vh',
+            height: '100%',
             background: 'var(--bg-color)',
             padding: '2rem',
             boxSizing: 'border-box',
-            overflow: 'auto'
+            overflowY: 'auto',
+            zIndex: 10,
         }}>
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                 {/* Header */}
