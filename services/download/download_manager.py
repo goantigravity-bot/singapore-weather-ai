@@ -6,6 +6,7 @@ import threading
 from datetime import datetime, timedelta
 import boto3
 from botocore.exceptions import ClientError
+from download_satellite import process_day, load_env
 
 # --- Configuration ---
 # 1. Real-Time Thread
@@ -60,9 +61,9 @@ def update_status(mode, date, status, sat_count=0):
         logger.warning(f"Failed to update status: {e}")
 
 def check_s3_exists(date_str):
-    """Check if satellite data exists in active folder"""
+    """Check if processed satellite .npy exists for this date."""
     s3 = get_s3_client()
-    prefix = f"satellite/{date_str}/"
+    prefix = f"processed/satellite/{date_str}/"
     try:
         resp = s3.list_objects_v2(Bucket=S3_BUCKET, Prefix=prefix, MaxKeys=1)
         return 'Contents' in resp
@@ -105,101 +106,70 @@ def restore_from_archive(date_str):
     logger.info(f"✅ Restored {count} files for {date_str}")
     return count > 0
 
-def run_download_script(start, end):
-    """Executes the shell script"""
-    cmd = ["./bulk_download_to_s3_parallel.sh", start, end]
-    try:
-        env = os.environ.copy()
-        subprocess.run(cmd, env=env, check=True)
-        return True
-    except subprocess.CalledProcessError as e:
-        logger.error(f"❌ Download Failed: {e}")
-        return False
-
 # --- Thread 1: Real-Time ---
 def realtime_thread():
+    """每 5 分钟下载+预处理今天的卫星数据（增量）。"""
     logger.info("🟢 Real-Time Thread Started")
+    s3 = get_s3_client()
     while True:
         now = datetime.now()
         today_str = now.strftime("%Y-%m-%d")
-        
-        logger.info(f"⚡ [RealTime] Checking {today_str}")
-        update_status("real-time", today_str, "checking")
-        
-        # Always run download for Today (incremental)
-        run_download_script(today_str, today_str)
+
+        logger.info(f"⚡ [RealTime] Processing {today_str}")
+        update_status("real-time", today_str, "downloading")
+
+        result = process_day(today_str, s3)
+        logger.info(f"⚡ [RealTime] {today_str}: {result['uploaded']}↑ {result['skipped']}⏭ {result['failed']}❌")
         update_status("real-time", today_str, "sleeping")
-        
-        # Late night catch-up (e.g., 00:00 - 02:00)
+
+        # 凌晨 0-2 点补查昨天
         if now.hour < 2:
             yest_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
             logger.info(f"🌙 [RealTime] Late night check for {yest_str}")
-            run_download_script(yest_str, yest_str)
-            
-            # Check completion for Yesterday and upload marker
-            # TODO: Add completion check logic specifically for yesterday
-            pass
+            process_day(yest_str, s3)
 
         time.sleep(CHECK_INTERVAL_REALTIME)
 
 # --- Thread 2: Backfill ---
 def backfill_thread():
+    """历史回填：逐日检查并下载+预处理缺失的卫星数据。"""
     logger.info("🔵 Backfill Thread Started")
-    
-    # Determine Range
+    s3 = get_s3_client()
+
     s = datetime.strptime(START_DATE, "%Y-%m-%d")
     e = datetime.strptime(END_DATE, "%Y-%m-%d")
-    
+
     current = s
-    while True: # Continuous Loop over history? Or just once?
-        # User said "continuous loop"
+    while True:
         if current > e:
             logger.info("🔄 [Backfill] Cycle complete. Restarting in 4 hours.")
             time.sleep(CHECK_INTERVAL_BACKFILL)
-            current = s # Reset
-            # Re-read END_DATE in case days passed
-            yest = datetime.now() - timedelta(days=1)
-            e = yest
+            current = s
+            e = datetime.now() - timedelta(days=1)
             continue
-            
+
         date_str = current.strftime("%Y-%m-%d")
-        logger.info(f"🕵️ [Backfill] Checking {date_str}")
-        update_status("backfill", date_str, "checking")
-        
-        # 1. Check Active
-        if check_s3_exists(date_str.replace("-", "")): # S3 path uses YYYYMMDD?
-            # Wait, script uses YYYY-MM-DD input, but bucket structure?
-            # bulk_download...sh: DATE_STR=$(date -d "$CURRENT_DATE" +%Y%m%d)
-            # So S3 key is YYYYMMDD.
-            pass
-        
-        # We need YYYYMMDD for S3 check
         date_compact = current.strftime("%Y%m%d")
-        
+
         if check_s3_exists(date_compact):
-            logger.info(f"✅ [Backfill] Data exists for {date_str}. Skipping.")
+            logger.info(f"✅ [Backfill] {date_str} exists. Skipping.")
         else:
-            # 2. Check Archive
-            if check_s3_archived(date_compact):
-                logger.info(f"📦 [Backfill] Found in Archive. Restoring {date_str}...")
-                update_status("backfill", date_str, "restoring")
-                restore_from_archive(date_compact)
-            else:
-                # 3. Download
-                logger.info(f"⬇️ [Backfill] Downloading {date_str} from Remote...")
-                update_status("backfill", date_str, "downloading")
-                success = run_download_script(date_str, date_str)
-                if success:
-                    # Upload .complete marker
-                    logger.info(f"✅ [Backfill] Uploading .complete marker for {date_str}")
-                    try:
-                        s3 = get_s3_client()
-                        s3.put_object(Bucket=S3_BUCKET, Key=f"satellite/{date_compact}/.complete", Body="")
-                    except Exception as e:
-                        logger.error(f"❌ Failed to upload marker: {e}")
+            logger.info(f"⬇️ [Backfill] Processing {date_str}...")
+            update_status("backfill", date_str, "downloading")
+            result = process_day(date_str, s3)
+
+            if result["uploaded"] > 0:
+                # 上传 .complete 标记
+                try:
+                    s3.put_object(
+                        Bucket=S3_BUCKET,
+                        Key=f"processed/satellite/{date_compact}/.complete",
+                        Body=""
+                    )
+                except Exception as ex:
+                    logger.error(f"❌ Failed to upload marker: {ex}")
 
         current += timedelta(days=1)
-        # Small sleep between days to be nice
         time.sleep(1)
 
 # --- Thread 3: Gov Data ---
@@ -231,35 +201,34 @@ def gov_data_thread():
 
 def main():
     logger.info("🚀 Download Server Orchestrator Starting...")
-    
-    # Verify S3 connection & Create Bucket if needed (Local Dev)
+
+    # 加载 JAXA 凭证
+    load_env()
+
+    # Verify S3 connection
     try:
         s3 = get_s3_client()
         s3.list_buckets()
         logger.info("✅ S3 Connection OK")
-        
-        # Auto-create bucket for local simulation
+
         if S3_ENDPOINT_URL:
             try:
                 s3.head_bucket(Bucket=S3_BUCKET)
-            except:
+            except Exception:
                 logger.info(f"🔧 Creating bucket {S3_BUCKET} for local simulation...")
-                s3.create_bucket(Bucket=S3_BUCKET) 
-                # Note: MinIO ignores region usually
+                s3.create_bucket(Bucket=S3_BUCKET)
     except Exception as e:
         logger.error(f"❌ S3 Connection Failed: {e}")
-        # Proceed anyway?
-    
+
     # Start Threads
     t1 = threading.Thread(target=realtime_thread, daemon=True)
     t2 = threading.Thread(target=backfill_thread, daemon=True)
     t3 = threading.Thread(target=gov_data_thread, daemon=True)
-    
+
     t1.start()
     t2.start()
     t3.start()
-    
-    # Keep main alive
+
     try:
         while True:
             time.sleep(1)
