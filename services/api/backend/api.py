@@ -1239,6 +1239,8 @@ def get_satellite_frames():
 # Register Router (Match both /api prefix and root for dev convenience)
 app.include_router(api_router)
 app.include_router(api_router, prefix="/api")
+app.include_router(monitor_router)
+app.include_router(monitor_router, prefix="/api")
 
 # --- Frontend & Monitor Dashboard Static Files ---
 FRONTEND_DIR_ENV = os.environ.get("FRONTEND_DIR")
