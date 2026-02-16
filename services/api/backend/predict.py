@@ -8,12 +8,24 @@ import numpy as np
 from scipy.spatial import Delaunay
 from datetime import datetime, timedelta
 from weather_fusion_model import WeatherFusionNet
-from weather_dataset import latlon2xy # We reuse the projection tool
+
+# --- Himawari EQR L3 投影参数 ---
+# 原始数据来自 weather_dataset.py，内联以消除对该模块的依赖
+# 投影: Equirectangular, 覆盖 60N→60S / 70E→150W, 分辨率 0.02°
+LAT_MAX = 60.0
+LON_MIN = 70.0
+RES = 0.02
+
+def latlon2xy(lat, lon):
+    """将经纬度转为 Himawari EQR L3 像素坐标 (col, row)"""
+    y = (LAT_MAX - lat) / RES
+    x = (lon - LON_MIN) / RES
+    return int(round(x)), int(round(y))
 
 # --- Config ---
 MODEL_PATH = "weather_fusion_model.pth"
-CSV_PATH = "real_sensor_data.csv" # Or dummy_data/sensor_readings.csv
-SAT_DIR = "satellite_data"       # Or dummy_data/satellite
+CSV_PATH = "real_sensor_data.csv"
+SAT_DIR = "satellite_data"
 DEVICE = torch.device("cpu")
 
 # Singapore Crop Box (Same as in dataset)
