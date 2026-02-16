@@ -47,16 +47,22 @@ STATE_FILE = Path(__file__).parent / "data" / "satellite_process_state.json"
 
 
 def load_env():
-    """从下载服务器 .env 加载 JAXA 凭证。"""
+    """从同目录 .env 加载 JAXA 凭证。"""
     global JAXA_USER, JAXA_PASS
-    env_path = Path.home() / "weather-ai" / ".env"
-    if env_path.exists() and not JAXA_USER:
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if line.startswith("export JAXA_USER="):
-                JAXA_USER = line.split("=", 1)[1].strip('"')
-            elif line.startswith("export JAXA_PASS="):
-                JAXA_PASS = line.split("=", 1)[1].strip('"')
+    # 优先同目录 .env，fallback 到 ~/weather-ai/.env
+    env_candidates = [
+        Path(__file__).parent / ".env",
+        Path.home() / "weather-ai" / ".env",
+    ]
+    for env_path in env_candidates:
+        if env_path.exists() and not JAXA_USER:
+            for line in env_path.read_text().splitlines():
+                line = line.strip()
+                if line.startswith("export JAXA_USER="):
+                    JAXA_USER = line.split("=", 1)[1].strip('"')
+                elif line.startswith("export JAXA_PASS="):
+                    JAXA_PASS = line.split("=", 1)[1].strip('"')
+            break
 
 
 def download_nc_from_ftp(date_compact: str, slot: str, tmp_dir: str) -> str | None:
@@ -192,7 +198,7 @@ def main():
 
     load_env()
     if not JAXA_USER or not JAXA_PASS:
-        logger.error("❌ JAXA 凭证未设置，请设置 JAXA_USER/JAXA_PASS 或确认 ~/weather-ai/.env")
+        logger.error("❌ JAXA 凭证未设置，请设置 JAXA_USER/JAXA_PASS 或确认 services/download/.env")
         sys.exit(1)
 
     # 加载雨天清单
