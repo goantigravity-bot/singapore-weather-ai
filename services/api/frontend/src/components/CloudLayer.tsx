@@ -142,7 +142,7 @@ const CloudLayer: React.FC = () => {
                     🛰️ IR Cloud
                 </span>
                 <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace' }}>
-                    {currentFrame.time} UTC
+                    {new Date(currentFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
             </div>
 
