@@ -1240,17 +1240,26 @@ def get_satellite_frames():
 app.include_router(api_router)
 app.include_router(api_router, prefix="/api")
 
-# --- 静态文件服务（前端）---
-# 自动检测前端构建目录，支持开发环境和生产环境
-# Local Dev: ../../frontend/dist
-# Docker: ./frontend/dist (if copied)
-# --- Frontend Static Files ---
+# --- Frontend & Monitor Dashboard Static Files ---
 FRONTEND_DIR_ENV = os.environ.get("FRONTEND_DIR")
 if FRONTEND_DIR_ENV:
     FRONTEND_DIR = Path(FRONTEND_DIR_ENV)
 else:
-    # Fallback dev path
-    FRONTEND_DIR = Path(__file__).parent.parent.parent / "frontend" / "dist"
+    # Dev fallback: services/api/ → services/frontend/dist
+    FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
+
+MONITOR_DIR_ENV = os.environ.get("MONITOR_DIR")
+if MONITOR_DIR_ENV:
+    MONITOR_DIR = Path(MONITOR_DIR_ENV)
+else:
+    MONITOR_DIR = Path(__file__).parent.parent / "monitor-dashboard" / "dist"
+
+# Monitor dashboard 挂载到 /monitor（必须在 frontend 之前，否则被 / 兜底）
+if MONITOR_DIR.exists():
+    logger.info(f"Serving monitor dashboard from {MONITOR_DIR}")
+    app.mount("/monitor", StaticFiles(directory=str(MONITOR_DIR), html=True), name="monitor")
+else:
+    logger.warning(f"Monitor dashboard not found at {MONITOR_DIR}")
 
 if FRONTEND_DIR.exists():
     logger.info(f"Serving frontend from {FRONTEND_DIR}")
