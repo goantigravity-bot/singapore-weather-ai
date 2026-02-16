@@ -191,7 +191,7 @@ def list_ftp_files(date_compact: str) -> list[str]:
 
 
 def _crop_and_upload(local_nc: str, filename: str, date_compact: str,
-                     s3, tmp_dir: str) -> str:
+                     s3, tmp_dir: str, source: str = "FTP") -> str:
     """对本地 .nc 文件执行 crop → upload .npy → 清理。"""
     npy_data = crop_nc_to_npy(local_nc)
     if npy_data is None:
@@ -203,7 +203,7 @@ def _crop_and_upload(local_nc: str, filename: str, date_compact: str,
 
     s3_key = f"{S3_PROCESSED_PREFIX}/{date_compact}/{npy_name}"
     s3.upload_file(local_npy, S3_BUCKET, s3_key)
-    logger.info(f"📤 {npy_name} → s3://{S3_BUCKET}/{s3_key}")
+    logger.info(f"📤 [{source}] {npy_name} → s3://{S3_BUCKET}/{s3_key}")
 
     os.remove(local_npy)
     return "uploaded"
@@ -227,7 +227,7 @@ def download_crop_upload(filename: str, date_compact: str, s3, tmp_dir: str,
             try:
                 s3.download_file(S3_BUCKET, s3_raw_key, local_nc)
                 if os.path.getsize(local_nc) > 1_000_000:
-                    return _crop_and_upload(local_nc, filename, date_compact, s3, tmp_dir)
+                    return _crop_and_upload(local_nc, filename, date_compact, s3, tmp_dir, source="S3")
             except Exception as e:
                 logger.warning(f"S3 raw download failed, trying FTP: {e}")
                 if os.path.exists(local_nc):
@@ -250,7 +250,7 @@ def download_crop_upload(filename: str, date_compact: str, s3, tmp_dir: str,
         if os.path.getsize(local_nc) < 1_000_000:
             return "failed"
 
-        return _crop_and_upload(local_nc, filename, date_compact, s3, tmp_dir)
+        return _crop_and_upload(local_nc, filename, date_compact, s3, tmp_dir, source="FTP")
 
     except Exception as e:
         logger.error(f"❌ {filename}: {e}")
