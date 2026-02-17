@@ -75,13 +75,13 @@ class WeatherFusionNet(nn.Module):
     Fusion Network combining Satellite and Sensor data.
     方案 A: 增加 2 维基站坐标特征到融合层。
     """
-    def __init__(self, sat_channels=1, sensor_features=7, coord_dim=2, prediction_dim=1):
+    def __init__(self, sat_channels=3, sensor_features=7, coord_dim=6, prediction_dim=1):
         super(WeatherFusionNet, self).__init__()
         
         self.sat_encoder = SatelliteEncoder(in_channels=sat_channels, feature_dim=128)
         self.sensor_encoder = SensorEncoder(input_size=sensor_features, feature_dim=64)
         
-        # 融合层: sat(128) + sensor(64) + coord(2) = 194
+        # 融合层: sat(128) + sensor(64) + coord(6: xy位置+hour/month周期编码) = 198
         fusion_input_dim = 128 + 64 + coord_dim
         self.fusion_head = nn.Sequential(
             nn.Linear(fusion_input_dim, 64),
@@ -116,8 +116,8 @@ if __name__ == "__main__":
     # 2. Sensor Data: 7 features
     dummy_sensor_data = torch.randn(BATCH_SIZE, 10, 7)
     
-    # 3. Coord: normalized station position
-    dummy_coord = torch.rand(BATCH_SIZE, 2)
+    # 3. Coord: position + hour/month cycle encoding
+    dummy_coord = torch.rand(BATCH_SIZE, 6)
     
     # Initialize Model
     model = WeatherFusionNet(sat_channels=1, sensor_features=7, prediction_dim=1)

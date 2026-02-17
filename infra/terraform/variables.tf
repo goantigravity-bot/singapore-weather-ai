@@ -26,8 +26,19 @@ variable "instance_type" {
   default     = "t3.medium"
   
   validation {
-    condition     = contains(["t3.small", "t3.medium", "t3.large"], var.instance_type)
-    error_message = "实例类型必须是 t3.small, t3.medium 或 t3.large"
+    condition     = contains(["t3.small", "t3.medium", "t3.large", "t3.xlarge"], var.instance_type)
+    error_message = "实例类型必须是 t3.small, t3.medium, t3.large 或 t3.xlarge"
+  }
+}
+
+variable "download_instance_type" {
+  description = "下载服务器 EC2 实例类型 — 需要足够内存支持并行 satpy 处理"
+  type        = string
+  default     = "t3.xlarge"  # 4 vCPU / 16GB — 支持 8 workers 不会 OOM
+
+  validation {
+    condition     = contains(["t3.small", "t3.medium", "t3.large", "t3.xlarge"], var.download_instance_type)
+    error_message = "下载服务器实例类型必须是 t3.small ~ t3.xlarge"
   }
 }
 

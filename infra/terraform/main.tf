@@ -155,7 +155,7 @@ resource "aws_instance" "weather_api" {
 # 下载服务器 — 卫星/传感器数据下载+预处理
 resource "aws_instance" "download_server" {
   ami           = data.aws_ami.ubuntu.id
-  instance_type = "t3.small"
+  instance_type = var.download_instance_type
   key_name      = aws_key_pair.weather_api.key_name
 
   vpc_security_group_ids = [aws_security_group.weather_api.id]

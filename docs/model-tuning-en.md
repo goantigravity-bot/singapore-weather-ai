@@ -1,6 +1,6 @@
 # Singapore Weather AI — Model Tuning, Data Cleansing & Pipeline
 
-> **Version**: 1.0 &nbsp; | &nbsp; **Consolidated**: 2026-02-16
+> **Version**: 1.1 &nbsp; | &nbsp; **Updated**: 2026-02-17
 
 ---
 
@@ -9,13 +9,13 @@
 ```mermaid
 flowchart LR
     subgraph Phase1["1. Data Ingestion"]
-        NOAA["🛰️ NOAA Satellite\nHimawari-9"]
+        NOAA["🛰️ NOAA Satellite\nHimawari-8/9"]
         NEA["🌡️ NEA API\nSensors"]
     end
 
     subgraph Phase2["2. Cleansing"]
         ALIGN["Timestamp Alignment\nUTC ↔ SGT"]
-        CROP["Spatial Crop\n128×128 Singapore"]
+        CROP["Pixel Slicing\n41×37 Singapore"]
         OUTLIER["Outlier Filtering"]
     end
 
@@ -46,28 +46,28 @@ flowchart LR
 
 ### 2.1 Satellite Data
 
-#### 数据源演变
+#### Data Source Evolution
 
-| 阶段 | 数据源 | 格式 | 问题 | 时间 |
-|------|--------|------|------|------|
-| v1 | **JAXA FTP** (`ftp.ptree.jaxa.jp`) | NC 全盘 ~700MB | 跨洋下载慢、FTP 连接不稳定、需 JAXA 账号 | 2025-10 ~ 2026-02 |
-| v2 | **NOAA ISatSS** (`noaa-himawari9/AHI-L2-FLDK-ISatSS/`) | NC L2 ~3MB | S3 同区域快，但 NC 文件体积大（10.1TB 存储费 $53/月） | 2026-02 |
-| **v3** | **AWS Open Data L1b** (`noaa-himawari8/9/AHI-L1b-FLDK/`) | HSD .bz2 + satpy | ✅ 仅下 Segment S05，3 通道，6KB/文件 | **2026-02-17 ~** |
+| Phase | Source | Format | Issues | Period |
+|-------|--------|--------|--------|--------|
+| v1 | **JAXA FTP** (`ftp.ptree.jaxa.jp`) | Full-disk NC ~700MB | Slow trans-oceanic download, unstable FTP, requires JAXA account | 2025-10 ~ 2026-02 |
+| v2 | **NOAA ISatSS** (`noaa-himawari9/AHI-L2-FLDK-ISatSS/`) | NC L2 ~3MB | Fast within AWS region, but NC files still large (10.1TB → $53/month S3) | 2026-02 |
+| **v3** | **AWS Open Data L1b** (`noaa-himawari8/9/AHI-L1b-FLDK/`) | HSD .bz2 + satpy | ✅ Segment S05 only, 3 channels, 6KB/file | **2026-02-17 ~** |
 
-#### 当前方案（v3）对比
+#### Current Approach (v3) Comparison
 
-| Property | v1/v2 (已弃用) | **v3 (当前)** |
+| Property | v1/v2 (Deprecated) | **v3 (Current)** |
 |----------|------------|---------------|
 | Source | JAXA FTP / NOAA ISatSS | **AWS Open Data L1b HSD** |
-| Bands | C13 单通道 | **B08 (水汽) + B11 (云相态) + B13 (红外)** |
-| Resolution | 128×128 crop | **41×37 原始分辨率** |
+| Bands | C13 single-channel | **B08 (water vapor) + B11 (cloud phase) + B13 (IR window)** |
+| Resolution | 128×128 crop | **41×37 native resolution** |
 | Frequency | 10 min | 10 min |
 | Format | .nc (~3MB) → .npy (~64KB) | **.bz2 → satpy → .npy (~6KB)** |
-| Segment | 全盘 | **S05 only (Singapore)** |
-| 处理流程 | netCDF4 crop | **satpy + get_lonlats 像素切片** |
-| 模型输入 | crop 32×32 patch per station | **全图 41×37 + coord 定位** |
+| Segment | Full disk | **S05 only (Singapore)** |
+| Processing | netCDF4 crop | **satpy + get_lonlats pixel slicing** |
+| Model input | crop 32×32 patch per station | **Full image 41×37 + coordinate embedding** |
 
-> 详见 [data-source-progress.md](file:///Users/jinhui/development/tools/claude-skill/docs/data-source-progress.md) 和 [architecture-decisions.md](file:///Users/jinhui/development/tools/claude-skill/docs/architecture-decisions.md)
+> See also: [data-source-progress.md](file:///Users/jinhui/development/tools/claude-skill/docs/data-source-progress.md) and [architecture-decisions.md](file:///Users/jinhui/development/tools/claude-skill/docs/architecture-decisions.md)
 
 ### 2.2 NEA Government Sensor Data
 
@@ -97,19 +97,19 @@ flowchart LR
 ### 3.1 Satellite Data Processing
 
 ```
-旧: Raw .nc → netCDF4 extract TBB → spatial crop (128×128) → normalize → .npy
-新: HSD .bz2 → satpy 解析 → get_lonlats 像素切片 (41×37) → 3× .npy → S3
+Old: Raw .nc → netCDF4 extract TBB → spatial crop (128×128) → normalize → .npy
+New: HSD .bz2 → satpy parse → get_lonlats pixel slicing (41×37) → 3× .npy → S3
 ```
 
 **Key considerations**:
 
 | Issue | Solution |
 |---|---|
-| Himawari-8 vs 9 bucket 切换 | 2022 年前用 H8, 之后 H9 |
-| satpy resample 全盘超时 | 改用 `get_lonlats()` + 直接数组切片 |
-| boto3 并发 client 线程安全 | 主线程预创建 client 池 |
-| 8 workers OOM (8GB 服务器) | 停旧服务后恢复 8 workers |
-| OpenMP 冲突 (torch + satpy) | `KMP_DUPLICATE_LIB_OK=TRUE` |
+| Himawari-8 vs 9 bucket switch | Use H8 before 2022, H9 after |
+| satpy resample full-disk timeout | Use `get_lonlats()` + direct array slicing |
+| boto3 concurrent client thread safety | Pre-create client pool in main thread |
+| 8 workers OOM on 8GB server | Stopped old service, restored 8 workers |
+| OpenMP conflict (torch + satpy) | `KMP_DUPLICATE_LIB_OK=TRUE` |
 
 ### 3.2 Timestamp Alignment Strategy
 
@@ -118,7 +118,7 @@ flowchart LR
 | Satellite | 10-min UTC | Resample to 10-min intervals |
 | NEA sensors | 1-5 min SGT | Resample to 10-min, convert to UTC |
 
-**Time zone**: 卫星文件名 = **UTC**，传感器 CSV = **SGT (UTC+8)**。`prepare_station_data.py` 查找时减 8 小时。
+**Time zone**: Satellite filenames = **UTC**. Sensor CSV = **SGT (UTC+8)**. `prepare_station_data.py` subtracts 8 hours when looking up satellite files.
 
 ### 3.3 Missing Data Handling
 
@@ -204,31 +204,31 @@ Day-by-day batch training with:
 
 ## 6. Model Iteration Experiments
 
-> 共执行 6 轮优化实验 | 设备：Mac (CPU) + EC2 g4dn.xlarge (GPU)
+> 6 rounds of optimization | Devices: Mac (CPU) + EC2 g4dn.xlarge (GPU)
 
 ### 6.1 Training Data Volume Evolution
 
-#### 为什么需要更多数据？
+#### Why More Data?
 
-| 阶段 | 数据量 | 时间跨度 | 问题 / 动机 |
-|------|--------|----------|-------------|
-| 初始 | ~3 个月 | 2025-10 ~ 2026-01 | 快速验证模型可行性，但只覆盖东北季风季 |
-| 扩展到 1 年 | ~12 个月 | 2024-02 ~ 2026-02 | 覆盖全年季节（东北季风 + 西南季风 + 季风间期），但罕见强降雨事件样本不足 |
-| 扩展到 2 年 | ~24 个月 | 2023-01 ~ 2026-02 | 捕捉年际变化（如 ENSO 影响），增加极端天气样本 |
-| **扩展到 6 年** | **~72 个月** | **2020-01 ~ 2026-02** | ✅ 覆盖完整 ENSO 周期、多次强降雨事件、Himawari-8→9 卫星切换 |
+| Phase | Volume | Time Span | Motivation |
+|-------|--------|-----------|------------|
+| Initial | ~3 months | 2025-10 ~ 2026-01 | Quick model feasibility validation; only covers NE monsoon season |
+| Expand to 1 year | ~12 months | 2024-02 ~ 2026-02 | Full seasonal coverage (NE monsoon + SW monsoon + inter-monsoon); rare heavy rain events still insufficient |
+| Expand to 2 years | ~24 months | 2023-01 ~ 2026-02 | Capture inter-annual variability (e.g. ENSO influence); more extreme weather samples |
+| **Expand to 6 years** | **~72 months** | **2020-01 ~ 2026-02** | ✅ Full ENSO cycle, multiple heavy rain events, Himawari-8→9 satellite transition |
 
-#### 数据量对模型的影响
+#### Impact of Data Volume on Model Performance
 
 ```
-3 个月:  样本少 → 模型过拟合 → 对未见过的天气模式泛化差
-1 年:    覆盖季节性 → 但 La Niña/El Niño 年的降雨模式差异大
-2 年:    开始捕捉年际变化 → 但 5.0mm 暴雨仍然稀缺（占比 ~2%）
-6 年:    ✅ ENSO 完整周期 (~3-7 年) → 暴雨样本数 ×6 → 模型更鲁棒
+3 months:  Few samples → overfitting → poor generalization to unseen weather patterns
+1 year:    Seasonal coverage → but La Niña/El Niño years have very different rainfall patterns
+2 years:   Begin capturing inter-annual variability → but 5.0mm heavy rain still scarce (~2%)
+6 years:   ✅ Full ENSO cycle (~3-7 years) → heavy rain samples ×6 → more robust model
 ```
 
-> **关键洞察**: 新加坡降雨受 ENSO 和 MJO 影响显著。仅 1 年数据可能只覆盖 La Niña 干旱期或 El Niño 多雨期，模型在另一种气候态下表现会大幅下降。6 年数据确保两种气候态都被学到。
+> **Key Insight**: Singapore rainfall is strongly influenced by ENSO and MJO. With only 1 year of data, the model may only learn La Niña (dry) or El Niño (wet) patterns and perform poorly in the opposite climate state. 6 years of data ensures both climate regimes are learned.
 
-#### R1-R4 实验时的数据（1 年）
+#### R1-R4 Experiment Data (1 Year)
 
 | Item | Value |
 |------|-------|
@@ -238,14 +238,14 @@ Day-by-day batch training with:
 | Samples | 395,561 (26.5% rain / 73.5% dry) |
 | Mixed moments | 93.6% — same timestamp has ~16 raining + ~43 dry stations |
 
-#### 下一轮实验（6 年 × 3 通道）
+#### Next Round (6 Years × 3 Channels)
 
-| Item | 预估值 |
-|------|--------|
-| Satellite | ~970K frames × 3 bands = ~2.9M 文件 |
-| Sensor | ~4.5M rows (69 stations × 6 年) |
+| Item | Estimated |
+|------|-----------|
+| Satellite | ~970K frames × 3 bands = ~2.9M files |
+| Sensor | ~4.5M rows (69 stations × 6 years) |
 | Time span | 2020-01-01 ~ 2026-02-16 |
-| 预估 Samples | ~2.4M (×6 当前) |
+| Estimated Samples | ~2.4M (×6 current) |
 
 ### 6.2 Iteration Results (0.1mm threshold)
 
@@ -334,46 +334,46 @@ Each sample:
 
 ### 6.4 Rain Threshold Evolution
 
-#### 阶段 1: 0.1mm — 初始基线
+#### Phase 1: 0.1mm — Initial Baseline
 
-最初使用气象学标准 0.1mm/10min 定义"降雨"。
+Started with the meteorological standard of 0.1mm/10min to define "rain".
 
-| 指标 | 值 | 问题 |
-|------|-----|------|
-| Rain 比例 | 30.3% | 毛毛雨也算降雨，样本偏多 |
-| F1 | 46.6% | Precision 极低 |
-| FP | 477 | **假阳性泛滥** — 模型把干天预测为雨 |
+| Metric | Value | Problem |
+|--------|-------|--------|
+| Rain ratio | 30.3% | Drizzle counts as rain, too many positive samples |
+| F1 | 46.6% | Very low Precision |
+| FP | 477 | **False positive flood** — model predicts rain on dry days |
 
-**结论**: 0.1mm 太敏感，微量凝露也触发，对用户无实际意义。
+**Conclusion**: 0.1mm is too sensitive; even trace condensation triggers it, providing no practical value to users.
 
-#### 阶段 2: 5.0mm — 尝试后放弃
+#### Phase 2: 5.0mm — Attempted Then Abandoned
 
-直接跳到 5.0mm/10min（中到大雨），但训练数据严重不足。
+Jumped directly to 5.0mm/10min (moderate-to-heavy rain), but training data was severely insufficient.
 
-| 指标 | 0.1mm | 5.0mm | 问题 |
-|------|-------|-------|------|
-| Rain 比例 | 30.3% | **2.0%** | 正样本太少 |
-| F1 | 46.6% | **35.7%** | 严重下降 |
+| Metric | 0.1mm | 5.0mm | Problem |
+|--------|-------|-------|---------|
+| Rain ratio | 30.3% | **2.0%** | Too few positive samples |
+| F1 | 46.6% | **35.7%** | Severe degradation |
 
-**结论**: 新加坡大雨占比仅 2%，样本严重不平衡，模型无法学习。需要寻找中间值。
+**Conclusion**: Heavy rain accounts for only 2% of Singapore data — severe class imbalance makes learning impossible. Need to find a middle ground.
 
-#### 阶段 3: 1.0mm — 最终选择 ✅
+#### Phase 3: 1.0mm — Final Choice ✅
 
-回退到 1.0mm/10min ≈ 用户能感知到需要带伞的雨量。
+Settled on 1.0mm/10min ≈ rain that users can perceive and would need an umbrella for.
 
-| 指标 | 0.1mm | 5.0mm | **1.0mm** |
-|------|-------|-------|----------|
-| Rain 比例 | 30.3% | 2.0% | **13.0%** |
+| Metric | 0.1mm | 5.0mm | **1.0mm** |
+|--------|-------|-------|----------|
+| Rain ratio | 30.3% | 2.0% | **13.0%** |
 | Precision | 34.9% | — | **61.8%** |
 | Recall | 97.7% | — | 61.3% |
 | **F1** | 46.6% | 35.7% | **61.5%** ✅ |
 | FP | 477 | — | **42** |
 
-**结论**: Precision/Recall 平衡最佳，误报减少 91%。
+**Conclusion**: Best Precision/Recall balance; false positives reduced by 91%.
 
-#### 最终决策
+#### Final Decision
 
-> **选择 1.0mm** — 0.1mm 太敏感，5.0mm 样本不足，1.0mm 兼顾实用性和模型可学性。
+> **Selected 1.0mm** — 0.1mm too sensitive, 5.0mm insufficient samples, 1.0mm balances practical utility with model learnability.
 
 **1.0mm threshold comparison** (all models using 32×32 patch):
 
@@ -412,4 +412,3 @@ Each sample:
 | Validation | Random split | Time-series cross-validation |
 | Rain-Day Strategy | Equal sampling | Weighted sampling: prioritize rainy-day data |
 | Spatial Modeling | IDW interpolation | GNN for inter-station relationships |
-

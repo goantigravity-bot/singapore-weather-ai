@@ -158,8 +158,9 @@ terraform destroy
 | 类型 | vCPU | 内存 | 适用场景 | 成本 |
 |------|------|------|----------|------|
 | t3.small | 2 | 2 GB | 轻量级，测试 | ~$15/月 |
-| t3.medium | 2 | 4 GB | 标准，推荐 | ~$30/月 |
-| t3.large | 2 | 8 GB | 高负载 | ~$60/月 |
+| t3.medium | 2 | 4 GB | API 服务器，推荐 | ~$30/月 |
+| t3.large | 2 | 8 GB | 高负载 API | ~$60/月 |
+| t3.xlarge | 4 | 16 GB | **下载服务器**（8 workers satpy） | ~$120/月 |
 
 ### CloudFront配置
 

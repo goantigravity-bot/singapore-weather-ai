@@ -55,32 +55,36 @@ class SensorEncoder(nn.Module):
 class WeatherFusionNet(nn.Module):
     """
     Fusion Network combining Satellite and Sensor data.
+    coord 输入包含位置 (2维) + hour/month 周期编码 (4维) = 6 维
     """
-    def __init__(self, sat_channels=3, sensor_features=5, prediction_dim=1):
+    def __init__(self, sat_channels=3, sensor_features=7, coord_dim=6, prediction_dim=1):
         super(WeatherFusionNet, self).__init__()
         
         self.sat_encoder = SatelliteEncoder(in_channels=sat_channels, feature_dim=128)
         self.sensor_encoder = SensorEncoder(input_size=sensor_features, feature_dim=64)
         
-        # Fusion Layer
-        fusion_input_dim = 128 + 64
+        # 融合层: sat(128) + sensor(64) + coord(6) = 198
+        fusion_input_dim = 128 + 64 + coord_dim
         self.fusion_head = nn.Sequential(
             nn.Linear(fusion_input_dim, 64),
             nn.ReLU(),
             nn.Dropout(0.2),
-            nn.Linear(64, prediction_dim) # e.g., predict rainfall amount (regression)
+            nn.Linear(64, prediction_dim)
         )
 
-    def forward(self, sat_img, sensor_data):
+    def forward(self, sat_img, sensor_data, coord=None):
         """
         sat_img: (Batch, C, H, W)
         sensor_data: (Batch, Seq_Len, F)
+        coord: (Batch, 6) — 位置 + 时间周期编码（可选，向后兼容）
         """
         sat_feat = self.sat_encoder(sat_img)
         sensor_feat = self.sensor_encoder(sensor_data)
         
-        # Concatenate features
-        combined = torch.cat((sat_feat, sensor_feat), dim=1)
+        if coord is not None:
+            combined = torch.cat((sat_feat, sensor_feat, coord), dim=1)
+        else:
+            combined = torch.cat((sat_feat, sensor_feat), dim=1)
         
         output = self.fusion_head(combined)
         return output

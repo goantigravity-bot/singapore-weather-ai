@@ -1324,6 +1324,68 @@ def get_satellite_frames():
     return {"frames": frames, "bounds": SG_BOUNDS}
 
 
+# ── Telegram 通知集成 ──
+
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared'))
+import telegram_notifier
+
+@api_router.get("/telegram/status")
+def telegram_status():
+    """返回 Telegram 通知配置状态"""
+    return {
+        "configured": telegram_notifier.is_configured(),
+        "bot_token_set": bool(telegram_notifier.TELEGRAM_BOT_TOKEN),
+        "chat_id_set": bool(telegram_notifier.TELEGRAM_CHAT_ID),
+        "cooldown_minutes": telegram_notifier.COOLDOWN_MINUTES,
+    }
+
+
+@api_router.post("/telegram/test")
+def telegram_test():
+    """发送测试消息验证 Telegram 连接"""
+    if not telegram_notifier.is_configured():
+        raise HTTPException(400, "Telegram not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID env vars.")
+    success = telegram_notifier.send_test_message()
+    if success:
+        return {"status": "ok", "message": "Test message sent"}
+    raise HTTPException(500, "Failed to send test message. Check bot token and chat ID.")
+
+
+@api_router.post("/telegram/alert")
+def telegram_manual_alert(
+    location: str = Query(..., description="Location name"),
+    lat: float = Query(...),
+    lon: float = Query(...),
+):
+    """手动触发某地的降雨预警 (用于测试或人工告警)"""
+    if not telegram_notifier.is_configured():
+        raise HTTPException(400, "Telegram not configured")
+
+    # 对该坐标跑一次预测
+    global model, df, stations_meta
+    if model is None: model, df = load_system()
+    if not stations_meta: stations_meta = get_station_mapping()
+
+    raw = predict_ensemble(lat, lon, datetime.now(SGT), model, df, stations_meta, ensemble_size=3)
+    if not raw:
+        raise HTTPException(404, "Prediction failed for this location")
+
+    rainfall = raw.get('rainfall', 0)
+    confidence = raw.get('confidence', 0.5)
+
+    success = telegram_notifier.send_rain_alert(
+        location=location, probability=confidence,
+        rainfall_mm=rainfall, lat=lat, lon=lon
+    )
+    return {
+        "sent": success,
+        "rainfall_mm": rainfall,
+        "confidence": confidence,
+        "location": location,
+    }
+
+
 # Register Router (Match both /api prefix and root for dev convenience)
 app.include_router(api_router)
 app.include_router(api_router, prefix="/api")

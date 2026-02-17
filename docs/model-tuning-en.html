@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singapore Weather AI — Model Tuning, Data Cleansing & Pipeline</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.3rem; color: var(--text-muted); }
+        strong { color: var(--text); }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="singapore-weather-ai-model-tuning-data-cleansing-pipeline">Singapore Weather AI — Model Tuning, Data Cleansing &amp; Pipeline</h1>
+<blockquote>
+<p><strong>Version</strong>: 1.1 &nbsp; | &nbsp; <strong>Updated</strong>: 2026-02-17</p>
+</blockquote>
+<hr />
+<h2 id="1-training-pipeline-overview">1. Training Pipeline Overview</h2>
+<div class="mermaid">
+flowchart LR
+    subgraph Phase1["1. Data Ingestion"]
+        NOAA["🛰️ NOAA Satellite\nHimawari-8/9"]
+        NEA["🌡️ NEA API\nSensors"]
+    end
+
+    subgraph Phase2["2. Cleansing"]
+        ALIGN["Timestamp Alignment\nUTC ↔ SGT"]
+        CROP["Pixel Slicing\n41×37 Singapore"]
+        OUTLIER["Outlier Filtering"]
+    end
+
+    subgraph Phase3["3. Training"]
+        WINDOW["30-Day\nSliding Window"]
+        FUSE["WeatherFusionNet\nCNN + LSTM"]
+        EVAL["Evaluate\nMAE / RMSE"]
+    end
+
+    subgraph Phase4["4. Deploy"]
+        S3["Upload .pth\nto S3"]
+        API["API Syncs\nEvery 10 min"]
+    end
+
+    NOAA --> ALIGN
+    NEA --> ALIGN
+    ALIGN --> CROP --> OUTLIER
+    OUTLIER --> WINDOW --> FUSE --> EVAL
+    EVAL --> S3 --> API
+
+    style Phase2 fill:#fff3e0,stroke:#f57c00
+    style Phase3 fill:#e8f5e9,stroke:#388e3c
+</div>
+
+<hr />
+<h2 id="2-data-sources">2. Data Sources</h2>
+<h3 id="21-satellite-data">2.1 Satellite Data</h3>
+<h4 id="data-source-evolution">Data Source Evolution</h4>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Source</th>
+<th>Format</th>
+<th>Issues</th>
+<th>Period</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>v1</td>
+<td><strong>JAXA FTP</strong> (<code>ftp.ptree.jaxa.jp</code>)</td>
+<td>Full-disk NC ~700MB</td>
+<td>Slow trans-oceanic download, unstable FTP, requires JAXA account</td>
+<td>2025-10 ~ 2026-02</td>
+</tr>
+<tr>
+<td>v2</td>
+<td><strong>NOAA ISatSS</strong> (<code>noaa-himawari9/AHI-L2-FLDK-ISatSS/</code>)</td>
+<td>NC L2 ~3MB</td>
+<td>Fast within AWS region, but NC files still large (10.1TB → $53/month S3)</td>
+<td>2026-02</td>
+</tr>
+<tr>
+<td><strong>v3</strong></td>
+<td><strong>AWS Open Data L1b</strong> (<code>noaa-himawari8/9/AHI-L1b-FLDK/</code>)</td>
+<td>HSD .bz2 + satpy</td>
+<td>✅ Segment S05 only, 3 channels, 6KB/file</td>
+<td><strong>2026-02-17 ~</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="current-approach-v3-comparison">Current Approach (v3) Comparison</h4>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>v1/v2 (Deprecated)</th>
+<th><strong>v3 (Current)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source</td>
+<td>JAXA FTP / NOAA ISatSS</td>
+<td><strong>AWS Open Data L1b HSD</strong></td>
+</tr>
+<tr>
+<td>Bands</td>
+<td>C13 single-channel</td>
+<td><strong>B08 (water vapor) + B11 (cloud phase) + B13 (IR window)</strong></td>
+</tr>
+<tr>
+<td>Resolution</td>
+<td>128×128 crop</td>
+<td><strong>41×37 native resolution</strong></td>
+</tr>
+<tr>
+<td>Frequency</td>
+<td>10 min</td>
+<td>10 min</td>
+</tr>
+<tr>
+<td>Format</td>
+<td>.nc (~3MB) → .npy (~64KB)</td>
+<td><strong>.bz2 → satpy → .npy (~6KB)</strong></td>
+</tr>
+<tr>
+<td>Segment</td>
+<td>Full disk</td>
+<td><strong>S05 only (Singapore)</strong></td>
+</tr>
+<tr>
+<td>Processing</td>
+<td>netCDF4 crop</td>
+<td><strong>satpy + get_lonlats pixel slicing</strong></td>
+</tr>
+<tr>
+<td>Model input</td>
+<td>crop 32×32 patch per station</td>
+<td><strong>Full image 41×37 + coordinate embedding</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>See also: <a href="file:///Users/jinhui/development/tools/claude-skill/docs/data-source-progress.md">data-source-progress.md</a> and <a href="file:///Users/jinhui/development/tools/claude-skill/docs/architecture-decisions.md">architecture-decisions.md</a></p>
+</blockquote>
+<h3 id="22-nea-government-sensor-data">2.2 NEA Government Sensor Data</h3>
+<table>
+<thead>
+<tr>
+<th>API Endpoint</th>
+<th>Data Type</th>
+<th>Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/environment/rainfall</code></td>
+<td>Rainfall (mm)</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td><code>/environment/air-temperature</code></td>
+<td>Temperature (°C)</td>
+<td>1 min</td>
+</tr>
+<tr>
+<td><code>/environment/relative-humidity</code></td>
+<td>Humidity (%)</td>
+<td>1 min</td>
+</tr>
+<tr>
+<td><code>/environment/pm25</code></td>
+<td>PM2.5 (μg/m³)</td>
+<td>1 hour</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-sensor-csv-schema-real_sensor_datacsv">2.3 Sensor CSV Schema (<code>real_sensor_data.csv</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>timestamp</code></td>
+<td>datetime</td>
+<td>Observation time</td>
+</tr>
+<tr>
+<td><code>sensor_id</code></td>
+<td>string</td>
+<td>Station ID (e.g. "S50")</td>
+</tr>
+<tr>
+<td><code>temperature</code></td>
+<td>float</td>
+<td>Celsius</td>
+</tr>
+<tr>
+<td><code>humidity</code></td>
+<td>float</td>
+<td>Percent</td>
+</tr>
+<tr>
+<td><code>rainfall</code></td>
+<td>float</td>
+<td>mm (cumulative)</td>
+</tr>
+<tr>
+<td><code>pm25</code></td>
+<td>float</td>
+<td>μg/m³</td>
+</tr>
+<tr>
+<td><code>wind_speed</code></td>
+<td>float</td>
+<td>km/h</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-data-cleansing-alignment">3. Data Cleansing &amp; Alignment</h2>
+<h3 id="31-satellite-data-processing">3.1 Satellite Data Processing</h3>
+<div class="highlight"><pre><span></span><code>Old: Raw .nc → netCDF4 extract TBB → spatial crop (128×128) → normalize → .npy
+New: HSD .bz2 → satpy parse → get_lonlats pixel slicing (41×37) → 3× .npy → S3
+</code></pre></div>
+
+<p><strong>Key considerations</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Himawari-8 vs 9 bucket switch</td>
+<td>Use H8 before 2022, H9 after</td>
+</tr>
+<tr>
+<td>satpy resample full-disk timeout</td>
+<td>Use <code>get_lonlats()</code> + direct array slicing</td>
+</tr>
+<tr>
+<td>boto3 concurrent client thread safety</td>
+<td>Pre-create client pool in main thread</td>
+</tr>
+<tr>
+<td>8 workers OOM on 8GB server</td>
+<td>Stopped old service, restored 8 workers</td>
+</tr>
+<tr>
+<td>OpenMP conflict (torch + satpy)</td>
+<td><code>KMP_DUPLICATE_LIB_OK=TRUE</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-timestamp-alignment-strategy">3.2 Timestamp Alignment Strategy</h3>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Native Frequency</th>
+<th>Alignment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Satellite</td>
+<td>10-min UTC</td>
+<td>Resample to 10-min intervals</td>
+</tr>
+<tr>
+<td>NEA sensors</td>
+<td>1-5 min SGT</td>
+<td>Resample to 10-min, convert to UTC</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Time zone</strong>: Satellite filenames = <strong>UTC</strong>. Sensor CSV = <strong>SGT (UTC+8)</strong>. <code>prepare_station_data.py</code> subtracts 8 hours when looking up satellite files.</p>
+<h3 id="33-missing-data-handling">3.3 Missing Data Handling</h3>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Cause</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Overnight sensor gaps</td>
+<td>NEA API returns sparse nighttime data</td>
+<td>Pad with nearest available value</td>
+</tr>
+<tr>
+<td>Incomplete daily .npy</td>
+<td>Download interrupted mid-day</td>
+<td>No <code>.complete</code> marker → re-download whole day</td>
+</tr>
+<tr>
+<td>S3 partial preprocessed</td>
+<td>Only 12/144 .npy files (narrow window)</td>
+<td>Delete incomplete .npy, force full re-preprocess</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-model-architecture-weatherfusionnet">4. Model Architecture — WeatherFusionNet</h2>
+<h3 id="41-dual-branch-fusion">4.1 Dual-Branch Fusion</h3>
+<table>
+<thead>
+<tr>
+<th>Branch</th>
+<th>Architecture</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Satellite</strong></td>
+<td>3× Conv2d + BatchNorm + ReLU + AdaptiveAvgPool</td>
+<td><code>(B, 3, 41, 37)</code></td>
+<td><code>(B, 128)</code></td>
+</tr>
+<tr>
+<td><strong>Sensor</strong></td>
+<td>LSTM(in=7, hidden=128) + FC</td>
+<td><code>(B, 6, 7)</code></td>
+<td><code>(B, 64)</code></td>
+</tr>
+<tr>
+<td><strong>Fusion</strong></td>
+<td>FC(198→64) + ReLU + Dropout(0.2) + FC(64→1)</td>
+<td><code>(B, 198)</code></td>
+<td><code>(B, 1)</code> → rainfall mm</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-training-configuration">4.2 Training Configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Target</td>
+<td>10-min rainfall (mm)</td>
+<td>Regression task</td>
+</tr>
+<tr>
+<td>Loss</td>
+<td>MSE</td>
+<td>Standard regression loss</td>
+</tr>
+<tr>
+<td>Optimizer</td>
+<td>Adam</td>
+<td>Adaptive learning rate</td>
+</tr>
+<tr>
+<td>Initial Epochs</td>
+<td>30 (from scratch)</td>
+<td>First training</td>
+</tr>
+<tr>
+<td>Incremental Epochs</td>
+<td>5 (fine-tune)</td>
+<td>Daily retraining</td>
+</tr>
+<tr>
+<td>Early Stopping</td>
+<td>Patience=10</td>
+<td>Stop if val loss plateaus</td>
+</tr>
+<tr>
+<td>Mixed Precision (AMP)</td>
+<td>✅ Enabled</td>
+<td>GPU acceleration</td>
+</tr>
+<tr>
+<td>LR Scheduler</td>
+<td>✅ Enabled</td>
+<td>Dynamic adjustment</td>
+</tr>
+<tr>
+<td>Batch Size</td>
+<td>4</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-incremental-learning">4.3 Incremental Learning</h3>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;weather_fusion_model.pth&quot;</span><span class="p">):</span>
+    <span class="c1"># Fine-tune mode: load existing, train 5 epochs</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">MODEL_SAVE_PATH</span><span class="p">))</span>
+    <span class="n">EPOCHS</span> <span class="o">=</span> <span class="n">EPOCHS_INCREMENTAL</span>  <span class="c1"># 5</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># Full training: 30 epochs from scratch</span>
+    <span class="n">EPOCHS</span> <span class="o">=</span> <span class="n">EPOCHS_INITIAL</span>  <span class="c1"># 30</span>
+</code></pre></div>
+
+<blockquote>
+<p>[!WARNING]
+<strong>Catastrophic forgetting risk</strong>: Model may lose old patterns during incremental learning. Recommend full retraining once per month.</p>
+</blockquote>
+<hr />
+<h2 id="5-training-optimization">5. Training Optimization</h2>
+<h3 id="51-sliding-window">5.1 Sliding Window</h3>
+<p>30-day window limits training data volume, keeping training time stable regardless of accumulated data size.</p>
+<table>
+<thead>
+<tr>
+<th>Period</th>
+<th>Without Window</th>
+<th>With 30-Day Window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First month</td>
+<td>5-10 min</td>
+<td>5-10 min</td>
+</tr>
+<tr>
+<td>3 months</td>
+<td>2-3 hours</td>
+<td>5-10 min</td>
+</tr>
+<tr>
+<td>6 months</td>
+<td>5-7 hours</td>
+<td>5-10 min</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Trade-off</strong>: Fast training, focuses on recent weather patterns. May miss long-term seasonal signals (acceptable for tropical Singapore).</p>
+<h3 id="52-performance-benchmarks">5.2 Performance Benchmarks</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Before</th>
+<th>After</th>
+<th>Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial training</td>
+<td>45-60 min</td>
+<td>15-20 min</td>
+<td>3×</td>
+</tr>
+<tr>
+<td>Daily incremental</td>
+<td>45-60 min</td>
+<td>5-10 min</td>
+<td>6-8×</td>
+</tr>
+<tr>
+<td>After 3 months</td>
+<td>5-7 hours</td>
+<td>5-10 min</td>
+<td>30-84×</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-training-scheduler-training_schedulerpy">5.3 Training Scheduler (<code>training_scheduler.py</code>)</h3>
+<p>Day-by-day batch training with:
+- S3 data readiness check (<code>.complete</code> marker)
+- Download → Preprocess → Train → Sync workflow
+- Real-time state sync to S3 for monitoring dashboard
+- Auto-retry on failure
+- Email notification on completion/failure</p>
+<h2 id="6-model-iteration-experiments">6. Model Iteration Experiments</h2>
+<blockquote>
+<p>6 rounds of optimization | Devices: Mac (CPU) + EC2 g4dn.xlarge (GPU)</p>
+</blockquote>
+<h3 id="61-training-data-volume-evolution">6.1 Training Data Volume Evolution</h3>
+<h4 id="why-more-data">Why More Data?</h4>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Volume</th>
+<th>Time Span</th>
+<th>Motivation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial</td>
+<td>~3 months</td>
+<td>2025-10 ~ 2026-01</td>
+<td>Quick model feasibility validation; only covers NE monsoon season</td>
+</tr>
+<tr>
+<td>Expand to 1 year</td>
+<td>~12 months</td>
+<td>2024-02 ~ 2026-02</td>
+<td>Full seasonal coverage (NE monsoon + SW monsoon + inter-monsoon); rare heavy rain events still insufficient</td>
+</tr>
+<tr>
+<td>Expand to 2 years</td>
+<td>~24 months</td>
+<td>2023-01 ~ 2026-02</td>
+<td>Capture inter-annual variability (e.g. ENSO influence); more extreme weather samples</td>
+</tr>
+<tr>
+<td><strong>Expand to 6 years</strong></td>
+<td><strong>~72 months</strong></td>
+<td><strong>2020-01 ~ 2026-02</strong></td>
+<td>✅ Full ENSO cycle, multiple heavy rain events, Himawari-8→9 satellite transition</td>
+</tr>
+</tbody>
+</table>
+<h4 id="impact-of-data-volume-on-model-performance">Impact of Data Volume on Model Performance</h4>
+<div class="highlight"><pre><span></span><code>3 months:  Few samples → overfitting → poor generalization to unseen weather patterns
+1 year:    Seasonal coverage → but La Niña/El Niño years have very different rainfall patterns
+2 years:   Begin capturing inter-annual variability → but 5.0mm heavy rain still scarce (~2%)
+6 years:   ✅ Full ENSO cycle (~3-7 years) → heavy rain samples ×6 → more robust model
+</code></pre></div>
+
+<blockquote>
+<p><strong>Key Insight</strong>: Singapore rainfall is strongly influenced by ENSO and MJO. With only 1 year of data, the model may only learn La Niña (dry) or El Niño (wet) patterns and perform poorly in the opposite climate state. 6 years of data ensures both climate regimes are learned.</p>
+</blockquote>
+<h4 id="r1-r4-experiment-data-1-year">R1-R4 Experiment Data (1 Year)</h4>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Satellite</td>
+<td>2,384 frames Himawari-9 Band 13 (128×128 IR TBB)</td>
+</tr>
+<tr>
+<td>Sensor</td>
+<td>755,550 rows (69 stations, 401 days × rain ±30min window)</td>
+</tr>
+<tr>
+<td>Time span</td>
+<td>2024-02-15 ~ 2026-02-04</td>
+</tr>
+<tr>
+<td>Samples</td>
+<td>395,561 (26.5% rain / 73.5% dry)</td>
+</tr>
+<tr>
+<td>Mixed moments</td>
+<td>93.6% — same timestamp has ~16 raining + ~43 dry stations</td>
+</tr>
+</tbody>
+</table>
+<h4 id="next-round-6-years-3-channels">Next Round (6 Years × 3 Channels)</h4>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Estimated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Satellite</td>
+<td>~970K frames × 3 bands = ~2.9M files</td>
+</tr>
+<tr>
+<td>Sensor</td>
+<td>~4.5M rows (69 stations × 6 years)</td>
+</tr>
+<tr>
+<td>Time span</td>
+<td>2020-01-01 ~ 2026-02-16</td>
+</tr>
+<tr>
+<td>Estimated Samples</td>
+<td>~2.4M (×6 current)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-iteration-results-01mm-threshold">6.2 Iteration Results (0.1mm threshold)</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Baseline</th>
+<th>R1: +Attention</th>
+<th>R2: +DeepCNN</th>
+<th>R3: +Residual</th>
+<th><strong>R4: Patch</strong> ✅</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Val Loss</strong></td>
+<td>1.258</td>
+<td>0.800</td>
+<td>0.859</td>
+<td>1.013</td>
+<td><strong>0.980</strong></td>
+</tr>
+<tr>
+<td><strong>MAE (mm)</strong></td>
+<td>0.431</td>
+<td>0.414</td>
+<td>0.446</td>
+<td>0.544</td>
+<td><strong>0.406</strong> ✅</td>
+</tr>
+<tr>
+<td><strong>RMSE (mm)</strong></td>
+<td>1.205</td>
+<td>1.111</td>
+<td><strong>1.076</strong></td>
+<td>1.115</td>
+<td>1.096</td>
+</tr>
+<tr>
+<td><strong>Precision</strong></td>
+<td>34.9%</td>
+<td>35.3%</td>
+<td>33.9%</td>
+<td>31.1%</td>
+<td><strong>39.2%</strong> ✅</td>
+</tr>
+<tr>
+<td><strong>Recall</strong></td>
+<td>97.7%</td>
+<td><strong>99.6%</strong></td>
+<td>99.2%</td>
+<td>100.0%</td>
+<td>97.0%</td>
+</tr>
+<tr>
+<td><strong>F1</strong></td>
+<td>51.5%</td>
+<td>52.1%</td>
+<td>50.5%</td>
+<td>47.4%</td>
+<td><strong>55.8%</strong> ✅</td>
+</tr>
+<tr>
+<td><strong>TN</strong></td>
+<td>109</td>
+<td>107</td>
+<td>78</td>
+<td>5</td>
+<td><strong>192</strong> ✅</td>
+</tr>
+<tr>
+<td>FP</td>
+<td>477</td>
+<td>479</td>
+<td>508</td>
+<td>581</td>
+<td><strong>394</strong> ✅</td>
+</tr>
+<tr>
+<td>Training time</td>
+<td>510s</td>
+<td>538s</td>
+<td>665s</td>
+<td>2063s</td>
+<td><strong>88s</strong> ✅</td>
+</tr>
+<tr>
+<td>Parameters</td>
+<td>122,657</td>
+<td>122,722</td>
+<td>352,930</td>
+<td>174,130</td>
+<td>122,850</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="63-each-round-details">6.3 Each Round Details</h3>
+<h4 id="baseline-original-weatherfusionnet">Baseline: Original WeatherFusionNet</h4>
+<div class="highlight"><pre><span></span><code>SatelliteEncoder: Conv(1→16) → Conv(16→32) → Conv(32→64) → GAP → FC(64→128)
+SensorEncoder:    LSTM(7→128) → FC(128→64)
+Fusion:           Concat(192) → FC(192→64) → Dropout(0.2) → FC(64→1)
+</code></pre></div>
+
+<p>GAP treats all spatial positions equally — cloud noise from edges causes high FP (477).</p>
+<h4 id="r1-spatial-attention">R1: Spatial Attention ✅</h4>
+<p>Added <code>SpatialAttention</code> (1×1 Conv + Sigmoid) to replace <code>AdaptiveAvgPool2d</code>. Model learns to focus on cloudy regions.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SpatialAttention</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">attn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">())</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">attn</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</code></pre></div>
+
+<ul>
+<li>Val Loss: 1.258 → <strong>0.800</strong> (-36%)</li>
+<li>Heavy rain prediction range: 7.1mm → <strong>12.9mm</strong></li>
+</ul>
+<h4 id="r2-deeper-cnn-35-layers">R2: Deeper CNN (3→5 layers) ❌</h4>
+<p>Deepened CNN from 3 layers (16→32→64) to 5 layers (16→32→64→128→128). Attention channel 64→128.</p>
+<ul>
+<li>RMSE slightly improved (1.076), but Precision dropped (33.9%)</li>
+<li>Val Loss oscillated up to <strong>2.75</strong> (extremely unstable)</li>
+<li><strong>Conclusion: 2,384 samples cannot support 352K-parameter deep network</strong></li>
+</ul>
+<h4 id="r3-residual-blocks">R3: Residual Blocks ❌</h4>
+<p>Replaced Conv+BN+ReLU with ResidualBlock (dual Conv + skip connection).</p>
+<ul>
+<li>TN dropped to <strong>5</strong> — model predicts nearly everything as rain</li>
+<li>Training time 2063s (3.8× slower than R1)</li>
+<li><strong>Conclusion: 3-layer CNN too shallow for gradient vanishing; Residual adds no value</strong></li>
+</ul>
+<h4 id="r4-local-patch-coordinate-embedding-best">R4: Local Patch + Coordinate Embedding ✅ Best</h4>
+<p><strong>Core change</strong>: Instead of full 128×128 satellite image, crop <strong>32×32 patch</strong> (~14km) centered on each station's pixel coordinate. Add 2D normalized coordinates to fusion layer.</p>
+<div class="highlight"><pre><span></span><code>Each sample:
+├── Satellite: 32×32 patch (cropped from 128×128 full image)
+├── Sensor: 7-dim time series (temp/rain/humidity/PM2.5/wind/wind_sin/wind_cos)
+├── Coordinates: 2-dim normalized position (px/128, py/128)
+└── Label: next 10-min rainfall (mm)
+</code></pre></div>
+
+<p><strong>Why it works</strong>: Same timestamp, 60 stations crop different patches → natural rain/dry contrastive samples. Model sees only "the cloud directly above this station".</p>
+<p><strong>Modified files</strong>: <code>weather_dataset.py</code> (lat/lon→pixel+crop), <code>weather_fusion_model.py</code> (192→194 dim), <code>train_direct.py</code>, <code>evaluate.py</code></p>
+<h4 id="failed-experiments">Failed Experiments</h4>
+<table>
+<thead>
+<tr>
+<th>Experiment</th>
+<th>Base</th>
+<th>Change</th>
+<th>Precision</th>
+<th>Conclusion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R5: +Dropout</td>
+<td>R4</td>
+<td>Dropout2d(0.2) in each CNN layer</td>
+<td>34.0% ❌</td>
+<td>32×32 too small, dropout drops critical texture</td>
+</tr>
+<tr>
+<td>R5b: 48×48 Patch</td>
+<td>R4</td>
+<td>PATCH_SIZE 32→48</td>
+<td>34.3% ❌</td>
+<td>Larger patch introduces noise</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="64-rain-threshold-evolution">6.4 Rain Threshold Evolution</h3>
+<h4 id="phase-1-01mm-initial-baseline">Phase 1: 0.1mm — Initial Baseline</h4>
+<p>Started with the meteorological standard of 0.1mm/10min to define "rain".</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+<th>Problem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rain ratio</td>
+<td>30.3%</td>
+<td>Drizzle counts as rain, too many positive samples</td>
+</tr>
+<tr>
+<td>F1</td>
+<td>46.6%</td>
+<td>Very low Precision</td>
+</tr>
+<tr>
+<td>FP</td>
+<td>477</td>
+<td><strong>False positive flood</strong> — model predicts rain on dry days</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion</strong>: 0.1mm is too sensitive; even trace condensation triggers it, providing no practical value to users.</p>
+<h4 id="phase-2-50mm-attempted-then-abandoned">Phase 2: 5.0mm — Attempted Then Abandoned</h4>
+<p>Jumped directly to 5.0mm/10min (moderate-to-heavy rain), but training data was severely insufficient.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>0.1mm</th>
+<th>5.0mm</th>
+<th>Problem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rain ratio</td>
+<td>30.3%</td>
+<td><strong>2.0%</strong></td>
+<td>Too few positive samples</td>
+</tr>
+<tr>
+<td>F1</td>
+<td>46.6%</td>
+<td><strong>35.7%</strong></td>
+<td>Severe degradation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion</strong>: Heavy rain accounts for only 2% of Singapore data — severe class imbalance makes learning impossible. Need to find a middle ground.</p>
+<h4 id="phase-3-10mm-final-choice">Phase 3: 1.0mm — Final Choice ✅</h4>
+<p>Settled on 1.0mm/10min ≈ rain that users can perceive and would need an umbrella for.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>0.1mm</th>
+<th>5.0mm</th>
+<th><strong>1.0mm</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rain ratio</td>
+<td>30.3%</td>
+<td>2.0%</td>
+<td><strong>13.0%</strong></td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>34.9%</td>
+<td>—</td>
+<td><strong>61.8%</strong></td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>97.7%</td>
+<td>—</td>
+<td>61.3%</td>
+</tr>
+<tr>
+<td><strong>F1</strong></td>
+<td>46.6%</td>
+<td>35.7%</td>
+<td><strong>61.5%</strong> ✅</td>
+</tr>
+<tr>
+<td>FP</td>
+<td>477</td>
+<td>—</td>
+<td><strong>42</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion</strong>: Best Precision/Recall balance; false positives reduced by 91%.</p>
+<h4 id="final-decision">Final Decision</h4>
+<blockquote>
+<p><strong>Selected 1.0mm</strong> — 0.1mm too sensitive, 5.0mm insufficient samples, 1.0mm balances practical utility with model learnability.</p>
+</blockquote>
+<p><strong>1.0mm threshold comparison</strong> (all models using 32×32 patch):</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Precision</th>
+<th>Recall</th>
+<th><strong>F1</strong></th>
+<th>MAE</th>
+<th>FP</th>
+<th>Time</th>
+<th>Params</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline</td>
+<td>62.2%</td>
+<td>50.5%</td>
+<td>55.7%</td>
+<td>0.517</td>
+<td>34</td>
+<td>79s</td>
+<td>123K</td>
+</tr>
+<tr>
+<td>R1: +Attention</td>
+<td>57.7%</td>
+<td>57.7%</td>
+<td>57.7%</td>
+<td>0.494</td>
+<td>47</td>
+<td>80s</td>
+<td>123K</td>
+</tr>
+<tr>
+<td>R2: +DeepCNN</td>
+<td>57.7%</td>
+<td>54.1%</td>
+<td>55.8%</td>
+<td>0.532</td>
+<td>44</td>
+<td>120s</td>
+<td>353K</td>
+</tr>
+<tr>
+<td>R3: +Residual</td>
+<td>48.6%</td>
+<td>62.2%</td>
+<td>54.5%</td>
+<td>0.597</td>
+<td>73</td>
+<td>209s</td>
+<td>211K</td>
+</tr>
+<tr>
+<td><strong>R4: Patch+Coord</strong></td>
+<td><strong>61.8%</strong></td>
+<td><strong>61.3%</strong></td>
+<td><strong>61.5%</strong> ✅</td>
+<td><strong>0.498</strong></td>
+<td><strong>42</strong></td>
+<td><strong>80s</strong></td>
+<td>123K</td>
+</tr>
+</tbody>
+</table>
+<h3 id="65-conclusion">6.5 Conclusion</h3>
+<p><strong>R4 (Local Patch + Coordinate Embedding) is the current best model</strong> — highest F1 at both 0.1mm and 1.0mm thresholds, fastest training (88s), smallest parameter count (123K).</p>
+<hr />
+<h2 id="7-next-steps-improvement-directions">7. Next Steps &amp; Improvement Directions</h2>
+<h3 id="71-architecture-improvements">7.1 Architecture Improvements</h3>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Improvement</th>
+<th>Expected Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🥇</td>
+<td><strong>LR Scheduler</strong> (Cosine / Step)</td>
+<td>Fine-grained late-stage training</td>
+</tr>
+<tr>
+<td>🥈</td>
+<td><strong>Multi-frame temporal patches</strong> (consecutive satellite frames)</td>
+<td>Predict cloud arrival time</td>
+</tr>
+<tr>
+<td>🥉</td>
+<td><strong>Coordinate-guided attention</strong> (full image + coord-conditioned attention)</td>
+<td>See approaching clouds from distance</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-data-training-strategy">7.2 Data &amp; Training Strategy</h3>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Current</th>
+<th>Suggested</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Data Volume</td>
+<td>30-day sliding window</td>
+<td>Extend to 60-90 days</td>
+</tr>
+<tr>
+<td>Feature Engineering</td>
+<td>Basic sat + sensor</td>
+<td>Add temporal features (hour, day-of-week), lag features</td>
+</tr>
+<tr>
+<td>Ensemble</td>
+<td>Single model</td>
+<td>RF + NN + XGBoost voting</td>
+</tr>
+<tr>
+<td>Loss Function</td>
+<td>MSE</td>
+<td>Weighted loss: higher weight for heavy rain</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Random split</td>
+<td>Time-series cross-validation</td>
+</tr>
+<tr>
+<td>Rain-Day Strategy</td>
+<td>Equal sampling</td>
+<td>Weighted sampling: prioritize rainy-day data</td>
+</tr>
+<tr>
+<td>Spatial Modeling</td>
+<td>IDW interpolation</td>
+<td>GNN for inter-station relationships</td>
+</tr>
+</tbody>
+</table>
+        <footer>Weather AI — Singapore Weather AI — Model Tuning, Data Cleansing & Pipeline — Generated 2026-02-14</footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

@@ -9,8 +9,8 @@ import time
 # 1. Single datetime.date objects: datetime.date(2026, 1, 22)
 # 2. Dictionaries with 'start' and 'end' keys: {'start': ..., 'end': ...}
 FETCH_CONFIG = [
-    # 2023 ~ 2025 全量历史数据
-    {'start': datetime.date(2023, 1, 1), 'end': datetime.date(2025, 12, 31)},
+    # 2020 ~ 2026 全量历史数据
+    {'start': datetime.date(2020, 1, 1), 'end': datetime.date(2026, 2, 17)},
 ]
 
 # 🆕 Check Environment Variables (Override/Append)
