@@ -49,7 +49,6 @@ model_backups/
 
 # Sample/training data
 station_data/
-station_models/
 *.npz
 
 infra/terraform-gcc/.terraform/
