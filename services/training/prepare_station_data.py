@@ -108,7 +108,7 @@ def timestamp_to_3ch_paths(ts_str):
     utc_time = sgt_time - timedelta(hours=8)
     date_part = utc_time.strftime("%Y%m%d")
     time_part = utc_time.strftime("%H%M")
-    return [os.path.join(SAT_3CH_DIR, f"SAT_{band}_{date_part}_{time_part}.npy") for band in BANDS]
+    return [os.path.join(SAT_3CH_DIR, date_part, f"SAT_{band}_{date_part}_{time_part}.npy") for band in BANDS]
 
 
 def fast_read_station_csv(station_id):

@@ -93,10 +93,10 @@ def _s3_key(dt: datetime, band: str) -> str:
 
 
 def _s3_upload_key(band: str, dt: datetime) -> str:
-    """S3 上传路径"""
+    """S3 上传路径 — 按日期分文件夹存储"""
     date_str = dt.strftime("%Y%m%d")
     time_str = dt.strftime("%H%M")
-    return f"{UPLOAD_PREFIX}/SAT_{band}_{date_str}_{time_str}.npy"
+    return f"{UPLOAD_PREFIX}/{date_str}/SAT_{band}_{date_str}_{time_str}.npy"
 
 
 def _all_outputs_exist(dt: datetime, s3_client) -> bool:
@@ -107,6 +107,20 @@ def _all_outputs_exist(dt: datetime, s3_client) -> bool:
         except Exception:
             return False
     return True
+
+
+def _check_day_complete_s3(date_str: str, s3_client) -> bool:
+    """检查 S3 上该天是否已有 .complete 标记"""
+    try:
+        s3_client.head_object(Bucket=UPLOAD_BUCKET, Key=f"{UPLOAD_PREFIX}/{date_str}/.complete")
+        return True
+    except Exception:
+        return False
+
+
+def _mark_day_complete_s3(date_str: str, s3_client):
+    """在 S3 上写入 .complete 标记"""
+    s3_client.put_object(Bucket=UPLOAD_BUCKET, Key=f"{UPLOAD_PREFIX}/{date_str}/.complete", Body=b"")
 
 
 def process_slot(dt: datetime, s3_client, upload_s3) -> str:
@@ -220,6 +234,8 @@ def main():
 
     # 主线程 S3 客户端（单线程模式使用）
     s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED), region_name="us-east-1")
+    # 带认证的 S3 客户端（写私有 bucket、检查 .complete）
+    upload_client = boto3.client("s3")
 
     current = start
     day_num = 0
@@ -227,9 +243,15 @@ def main():
         day_num += 1
         date_str = current.strftime("%Y-%m-%d")
 
-        # 已完成的日期直接跳过
+        # 已完成的日期直接跳过（先查本地缓存，再查 S3 .complete）
         if date_str in completed:
             logger.info(f"[{day_num}/{total_days}] {date_str} ⏭ cached skip")
+            current += timedelta(days=1)
+            continue
+
+        if _check_day_complete_s3(current.strftime("%Y%m%d"), upload_client):
+            logger.info(f"[{day_num}/{total_days}] {date_str} ⏭ S3 .complete exists")
+            _mark_completed(date_str)  # 同步到本地缓存
             current += timedelta(days=1)
             continue
 
@@ -242,8 +264,9 @@ def main():
             f"missing={stats['missing']}, failed={stats['failed']}"
         )
 
-        # 无失败的天标记为完成
+        # 无失败的天标记为完成（S3 + 本地缓存双写）
         if stats["failed"] == 0:
+            _mark_day_complete_s3(current.strftime("%Y%m%d"), upload_client)
             _mark_completed(date_str)
 
         current += timedelta(days=1)
