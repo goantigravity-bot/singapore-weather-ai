@@ -29,3 +29,27 @@ description: AWS 账号切换和资源管理规则
 |------|---------|---------|---------------|
 | Personal | `personal` | AWS CLI / 手动 | `infra/terraform/` |
 | GCC | `gcc-jinhui` | **Terraform only** | `infra/terraform-gcc/` |
+
+## EC2 实例管理注意事项
+
+> **重要**: EC2 实例 stop/start 后，公网 IP 会变更（除非绑定了弹性 IP）。
+
+### API Server 重启流程
+
+每次 start API server 实例后，必须先查询新 IP：
+
+```bash
+# 查询 API server 当前 IP
+aws ec2 describe-instances --profile personal \
+  --filters "Name=instance-id,Values=i-004dffd96ed716316" \
+  --query "Reservations[0].Instances[0].PublicIpAddress" \
+  --output text
+```
+
+然后用新 IP 进行 SSH 和部署操作，避免使用旧的硬编码 IP（如 `3.0.28.161`）。
+
+### 已知实例 ID
+
+| 服务 | Instance ID | 说明 |
+|------|------------|------|
+| API Server | `i-004dffd96ed716316` | stop 后 IP 会变 |
