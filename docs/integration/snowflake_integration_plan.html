@@ -427,51 +427,54 @@ user_activity (standalone for usage analytics)
 </code></pre></div>
 
 <hr />
-<h2 id="5-aws-side-what-we-provide">5. AWS Side — What We Provide</h2>
-<p>We will configure an <strong>IAM Role</strong> on our AWS account that grants Snowflake read-only access to the <code>2snowflake/</code> prefix.</p>
-<p><strong>IAM Policy:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;s3:GetObject&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;s3:ListBucket&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">&quot;arn:aws:s3:::weather-ai-models-de08370c&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;arn:aws:s3:::weather-ai-models-de08370c/2snowflake/*&quot;</span>
-<span class="w">  </span><span class="p">]</span>
-<span class="p">}</span>
+<h2 id="5-integration-approach">5. Integration Approach</h2>
+<p>We are taking a <strong>phased approach</strong> — manually validate the data first, then automate.</p>
+<hr />
+<h3 id="phase-1-current-manual-download-load">Phase 1 (Current): Manual Download &amp; Load</h3>
+<p>We will provide <strong>time-stamped download links</strong> for each batch. The Snowflake team downloads the CSV files and loads them manually into Snowflake.</p>
+<p><strong>How to get files:</strong></p>
+<p>We generate pre-signed URLs (valid 24 hours) on request. Example:</p>
+<div class="highlight"><pre><span></span><code>stations.csv        → https://weather-ai-models-de08370c.s3.ap-southeast-1.amazonaws.com/2snowflake/stations.csv?...
+forecast_result.csv → https://weather-ai-models-de08370c.s3.ap-southeast-1.amazonaws.com/2snowflake/2026-02-21_12-20/forecast_result.csv?...
 </code></pre></div>
 
-<p>We will need the <strong>Snowflake Storage Integration ARN</strong> (provided by the Snowflake team after creating the integration) to complete the IAM trust relationship.</p>
+<blockquote>
+<p>Contact the Weather AI team to request download links for a specific time window.</p>
+</blockquote>
+<p><strong>Loading into Snowflake (once tables are created):</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Option A: Snowsight UI → Load Data → upload CSV file</span>
+
+<span class="c1">-- Option B: via Snowflake stage (internal)</span>
+<span class="n">PUT</span><span class="w"> </span><span class="n">file</span><span class="p">:</span><span class="o">///</span><span class="n">path</span><span class="o">/</span><span class="k">to</span><span class="o">/</span><span class="n">forecast_result</span><span class="p">.</span><span class="n">csv</span><span class="w"> </span><span class="o">@%</span><span class="n">forecast_result</span><span class="p">;</span>
+<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">forecast_result</span><span class="w"> </span><span class="n">FILE_FORMAT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">TYPE</span><span class="o">=</span><span class="s1">&#39;CSV&#39;</span><span class="w"> </span><span class="n">SKIP_HEADER</span><span class="o">=</span><span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
 <hr />
-<h2 id="6-snowflake-side-setup-required">6. Snowflake Side — Setup Required</h2>
-<div class="highlight"><pre><span></span><code><span class="c1">-- Step 1: Create Storage Integration</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">STORAGE</span><span class="w"> </span><span class="n">INTEGRATION</span><span class="w"> </span><span class="n">weather_ai_s3_integration</span>
-<span class="w">  </span><span class="k">TYPE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">EXTERNAL_STAGE</span>
-<span class="w">  </span><span class="n">STORAGE_PROVIDER</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;S3&#39;</span>
-<span class="w">  </span><span class="n">ENABLED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">TRUE</span>
-<span class="w">  </span><span class="n">STORAGE_AWS_ROLE_ARN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;arn:aws:iam::&lt;our_account_id&gt;:role/snowflake-weather-ai-reader&#39;</span>
-<span class="w">  </span><span class="n">STORAGE_ALLOWED_LOCATIONS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;s3://weather-ai-models-de08370c/2snowflake/&#39;</span><span class="p">);</span>
-
-<span class="c1">-- Retrieve the Snowflake IAM values to send back to us:</span>
-<span class="k">DESC</span><span class="w"> </span><span class="n">INTEGRATION</span><span class="w"> </span><span class="n">weather_ai_s3_integration</span><span class="p">;</span>
-<span class="c1">-- → STORAGE_AWS_IAM_USER_ARN and STORAGE_AWS_EXTERNAL_ID</span>
-
-<span class="c1">-- Step 2: Create External Stage</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="n">STAGE</span><span class="w"> </span><span class="n">weather_ai_stage</span>
-<span class="w">  </span><span class="n">URL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;s3://weather-ai-models-de08370c/2snowflake/&#39;</span>
-<span class="w">  </span><span class="n">STORAGE_INTEGRATION</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">weather_ai_s3_integration</span>
-<span class="w">  </span><span class="n">FILE_FORMAT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">TYPE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;CSV&#39;</span><span class="w"> </span><span class="n">FIELD_OPTIONALLY_ENCLOSED_BY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&quot;&#39;</span><span class="w"> </span><span class="n">SKIP_HEADER</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
-
-<span class="c1">-- Step 3: Create tables (schemas as above in Section 3)</span>
-
-<span class="c1">-- Step 4: One-time load for stations</span>
-<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">stations</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="n">stations</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
-
-<span class="c1">-- Step 5: Incremental load (per batch folder)</span>
-<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">forecast_result</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="n">forecast_result</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
-<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">actual_result</span><span class="w">   </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="n">actual_result</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
-<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">user_activity</span><span class="w">   </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="n">user_activity</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
-<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="k">location</span><span class="w">        </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="k">location</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
-<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">place</span><span class="w">           </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="n">place</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
+<h3 id="phase-2-future-automated-external-stage">Phase 2 (Future): Automated External Stage</h3>
+<p>Once Phase 1 is validated, we will configure an S3 External Stage with IAM Role access so Snowflake can ingest new batches automatically (via Snowpipe or scheduled COPY INTO). Details will be shared separately.</p>
+<hr />
+<h2 id="6-snowflake-side-table-setup-one-time">6. Snowflake Side — Table Setup (One-Time)</h2>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">stations</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">station_id</span><span class="w">   </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">station_name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">lat</span><span class="w"> </span><span class="nb">FLOAT</span><span class="p">,</span><span class="w"> </span><span class="n">lon</span><span class="w"> </span><span class="nb">FLOAT</span>
+<span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">forecast_result</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">forecast_id</span><span class="w">  </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">loc_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">rainfall_mm</span><span class="w"> </span><span class="nb">FLOAT</span><span class="p">,</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span>
+<span class="w">    </span><span class="n">confidence</span><span class="w">   </span><span class="nb">FLOAT</span><span class="p">,</span><span class="w"> </span><span class="n">is_risky</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">forecast_time</span><span class="w"> </span><span class="n">TIMESTAMP_NTZ</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="n">TIMESTAMP_NTZ</span>
+<span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">actual_result</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">actual_id</span><span class="w">    </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">loc_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">actual_rainfall_mm</span><span class="w"> </span><span class="nb">FLOAT</span><span class="p">,</span><span class="w"> </span><span class="n">station_id</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span>
+<span class="w">    </span><span class="n">match_distance_km</span><span class="w"> </span><span class="nb">FLOAT</span><span class="p">,</span><span class="w"> </span><span class="n">observation_time</span><span class="w"> </span><span class="n">TIMESTAMP_NTZ</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="n">TIMESTAMP_NTZ</span>
+<span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">user_activity</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">query_id</span><span class="w">     </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">response_time_ms</span><span class="w"> </span><span class="nb">FLOAT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">forecast_outcome</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">ip_address</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="n">TIMESTAMP_NTZ</span>
+<span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">location</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">loc_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">place_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">lat</span><span class="w"> </span><span class="nb">FLOAT</span><span class="p">,</span><span class="w"> </span><span class="n">lon</span><span class="w"> </span><span class="nb">FLOAT</span>
+<span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">place</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">place_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">place_name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">center_lat</span><span class="w"> </span><span class="nb">FLOAT</span><span class="p">,</span><span class="w"> </span><span class="n">center_lon</span><span class="w"> </span><span class="nb">FLOAT</span>
+<span class="p">);</span>
 </code></pre></div>
 
 <hr />
@@ -492,7 +495,7 @@ user_activity (standalone for usage analytics)
 </tr>
 <tr>
 <td><strong>User Behaviour</strong></td>
-<td><code>user_activity</code> ⟕ <code>place</code></td>
+<td><code>user_activity</code></td>
 <td>Daily query volume, top queried locations, response time trend</td>
 </tr>
 <tr>
@@ -503,30 +506,35 @@ user_activity (standalone for usage analytics)
 </tbody>
 </table>
 <hr />
-<h2 id="8-open-questions-for-snowflake-team">8. Open Questions for Snowflake Team</h2>
+<h2 id="8-next-steps">8. Next Steps</h2>
 <table>
 <thead>
 <tr>
 <th>#</th>
-<th>Question</th>
+<th>Owner</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>1</td>
-<td>Which Snowflake account / database / schema should we target?</td>
+<td>Snowflake team</td>
+<td>Create the 6 tables (SQL above)</td>
 </tr>
 <tr>
 <td>2</td>
-<td>Will you configure <strong>Snowpipe</strong> for automated ingestion, or will loading be triggered manually?</td>
+<td>Weather AI team</td>
+<td>Provide pre-signed URLs for initial CSV files</td>
 </tr>
 <tr>
 <td>3</td>
-<td>Please share <code>STORAGE_AWS_IAM_USER_ARN</code> and <code>STORAGE_AWS_EXTERNAL_ID</code> after creating the Storage Integration so we can complete the IAM trust policy on our side.</td>
+<td>Snowflake team</td>
+<td>Load CSVs, verify row counts and JOIN queries</td>
 </tr>
 <tr>
 <td>4</td>
-<td>Any preference on the Snowsight dashboard layout or additional metrics to include?</td>
+<td>Both</td>
+<td>Review dashboard output and agree on Phase 2 automation approach</td>
 </tr>
 </tbody>
 </table>

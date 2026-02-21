@@ -154,58 +154,67 @@ ORDER BY mae DESC;
 
 ---
 
-## 5. AWS Side — What We Provide
+## 5. Integration Approach
 
-We will configure an **IAM Role** on our AWS account that grants Snowflake read-only access to the `2snowflake/` prefix.
-
-**IAM Policy:**
-```json
-{
-  "Effect": "Allow",
-  "Action": ["s3:GetObject", "s3:ListBucket"],
-  "Resource": [
-    "arn:aws:s3:::weather-ai-models-de08370c",
-    "arn:aws:s3:::weather-ai-models-de08370c/2snowflake/*"
-  ]
-}
-```
-
-We will need the **Snowflake Storage Integration ARN** (provided by the Snowflake team after creating the integration) to complete the IAM trust relationship.
+We are taking a **phased approach** — manually validate the data first, then automate.
 
 ---
 
-## 6. Snowflake Side — Setup Required
+### Phase 1 (Current): Manual Download & Load
+
+We will provide **time-stamped download links** for each batch. The Snowflake team downloads the CSV files and loads them manually into Snowflake.
+
+**How to get files:**
+
+We generate pre-signed URLs (valid 24 hours) on request. Example:
+```
+stations.csv        → https://weather-ai-models-de08370c.s3.ap-southeast-1.amazonaws.com/2snowflake/stations.csv?...
+forecast_result.csv → https://weather-ai-models-de08370c.s3.ap-southeast-1.amazonaws.com/2snowflake/2026-02-21_12-20/forecast_result.csv?...
+```
+
+> Contact the Weather AI team to request download links for a specific time window.
+
+**Loading into Snowflake (once tables are created):**
+```sql
+-- Option A: Snowsight UI → Load Data → upload CSV file
+
+-- Option B: via Snowflake stage (internal)
+PUT file:///path/to/forecast_result.csv @%forecast_result;
+COPY INTO forecast_result FILE_FORMAT = (TYPE='CSV' SKIP_HEADER=1);
+```
+
+---
+
+### Phase 2 (Future): Automated External Stage
+
+Once Phase 1 is validated, we will configure an S3 External Stage with IAM Role access so Snowflake can ingest new batches automatically (via Snowpipe or scheduled COPY INTO). Details will be shared separately.
+
+---
+
+## 6. Snowflake Side — Table Setup (One-Time)
 
 ```sql
--- Step 1: Create Storage Integration
-CREATE OR REPLACE STORAGE INTEGRATION weather_ai_s3_integration
-  TYPE = EXTERNAL_STAGE
-  STORAGE_PROVIDER = 'S3'
-  ENABLED = TRUE
-  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::<our_account_id>:role/snowflake-weather-ai-reader'
-  STORAGE_ALLOWED_LOCATIONS = ('s3://weather-ai-models-de08370c/2snowflake/');
-
--- Retrieve the Snowflake IAM values to send back to us:
-DESC INTEGRATION weather_ai_s3_integration;
--- → STORAGE_AWS_IAM_USER_ARN and STORAGE_AWS_EXTERNAL_ID
-
--- Step 2: Create External Stage
-CREATE OR REPLACE STAGE weather_ai_stage
-  URL = 's3://weather-ai-models-de08370c/2snowflake/'
-  STORAGE_INTEGRATION = weather_ai_s3_integration
-  FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
-
--- Step 3: Create tables (schemas as above in Section 3)
-
--- Step 4: One-time load for stations
-COPY INTO stations FROM @weather_ai_stage/stations.csv;
-
--- Step 5: Incremental load (per batch folder)
-COPY INTO forecast_result FROM @weather_ai_stage/2026-02-21_12-00/forecast_result.csv;
-COPY INTO actual_result   FROM @weather_ai_stage/2026-02-21_12-00/actual_result.csv;
-COPY INTO user_activity   FROM @weather_ai_stage/2026-02-21_12-00/user_activity.csv;
-COPY INTO location        FROM @weather_ai_stage/2026-02-21_12-00/location.csv;
-COPY INTO place           FROM @weather_ai_stage/2026-02-21_12-00/place.csv;
+CREATE TABLE stations (
+    station_id   VARCHAR, station_name VARCHAR, lat FLOAT, lon FLOAT
+);
+CREATE TABLE forecast_result (
+    forecast_id  INT, loc_id INT, rainfall_mm FLOAT, status VARCHAR,
+    confidence   FLOAT, is_risky INT, forecast_time TIMESTAMP_NTZ, created_at TIMESTAMP_NTZ
+);
+CREATE TABLE actual_result (
+    actual_id    INT, loc_id INT, actual_rainfall_mm FLOAT, station_id VARCHAR,
+    match_distance_km FLOAT, observation_time TIMESTAMP_NTZ, created_at TIMESTAMP_NTZ
+);
+CREATE TABLE user_activity (
+    query_id     INT, query VARCHAR, response_time_ms FLOAT,
+    forecast_outcome VARCHAR, ip_address VARCHAR, created_at TIMESTAMP_NTZ
+);
+CREATE TABLE location (
+    loc_id INT, place_id INT, lat FLOAT, lon FLOAT
+);
+CREATE TABLE place (
+    place_id INT, place_name VARCHAR, center_lat FLOAT, center_lon FLOAT
+);
 ```
 
 ---
@@ -215,16 +224,18 @@ COPY INTO place           FROM @weather_ai_stage/2026-02-21_12-00/place.csv;
 | Dashboard | Primary Tables | Key Metrics |
 |-----------|---------------|-------------|
 | **Model Accuracy** | `forecast_result` ⟕ `actual_result` ⟕ `place` | MAE, Bias by hour / location / rain intensity |
-| **User Behaviour** | `user_activity` ⟕ `place` | Daily query volume, top queried locations, response time trend |
+| **User Behaviour** | `user_activity` | Daily query volume, top queried locations, response time trend |
 | **API Performance** | `forecast_result` | P50 / P95 response time, backtest coverage rate |
 
 ---
 
-## 8. Open Questions for Snowflake Team
+## 8. Next Steps
 
-| # | Question |
-|---|----------|
-| 1 | Which Snowflake account / database / schema should we target? |
-| 2 | Will you configure **Snowpipe** for automated ingestion, or will loading be triggered manually? |
-| 3 | Please share `STORAGE_AWS_IAM_USER_ARN` and `STORAGE_AWS_EXTERNAL_ID` after creating the Storage Integration so we can complete the IAM trust policy on our side. |
-| 4 | Any preference on the Snowsight dashboard layout or additional metrics to include? |
+| # | Owner | Action |
+|---|-------|--------|
+| 1 | Snowflake team | Create the 6 tables (SQL above) |
+| 2 | Weather AI team | Provide pre-signed URLs for initial CSV files |
+| 3 | Snowflake team | Load CSVs, verify row counts and JOIN queries |
+| 4 | Both | Review dashboard output and agree on Phase 2 automation approach |
+
+
