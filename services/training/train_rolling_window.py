@@ -96,7 +96,7 @@ def train_model():
 
     
     # 2. Model
-    model = WeatherFusionNet(sat_channels=1, sensor_features=7, coord_dim=2, prediction_dim=1)
+    model = WeatherFusionNet(sat_channels=3, sensor_features=7, coord_dim=2, prediction_dim=1)
     
     # 增量学习: 检查是否存在已训练模型
     if os.path.exists(MODEL_SAVE_PATH):

@@ -11,9 +11,12 @@ from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
 
-# --- 基站坐标映射（方案 A: 局部裁剪 32×32 patch）---
-PATCH_SIZE = 32
-IMG_SIZE = 128
+# --- 卫星图参数（satellite-3ch: B08/B11/B13, 41×37 裁剪区域）---
+# 3ch 数据 shape: (41, 37)，不再做 patch 裁剪，直接用整张图
+SAT_HEIGHT = 41
+SAT_WIDTH = 37
+IMG_SIZE = 41  # 保持兼容：用于坐标归一化
+SAT_BANDS = ['B08', 'B11', 'B13']
 _STATION_COORD_CACHE = os.path.join(os.path.dirname(__file__), 'station_coords.json')
 
 def _load_station_coords():
@@ -109,34 +112,36 @@ class WeatherDataset(Dataset):
             self._station_pixel[sid] = (px, py)
         logger.info(f"Station pixel map: {len(self._station_pixel)} stations mapped")
 
-        # --- 一次性预加载所有卫星 .npy 到内存（约 5MB，完全放得下内存）---
-        # 避免 __getitem__ 中每次 glob+np.load 磁盘 IO
+        # --- 预加载 3 通道卫星 .npy (B08/B11/B13) 到内存 ---
+        # 同一时间戳的 3 个波段文件堆叠为 (3, H, W)
         self._sat_cache = {}
         self.available_sat_timestamps = set()
         
         processed_dir = "processed_data"
         if os.path.exists(processed_dir):
+            # 先按时间戳分组收集各波段文件
+            band_files = {}  # {ts_str: {band: filepath}}
             for f in os.listdir(processed_dir):
-                if f.endswith(".npy"):
-                    # 兼容 NC_H09_YYYYMMDD_HHMM_... 和 SAT_YYYYMMDD_HHMM 两种格式
-                    ts_str = None
-                    if f.startswith("SAT_128_"):
-                        # SAT_128_YYYYMMDD_HHMM.npy
+                if not f.endswith(".npy"):
+                    continue
+                # 支持 SAT_B08/B11/B13 三种波段命名
+                for band in SAT_BANDS:
+                    prefix = f"SAT_{band}_"
+                    if f.startswith(prefix):
                         base = f.replace(".npy", "")
                         parts = base.split("_")
                         if len(parts) >= 4:
                             ts_str = f"{parts[2]}_{parts[3]}"
-                    elif f.startswith("NC_H0"):
-                        parts = f.split("_")
-                        if len(parts) >= 4:
-                            ts_str = f"{parts[2]}_{parts[3]}"
-
-                    if ts_str is None:
-                        continue
-
-                    self.available_sat_timestamps.add(ts_str)
+                            band_files.setdefault(ts_str, {})[band] = os.path.join(processed_dir, f)
+                        break
+            
+            # 堆叠三个波段为 (3, H, W)
+            for ts_str, bands in band_files.items():
+                if len(bands) == len(SAT_BANDS):
                     try:
-                        self._sat_cache[ts_str] = np.load(os.path.join(processed_dir, f))
+                        layers = [np.load(bands[b]) for b in SAT_BANDS]
+                        self._sat_cache[ts_str] = np.stack(layers, axis=0)  # (3, 41, 37)
+                        self.available_sat_timestamps.add(ts_str)
                     except Exception:
                         pass
 
@@ -266,7 +271,7 @@ class WeatherDataset(Dataset):
         target_val = group.iloc[sample_info['target_idx']]['rainfall']
         target_tensor = torch.tensor([target_val], dtype=torch.float32)
         
-        # 3. 从内存缓存获取卫星图像（O(1) 哈希查找，零磁盘 IO）
+        # 3. 从内存缓存获取 3 通道卫星图 (B08/B11/B13)
         current_ts = group.iloc[sample_info['input_idx_end'] - 1]['timestamp']
         
         minute = (current_ts.minute // 10) * 10
@@ -279,39 +284,20 @@ class WeatherDataset(Dataset):
              sat_ts_utc = sat_ts - timedelta(hours=8)
              utc_str = sat_ts_utc.strftime('%Y%m%d_%H%M')
         
-        # 直接从内存字典取，O(1) 哈希查找
         data = self._sat_cache.get(utc_str)
         if data is not None:
-            sat_full = torch.tensor(data, dtype=torch.float32)
-            if sat_full.ndim == 2:
-                sat_full = sat_full.unsqueeze(0)  # (1, 128, 128)
-            sat_full = (sat_full - 200) / 100.0
+            # data shape: (3, 41, 37), 温度单位 K
+            sat_img = torch.tensor(data, dtype=torch.float32)
+            sat_img = (sat_img - 200) / 100.0
         else:
-            sat_full = torch.zeros(1, IMG_SIZE, IMG_SIZE)
+            sat_img = torch.zeros(len(SAT_BANDS), SAT_HEIGHT, SAT_WIDTH)
         
-        # 4. 以基站为中心裁剪 32×32 patch
+        # 坐标特征 (0~1)
         sensor_id = sample_info['sensor_id']
         px, py = self._station_pixel.get(sensor_id, (IMG_SIZE // 2, IMG_SIZE // 2))
-        half = PATCH_SIZE // 2
-        
-        # 边界安全：clamp 到图像范围内
-        y1 = max(0, py - half)
-        y2 = min(IMG_SIZE, py + half)
-        x1 = max(0, px - half)
-        x2 = min(IMG_SIZE, px + half)
-        
-        patch = sat_full[:, y1:y2, x1:x2]
-        
-        # 边界处 patch 可能不足 32×32，用 0 填充
-        if patch.shape[1] != PATCH_SIZE or patch.shape[2] != PATCH_SIZE:
-            padded = torch.zeros(1, PATCH_SIZE, PATCH_SIZE)
-            padded[:, :patch.shape[1], :patch.shape[2]] = patch
-            patch = padded
-        
-        # 5. 归一化坐标特征 (0~1)
         coord_tensor = torch.tensor([px / IMG_SIZE, py / IMG_SIZE], dtype=torch.float32)
         
-        return patch, sensor_tensor, coord_tensor, target_tensor
+        return sat_img, sensor_tensor, coord_tensor, target_tensor
 
 def _build_weighted_sampler(subset, rain_threshold=0.1):
     """

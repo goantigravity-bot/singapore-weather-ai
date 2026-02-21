@@ -24,20 +24,20 @@ class SpatialAttention(nn.Module):
 class SatelliteEncoder(nn.Module):
     """
     Encoder for Satellite Images (Spatial Data).
-    方案 A: 输入为基站局部 32×32 patch + Spatial Attention
+    输入: (B, 3, 41, 37) — B08/B11/B13 三通道卫星图（新加坡裁剪区域）
     """
-    def __init__(self, in_channels=1, feature_dim=128):
+    def __init__(self, in_channels=3, feature_dim=128):
         super(SatelliteEncoder, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, 16, kernel_size=3, padding=1),
             nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.MaxPool2d(2),  # 32→16
+            nn.MaxPool2d(2),  # 41×37 → 20×18
 
             nn.Conv2d(16, 32, kernel_size=3, padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.MaxPool2d(2),  # 16→8
+            nn.MaxPool2d(2),  # 20×18 → 10×9
 
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
@@ -75,7 +75,7 @@ class WeatherFusionNet(nn.Module):
     Fusion Network combining Satellite and Sensor data.
     方案 A: 增加 2 维基站坐标特征到融合层。
     """
-    def __init__(self, sat_channels=3, sensor_features=7, coord_dim=6, prediction_dim=1):
+    def __init__(self, sat_channels=3, sensor_features=7, coord_dim=2, prediction_dim=1):
         super(WeatherFusionNet, self).__init__()
         
         self.sat_encoder = SatelliteEncoder(in_channels=sat_channels, feature_dim=128)
@@ -92,8 +92,7 @@ class WeatherFusionNet(nn.Module):
 
     def forward(self, sat_img, sensor_data, coord):
         """
-        sat_img: (Batch, C, 32, 32) — 基站局部 patch
-        sensor_data: (Batch, Seq_Len, F)
+        sat_img: (Batch, 3, 41, 37) — 3ch 卫星全图 (B08/B11/B13)
         coord: (Batch, 2) — 归一化基站坐标
         """
         sat_feat = self.sat_encoder(sat_img)
@@ -110,17 +109,17 @@ if __name__ == "__main__":
     # Simulate dummy data
     BATCH_SIZE = 4
     
-    # 1. Satellite Data: 4 images, 1 channel (IR), 32x32 patch
-    dummy_sat_img = torch.randn(BATCH_SIZE, 1, 32, 32)
+    # 1. Satellite Data: 3 channels (B08/B11/B13), 41x37
+    dummy_sat_img = torch.randn(BATCH_SIZE, 3, 41, 37)
     
     # 2. Sensor Data: 7 features
     dummy_sensor_data = torch.randn(BATCH_SIZE, 10, 7)
     
-    # 3. Coord: position + hour/month cycle encoding
-    dummy_coord = torch.rand(BATCH_SIZE, 6)
+    # 3. Coord: position (2d)
+    dummy_coord = torch.rand(BATCH_SIZE, 2)
     
     # Initialize Model
-    model = WeatherFusionNet(sat_channels=1, sensor_features=7, prediction_dim=1)
+    model = WeatherFusionNet(sat_channels=3, sensor_features=7, coord_dim=2, prediction_dim=1)
     
     # Forward Pass
     prediction = model(dummy_sat_img, dummy_sensor_data, dummy_coord)
