@@ -40,25 +40,24 @@ def get_region_from_latlon(lat, lon):
     return best_region
 
 def list_json_files(date_str=None):
-    """List JSON files. If date_str provided, filter by prefix govdata/YYYY-MM-DD/"""
+    """List JSON files in govdata/.
+    
+    若提供 date_str（格式 YYYY-MM-DD），则只扫描对应年份子目录
+    govdata/{year}/，避免对整个 govdata/ 做全量列举（性能优化）。
+    """
     s3 = get_s3_client()
     files = []
     paginator = s3.get_paginator('list_objects_v2')
-    
-    prefix = f"{GOVDATA_PREFIX}/"
+
     if date_str:
-        prefix = f"{GOVDATA_PREFIX}/" # Assumes YYYY-MM-DD folder structure in S3?
-        # Verify if download_manager uses YYYY-MM-DD or YYYYMMDD?
-        # bulk_download script usually uses YYYYMMDD. 
-        # API usually returns YYYY-MM-DD in json.
-        # Let's check download_manager logic. 
-        # It uploads to govdata/{date}/ where date is YYYY-MM-DD from python call.
-        # Wait, bulk_download...sh:
-        #  aws s3 cp ... s3://$BUCKET_NAME/govdata/$DATE_STR/ ...
-        # If DATE_STR is YYYY-MM-DD (passed from python), then it is dashes.
-    
+        # 精确到年份子目录，约 1500 个文件，<2 次分页
+        year = date_str[:4]
+        prefix = f"{GOVDATA_PREFIX}/{year}/"
+    else:
+        prefix = f"{GOVDATA_PREFIX}/"
+
     logger.info(f"Listing files in s3://{S3_BUCKET}/{prefix}...")
-    
+
     try:
         for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=prefix):
             for obj in page.get('Contents', []):
@@ -67,7 +66,7 @@ def list_json_files(date_str=None):
                     files.append(key)
     except Exception as e:
         logger.warning(f"Error listing files: {e}")
-        
+
     return files
 
 def process_single_json(s3, key, station_region_map):
@@ -86,21 +85,9 @@ def process_single_json(s3, key, station_region_map):
         
         records = []
 
-        # Wind v2 格式: {code, data: {readings: [{timestamp, data: [{stationId, value}]}]}}
-        if dtype in ('wind_speed', 'wind_direction'):
-            inner = data.get('data', {})
-            if not isinstance(inner, dict):
-                return []
-            for reading in inner.get('readings', []):
-                timestamp = reading.get('timestamp')
-                for entry in reading.get('data', []):
-                    records.append({
-                        "timestamp": timestamp,
-                        "sensor_id": entry['stationId'],
-                        "type": dtype,
-                        "value": entry['value']
-                    })
-            return records
+        # wind-speed / wind-direction 与其他指标相同，均为标准 v1 格式：
+        # {items: [{timestamp, readings: [{station_id, value}]}]}
+        # 无需特殊处理，统一走下方 v1 通用逻辑
 
         # v1 格式: {items: [{timestamp, readings: [{station_id, value}]}]}
         if not data or 'items' not in data:
