@@ -176,13 +176,13 @@ def train_model():
         epoch_samples = 0
         
         for batch_idx, (sat, sensor, coord, target) in enumerate(train_loader):
-            sat, sensor, target = sat.to(DEVICE), sensor.to(DEVICE), target.to(DEVICE)
+            sat, sensor, coord, target = sat.to(DEVICE), sensor.to(DEVICE), coord.to(DEVICE), target.to(DEVICE)
             
             optimizer.zero_grad()
             
             # Mixed Precision 前向传播
             with autocast(device_type=DEVICE.type, enabled=use_amp):
-                outputs = model(sat, sensor)
+                outputs = model(sat, sensor, coord)
                 loss = criterion(outputs, target)
             
             mae = torch.mean(torch.abs(outputs - target))
@@ -210,9 +210,9 @@ def train_model():
         RAIN_THRESHOLD = 0.1
         with torch.no_grad():
             for sat, sensor, coord, target in val_loader:
-                sat, sensor, target = sat.to(DEVICE), sensor.to(DEVICE), target.to(DEVICE)
+                sat, sensor, coord, target = sat.to(DEVICE), sensor.to(DEVICE), coord.to(DEVICE), target.to(DEVICE)
                 with autocast(device_type=DEVICE.type, enabled=use_amp):
-                    outputs = model(sat, sensor)
+                    outputs = model(sat, sensor, coord)
                     loss = criterion(outputs, target)
                 mae = torch.mean(torch.abs(outputs - target))
                 val_loss += loss.item()
