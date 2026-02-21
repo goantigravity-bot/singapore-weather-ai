@@ -175,7 +175,7 @@ def train_model():
         running_mae = 0.0
         epoch_samples = 0
         
-        for batch_idx, (sat, sensor, target) in enumerate(train_loader):
+        for batch_idx, (sat, sensor, coord, target) in enumerate(train_loader):
             sat, sensor, target = sat.to(DEVICE), sensor.to(DEVICE), target.to(DEVICE)
             
             optimizer.zero_grad()
@@ -209,7 +209,7 @@ def train_model():
         rain_total = 0
         RAIN_THRESHOLD = 0.1
         with torch.no_grad():
-            for sat, sensor, target in val_loader:
+            for sat, sensor, coord, target in val_loader:
                 sat, sensor, target = sat.to(DEVICE), sensor.to(DEVICE), target.to(DEVICE)
                 with autocast(device_type=DEVICE.type, enabled=use_amp):
                     outputs = model(sat, sensor)
