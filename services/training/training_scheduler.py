@@ -168,29 +168,45 @@ def upload_history_to_s3(date_str, metrics):
 
 def check_data_available(date_str):
     """
-    检查指定日期的数据是否在 S3 中就绪
-    通过检查是否存在实际 .nc 文件判断（不依赖 .complete 标记）
+    检查指定日期的数据是否在 S3 中就绪。
+    优先检查 processed/satellite/{date}/ 的 .npy（已预处理），
+    其次 fallback 检查 satellite/{date}/ 的 .nc（原始卫星数据）。
     """
     date_fmt = date_str.replace("-", "")
-    
+
     try:
         s3 = boto3.client('s3')
-        response = s3.list_objects_v2(
+
+        # 优先：检查预处理好的 .npy（节省带宽，直接可训练）
+        processed_resp = s3.list_objects_v2(
+            Bucket=S3_BUCKET,
+            Prefix=f"processed/{SATELLITE_PREFIX}/{date_fmt}/",
+            MaxKeys=5
+        )
+        npy_files = [
+            obj for obj in processed_resp.get('Contents', [])
+            if obj['Key'].endswith('.npy')
+        ]
+        if npy_files:
+            logger.info(f"✅ 预处理数据就绪: {date_str} ({len(npy_files)}+ 个 .npy 文件)")
+            return True
+
+        # Fallback：检查原始 .nc 卫星数据
+        raw_resp = s3.list_objects_v2(
             Bucket=S3_BUCKET,
             Prefix=f"{SATELLITE_PREFIX}/{date_fmt}/",
             MaxKeys=5
         )
-        # 检查是否有 .nc 文件（排除 .complete 等标记文件）
         nc_files = [
-            obj for obj in response.get('Contents', [])
+            obj for obj in raw_resp.get('Contents', [])
             if obj['Key'].endswith('.nc')
         ]
         if nc_files:
-            logger.info(f"✅ 数据就绪: {date_str} ({len(nc_files)}+ 个 .nc 文件)")
+            logger.info(f"✅ 原始卫星数据就绪: {date_str} ({len(nc_files)}+ 个 .nc 文件)")
             return True
-        else:
-            logger.info(f"⏳ 数据未就绪: {date_str}")
-            return False
+
+        logger.info(f"⏳ 数据未就绪: {date_str}")
+        return False
     except Exception as e:
         logger.warning(f"检查数据可用性失败: {e}")
         return False
