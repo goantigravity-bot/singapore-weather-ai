@@ -82,9 +82,8 @@ class WeatherDataset(Dataset):
         
         self.sensor_df['timestamp'] = pd.to_datetime(self.sensor_df['timestamp'])
         
-        # 🆕 滑动窗口优化: 只使用最近N天的数据
-        # MAX_TRAINING_DAYS = 30  # 原逻辑：只取最新30天
-        MAX_TRAINING_DAYS = 999  # 使用全部历史数据
+        # 滑动窗口：可通过环境变量限制训练数据时间范围，默认使用全部历史
+        MAX_TRAINING_DAYS = int(os.environ.get("MAX_TRAINING_DAYS", "99999"))
         
         if len(self.sensor_df) > 0:
             max_date = self.sensor_df['timestamp'].max()
