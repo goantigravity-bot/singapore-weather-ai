@@ -166,7 +166,7 @@ def run_backtest_cycle(predict_fn, model, df, stations_meta_model):
                     "confidence": raw.get("confidence", 0.5),
                     "is_risky": raw.get("rainfall", 0) >= 2.0,
                     "response_time_ms": None,
-                    "forecast_time": datetime.now().isoformat(),
+                    "forecast_time": datetime.utcnow().isoformat(),
                 }],
                 source="backtest"
             )

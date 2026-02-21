@@ -215,6 +215,26 @@ const MapComponent: React.FC<Props & {
 
             {/* 4. Satellite Cloud Overlay */}
             {showCloud && <CloudLayer />}
+
+            {/* Note: shown only when both wind and satellite cloud layers are active */}
+            {showWind && showCloud && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: '24px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 1000,
+                    background: 'rgba(0,0,0,0.55)',
+                    color: '#e2e8f0',
+                    fontSize: '11px',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    pointerEvents: 'none',
+                    whiteSpace: 'nowrap',
+                }}>
+                    ⚠️ Surface wind (10 m) — may differ from cloud movement at higher altitude
+                </div>
+            )}
         </MapContainer>
     );
 };
