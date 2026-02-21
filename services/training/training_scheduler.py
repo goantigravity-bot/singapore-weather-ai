@@ -10,6 +10,7 @@ training_scheduler.py
 """
 
 import os
+import sys
 import json
 import subprocess
 import boto3
@@ -351,7 +352,7 @@ def preprocess_data():
     logger.info("🔧 预处理卫星数据...")
     
     result = subprocess.run(
-        ["python", "preprocess_images.py"],
+        [sys.executable, "preprocess_images.py"],
         cwd=str(WORK_DIR),
         capture_output=True
     )
@@ -370,7 +371,7 @@ def process_gov_data(date_str):
     logger.info(f'📊 处理政府数据: {date_str}')
     
     result = subprocess.run(
-        ['python', 'process_gov_data_from_s3.py', '--date', date_str],
+        [sys.executable, 'process_gov_data_from_s3.py', '--date', date_str],
         cwd=str(WORK_DIR),
         capture_output=True,
         text=True
@@ -418,7 +419,7 @@ def train_model(date_str, epochs):
     logger.info(f"🧠 开始训练 {date_str} ({epochs} epochs)...")
     
     result = subprocess.run(
-        ["python", "train_rolling_window.py", 
+        [sys.executable, "train_rolling_window.py",
          "--start", date_str,
          "--end", date_str,
          "--epochs", str(epochs)],
