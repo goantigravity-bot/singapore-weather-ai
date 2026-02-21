@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snowflake Integration Plan — Singapore Weather AI</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .mermaid {
+            max-width: none;
+            overflow-x: auto;
+            text-align: center;
+        }
+        .mermaid svg {
+            min-width: 1000px;
+        }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+            vertical-align: top;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        strong { color: var(--text); }
+
+        img {
+            max-width: 100%; height: auto; display: block;
+            margin: 2rem auto; padding: 1rem; background: #ffffff;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="snowflake-integration-plan-singapore-weather-ai">Snowflake Integration Plan — Singapore Weather AI</h1>
+<p><strong>Prepared by:</strong> Weather AI Team
+<strong>Date:</strong> 2026-02-21
+<strong>Purpose:</strong> Share the data export design with the Snowflake team to align on setup and ingestion approach.</p>
+<hr />
+<h2 id="1-overview">1. Overview</h2>
+<p>The Singapore Weather AI system runs a real-time weather forecasting pipeline on AWS. We would like to export operational transaction data to Snowflake for analytics and dashboard reporting.</p>
+<p><strong>Data source:</strong> SQLite database (<code>weather.db</code>) on the API server (EC2, <code>ap-southeast-1</code>)
+<strong>Export method:</strong> Incremental CSV files pushed to Amazon S3 every 5 minutes
+<strong>S3 bucket:</strong> <code>s3://weather-ai-models-de08370c/</code></p>
+<hr />
+<h2 id="2-s3-folder-structure">2. S3 Folder Structure</h2>
+<div class="highlight"><pre><span></span><code>s3://weather-ai-models-de08370c/
+└── 2snowflake/
+    ├── stations.csv                  ← One-time static export (NEA station coordinates)
+    ├── 2026-02-21_11-55/             ← Incremental batch (timestamp = export time, UTC+8)
+    │   ├── forecast_result.csv
+    │   ├── actual_result.csv
+    │   ├── user_activity.csv
+    │   ├── location.csv
+    │   └── place.csv
+    ├── 2026-02-21_12-00/
+    │   └── (same files, next 5-min window)
+    └── ...
+</code></pre></div>
+
+<ul>
+<li>Each timestamped subfolder contains <strong>only new records</strong> created in that 5-minute window.</li>
+<li>File names within each subfolder are <strong>always the same</strong> — Snowflake can pattern-match on the subfolder.</li>
+<li><code>stations.csv</code> is written once and updated only if NEA station metadata changes.</li>
+</ul>
+<hr />
+<h2 id="3-table-schemas">3. Table Schemas</h2>
+<h3 id="31-stations-one-time-load">3.1 <code>stations</code> <em>(one-time load)</em></h3>
+<p>NEA weather station reference data. Static — stations rarely change location.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>station_id</code></td>
+<td>STRING</td>
+<td>NEA station identifier (e.g. <code>S111</code>)</td>
+</tr>
+<tr>
+<td><code>station_name</code></td>
+<td>STRING</td>
+<td>Human-readable name (e.g. <code>Newton</code>)</td>
+</tr>
+<tr>
+<td><code>lat</code></td>
+<td>FLOAT</td>
+<td>Station latitude</td>
+</tr>
+<tr>
+<td><code>lon</code></td>
+<td>FLOAT</td>
+<td>Station longitude</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="32-forecast_result-incremental-backtest-records-only">3.2 <code>forecast_result</code> <em>(incremental — backtest records only)</em></h3>
+<p>Model predictions generated every 10 minutes for 10 fixed benchmark locations across Singapore.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>forecast_id</code></td>
+<td>INT</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>loc_id</code></td>
+<td>INT</td>
+<td>FK → <code>location.loc_id</code></td>
+</tr>
+<tr>
+<td><code>rainfall_mm</code></td>
+<td>FLOAT</td>
+<td>Predicted rainfall (mm / 10 min)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>STRING</td>
+<td><code>No Rain</code> / <code>Light</code> / <code>Moderate</code> / <code>Heavy</code></td>
+</tr>
+<tr>
+<td><code>confidence</code></td>
+<td>FLOAT</td>
+<td>Model confidence score (0–1)</td>
+</tr>
+<tr>
+<td><code>is_risky</code></td>
+<td>INT</td>
+<td>1 if rainfall_mm ≥ 2.0, else 0</td>
+</tr>
+<tr>
+<td><code>forecast_time</code></td>
+<td>TIMESTAMP</td>
+<td>Time the prediction was made (SGT)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TIMESTAMP</td>
+<td>DB write time</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Only records with <code>source = 'backtest'</code> are exported. User-triggered predictions are excluded.</p>
+</blockquote>
+<hr />
+<h3 id="33-actual_result-incremental">3.3 <code>actual_result</code> <em>(incremental)</em></h3>
+<p>Observed rainfall from the nearest NEA station, automatically matched to each backtest forecast within a 30-minute window.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>actual_id</code></td>
+<td>INT</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>loc_id</code></td>
+<td>INT</td>
+<td>FK → <code>location.loc_id</code> (joins to <code>forecast_result</code>)</td>
+</tr>
+<tr>
+<td><code>actual_rainfall_mm</code></td>
+<td>FLOAT</td>
+<td>Real observed rainfall (mm / 10 min)</td>
+</tr>
+<tr>
+<td><code>station_id</code></td>
+<td>STRING</td>
+<td>NEA station used for matching (joins to <code>stations</code>)</td>
+</tr>
+<tr>
+<td><code>match_distance_km</code></td>
+<td>FLOAT</td>
+<td>Distance from forecast point to NEA station</td>
+</tr>
+<tr>
+<td><code>observation_time</code></td>
+<td>TIMESTAMP</td>
+<td>Time of NEA observation (SGT)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TIMESTAMP</td>
+<td>DB write time</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="34-user_activity-incremental">3.4 <code>user_activity</code> <em>(incremental)</em></h3>
+<p>Logs of user queries submitted to the prediction API.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>query_id</code></td>
+<td>INT</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>query</code></td>
+<td>STRING</td>
+<td>Natural language query text</td>
+</tr>
+<tr>
+<td><code>response_time_ms</code></td>
+<td>FLOAT</td>
+<td>API response latency (ms)</td>
+</tr>
+<tr>
+<td><code>forecast_outcome</code></td>
+<td>STRING</td>
+<td>Summary of prediction returned</td>
+</tr>
+<tr>
+<td><code>ip_address</code></td>
+<td>STRING</td>
+<td>SHA-256 hashed (PII masked)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TIMESTAMP</td>
+<td>Query time (SGT)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="35-location-incremental-slow-changing">3.5 <code>location</code> <em>(incremental / slow-changing)</em></h3>
+<p>Coordinate points associated with each forecast or query.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>loc_id</code></td>
+<td>INT</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>place_id</code></td>
+<td>INT</td>
+<td>FK → <code>place.place_id</code></td>
+</tr>
+<tr>
+<td><code>lat</code></td>
+<td>FLOAT</td>
+<td>Latitude of the point</td>
+</tr>
+<tr>
+<td><code>lon</code></td>
+<td>FLOAT</td>
+<td>Longitude of the point</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="36-place-incremental-slow-changing">3.6 <code>place</code> <em>(incremental / slow-changing)</em></h3>
+<p>Named locations (benchmark sites, user-queried places).</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>place_id</code></td>
+<td>INT</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>place_name</code></td>
+<td>STRING</td>
+<td>e.g. <code>backtest:Newton</code>, <code>Marina Bay</code></td>
+</tr>
+<tr>
+<td><code>center_lat</code></td>
+<td>FLOAT</td>
+<td>Representative latitude</td>
+</tr>
+<tr>
+<td><code>center_lon</code></td>
+<td>FLOAT</td>
+<td>Representative longitude</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-entity-relationship">4. Entity Relationship</h2>
+<div class="highlight"><pre><span></span><code>stations ←──────────────────── actual_result
+                                     │
+place ──── location ─────── forecast_result
+                  └───────── actual_result
+user_activity (standalone for usage analytics)
+</code></pre></div>
+
+<p><strong>Key JOIN for accuracy analysis:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="n">p</span><span class="p">.</span><span class="n">place_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">HOUR</span><span class="p">(</span><span class="n">f</span><span class="p">.</span><span class="n">forecast_time</span><span class="p">)</span><span class="w">                                  </span><span class="k">AS</span><span class="w"> </span><span class="n">hour_of_day</span><span class="p">,</span>
+<span class="w">    </span><span class="k">AVG</span><span class="p">(</span><span class="k">ABS</span><span class="p">(</span><span class="n">f</span><span class="p">.</span><span class="n">rainfall_mm</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">actual_rainfall_mm</span><span class="p">))</span><span class="w">         </span><span class="k">AS</span><span class="w"> </span><span class="n">mae</span><span class="p">,</span>
+<span class="w">    </span><span class="k">AVG</span><span class="p">(</span><span class="n">f</span><span class="p">.</span><span class="n">rainfall_mm</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">actual_rainfall_mm</span><span class="p">)</span><span class="w">              </span><span class="k">AS</span><span class="w"> </span><span class="n">bias</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w">                                               </span><span class="k">AS</span><span class="w"> </span><span class="n">sample_count</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">forecast_result</span><span class="w"> </span><span class="n">f</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">actual_result</span><span class="w"> </span><span class="n">a</span>
+<span class="w">    </span><span class="k">ON</span><span class="w">  </span><span class="n">f</span><span class="p">.</span><span class="n">loc_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">loc_id</span>
+<span class="w">    </span><span class="k">AND</span><span class="w"> </span><span class="k">ABS</span><span class="p">(</span><span class="n">DATEDIFF</span><span class="p">(</span><span class="s1">&#39;minute&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">forecast_time</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">observation_time</span><span class="p">))</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">30</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="k">location</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">loc_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">l</span><span class="p">.</span><span class="n">loc_id</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">place</span><span class="w">   </span><span class="n">p</span><span class="w">  </span><span class="k">ON</span><span class="w"> </span><span class="n">l</span><span class="p">.</span><span class="n">place_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">place_id</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">place_name</span><span class="p">,</span><span class="w"> </span><span class="n">hour_of_day</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">mae</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-aws-side-what-we-provide">5. AWS Side — What We Provide</h2>
+<p>We will configure an <strong>IAM Role</strong> on our AWS account that grants Snowflake read-only access to the <code>2snowflake/</code> prefix.</p>
+<p><strong>IAM Policy:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;s3:GetObject&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;s3:ListBucket&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;arn:aws:s3:::weather-ai-models-de08370c&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;arn:aws:s3:::weather-ai-models-de08370c/2snowflake/*&quot;</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>We will need the <strong>Snowflake Storage Integration ARN</strong> (provided by the Snowflake team after creating the integration) to complete the IAM trust relationship.</p>
+<hr />
+<h2 id="6-snowflake-side-setup-required">6. Snowflake Side — Setup Required</h2>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Step 1: Create Storage Integration</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">STORAGE</span><span class="w"> </span><span class="n">INTEGRATION</span><span class="w"> </span><span class="n">weather_ai_s3_integration</span>
+<span class="w">  </span><span class="k">TYPE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">EXTERNAL_STAGE</span>
+<span class="w">  </span><span class="n">STORAGE_PROVIDER</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;S3&#39;</span>
+<span class="w">  </span><span class="n">ENABLED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">TRUE</span>
+<span class="w">  </span><span class="n">STORAGE_AWS_ROLE_ARN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;arn:aws:iam::&lt;our_account_id&gt;:role/snowflake-weather-ai-reader&#39;</span>
+<span class="w">  </span><span class="n">STORAGE_ALLOWED_LOCATIONS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;s3://weather-ai-models-de08370c/2snowflake/&#39;</span><span class="p">);</span>
+
+<span class="c1">-- Retrieve the Snowflake IAM values to send back to us:</span>
+<span class="k">DESC</span><span class="w"> </span><span class="n">INTEGRATION</span><span class="w"> </span><span class="n">weather_ai_s3_integration</span><span class="p">;</span>
+<span class="c1">-- → STORAGE_AWS_IAM_USER_ARN and STORAGE_AWS_EXTERNAL_ID</span>
+
+<span class="c1">-- Step 2: Create External Stage</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="n">STAGE</span><span class="w"> </span><span class="n">weather_ai_stage</span>
+<span class="w">  </span><span class="n">URL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;s3://weather-ai-models-de08370c/2snowflake/&#39;</span>
+<span class="w">  </span><span class="n">STORAGE_INTEGRATION</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">weather_ai_s3_integration</span>
+<span class="w">  </span><span class="n">FILE_FORMAT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">TYPE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;CSV&#39;</span><span class="w"> </span><span class="n">FIELD_OPTIONALLY_ENCLOSED_BY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&quot;&#39;</span><span class="w"> </span><span class="n">SKIP_HEADER</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+
+<span class="c1">-- Step 3: Create tables (schemas as above in Section 3)</span>
+
+<span class="c1">-- Step 4: One-time load for stations</span>
+<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">stations</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="n">stations</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
+
+<span class="c1">-- Step 5: Incremental load (per batch folder)</span>
+<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">forecast_result</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="n">forecast_result</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
+<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">actual_result</span><span class="w">   </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="n">actual_result</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
+<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">user_activity</span><span class="w">   </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="n">user_activity</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
+<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="k">location</span><span class="w">        </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="k">location</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
+<span class="k">COPY</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">place</span><span class="w">           </span><span class="k">FROM</span><span class="w"> </span><span class="o">@</span><span class="n">weather_ai_stage</span><span class="o">/</span><span class="mi">2026</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">21</span><span class="n">_12</span><span class="o">-</span><span class="mi">00</span><span class="o">/</span><span class="n">place</span><span class="p">.</span><span class="n">csv</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-planned-snowsight-dashboards">7. Planned Snowsight Dashboards</h2>
+<table>
+<thead>
+<tr>
+<th>Dashboard</th>
+<th>Primary Tables</th>
+<th>Key Metrics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Model Accuracy</strong></td>
+<td><code>forecast_result</code> ⟕ <code>actual_result</code> ⟕ <code>place</code></td>
+<td>MAE, Bias by hour / location / rain intensity</td>
+</tr>
+<tr>
+<td><strong>User Behaviour</strong></td>
+<td><code>user_activity</code> ⟕ <code>place</code></td>
+<td>Daily query volume, top queried locations, response time trend</td>
+</tr>
+<tr>
+<td><strong>API Performance</strong></td>
+<td><code>forecast_result</code></td>
+<td>P50 / P95 response time, backtest coverage rate</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-open-questions-for-snowflake-team">8. Open Questions for Snowflake Team</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Which Snowflake account / database / schema should we target?</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Will you configure <strong>Snowpipe</strong> for automated ingestion, or will loading be triggered manually?</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Please share <code>STORAGE_AWS_IAM_USER_ARN</code> and <code>STORAGE_AWS_EXTERNAL_ID</code> after creating the Storage Integration so we can complete the IAM trust policy on our side.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Any preference on the Snowsight dashboard layout or additional metrics to include?</td>
+</tr>
+</tbody>
+</table>
+        <footer>Weather AI — Snowflake Integration Plan — Singapore Weather AI — Generated 2026-02-14</footer>
+    </div>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        
+        mermaid.registerIconPacks([
+            { name: 'logos', loader: () => fetch('https://unpkg.com/@iconify-json/logos@1/icons.json').then(res => res.json()) },
+            { name: 'mdi', loader: () => fetch('https://unpkg.com/@iconify-json/mdi@1/icons.json').then(res => res.json()) }
+        ]);
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>
