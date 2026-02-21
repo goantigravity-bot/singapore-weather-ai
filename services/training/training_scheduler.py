@@ -733,7 +733,7 @@ if __name__ == "__main__":
             for line in f:
                 if line.strip() and not line.startswith('#'):
                     key, _, value = line.strip().partition('=')
-                    os.environ[key] = value.strip('"').strip("'")
+                    os.environ.setdefault(key, value.strip('"').strip("'"))
     
     if args.status:
         show_status()
