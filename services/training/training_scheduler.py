@@ -25,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 配置
-WORK_DIR = Path("/home/ubuntu/weather-ai")
+WORK_DIR = Path(os.environ.get("WORK_DIR", "/Users/jinhui/development/tools/claude-skill/services/training"))
 STATE_FILE = WORK_DIR / "training_state.json"
 S3_BUCKET = "weather-ai-models-de08370c"
 SATELLITE_PREFIX = "satellite"
