@@ -56,8 +56,8 @@ API_ENDPOINTS = {
 DEFAULT_START = datetime.date(2020, 1, 1)
 DEFAULT_END = datetime.date(2024, 2, 14)
 
-# API 调用间隔（防止限流）
-API_DELAY_SEC = 0.5
+# API 调用间隔（防止限流），可通过 FETCH_API_DELAY 环境变量覆盖
+API_DELAY_SEC = float(os.environ.get("FETCH_API_DELAY", "0.5"))
 
 
 def get_s3_client():
