@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # 逐年增量训练脚本
 # 每年一个批次，控制内存使用：
 #   1. 只下载当年 satellite-3ch .npy 到 processed_data/
@@ -17,7 +17,7 @@ YEARS=(2020 2021 2022 2023 2024 2025 2026)
 PYTHON="${PYTHON:-python3}"
 
 echo "============================================"
-echo "🚀 逐年增量训练 (${YEARS[0]}-${YEARS[-1]})"
+echo "🚀 逐年增量训练 (2020-2026)"
 echo "   WORK_DIR: $WORK_DIR"
 echo "============================================"
 
@@ -27,10 +27,11 @@ for YEAR in "${YEARS[@]}"; do
     echo "📅 训练年份: $YEAR"
     echo "============================================"
 
-    # 1. 清理 processed_data/ 释放内存
-    echo "🗑️  清理上一年卫星数据..."
+    # 1. 清理上一年数据（卫星 + 传感器 CSV）释放内存
+    echo "🗑️  清理上一年数据..."
     find processed_data -name "*.npy" -delete 2>/dev/null || true
     rm -rf processed_data/*/ 2>/dev/null || true
+    rm -f real_sensor_data.csv 2>/dev/null || true
 
     # 2. 下载当年 satellite-3ch .npy（按日期前缀过滤）
     echo "📡 下载 ${YEAR} 年卫星数据..."
