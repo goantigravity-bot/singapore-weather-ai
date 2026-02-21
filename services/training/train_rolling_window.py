@@ -96,7 +96,7 @@ def train_model():
 
     
     # 2. Model
-    model = WeatherFusionNet(sat_channels=1, sensor_features=7, prediction_dim=1)
+    model = WeatherFusionNet(sat_channels=1, sensor_features=7, coord_dim=2, prediction_dim=1)
     
     # 增量学习: 检查是否存在已训练模型
     if os.path.exists(MODEL_SAVE_PATH):
@@ -119,9 +119,20 @@ def train_model():
                         saved_state[pixel_layer_weight] = new_weight
                         logger.info("Smart adaptation applied to weights")
             
-            model.load_state_dict(saved_state, strict=False)
+            # 过滤掉所有维度不匹配的层（如 coord_dim 变化导致 fusion_head 不兼容）
+            compatible_state = {}
+            skipped = []
+            for k, v in saved_state.items():
+                if k in model_state and v.shape == model_state[k].shape:
+                    compatible_state[k] = v
+                else:
+                    skipped.append(k)
+            if skipped:
+                logger.warning(f"跳过 {len(skipped)} 个不兼容层: {skipped}")
+            
+            model.load_state_dict(compatible_state, strict=False)
             EPOCHS = EPOCHS_INCREMENTAL
-            logger.info(f"✅ 模型加载成功 (增量模式)，将训练 {EPOCHS} epochs")
+            logger.info(f"✅ 模型加载成功 (增量模式，{len(compatible_state)}/{len(saved_state)} 层兼容)，将训练 {EPOCHS} epochs")
             
         except Exception as e:
             logger.error(f"模型加载失败: {e}，从头开始训练 {EPOCHS_INITIAL} epochs")
