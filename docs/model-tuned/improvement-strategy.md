@@ -3,8 +3,8 @@
 ## Background
 
 The Weather AI system predicts rainfall using a fusion model (`WeatherFusionNet`) that combines:
-- **Satellite imagery** (Himawari-8/9, cropped to Singapore, 64×64 pixels)
-- **Ground sensor data** (NEA: temperature, rainfall, humidity, PM2.5 from 60+ stations)
+- **Satellite imagery** (Himawari-8/9, 3-channel B08/B11/B13, 41×37 full-map)
+- **Ground sensor data** (NEA: temperature, rainfall, humidity, PM2.5, wind_speed, wind_direction from 80 stations)
 
 ### Current Performance (V2 Baseline)
 
@@ -24,10 +24,10 @@ The Weather AI system predicts rainfall using a fusion model (`WeatherFusionNet`
 
 ### 🔴 Group 1: Low-Cost, High-Impact (Code Changes Only)
 
-#### 1. Balanced DataLoader (WeightedRandomSampler)
+#### 1. ✅ Balanced DataLoader (WeightedRandomSampler)
 - **Problem**: 95% of training samples are dry → model biased toward dry predictions
 - **Solution**: Use PyTorch `WeightedRandomSampler` so each training batch has ~50% rain/dry
-- **Expected**: Precision +15-20%, F1 +10-15%
+- **Result**: Implemented — 4% rain / 96% dry rebalanced to 50:50 per batch
 - **Effort**: ~10 lines of code
 
 #### 2. Focal Loss
@@ -90,14 +90,45 @@ Raw satellite files use different satellite naming:
 
 ### 🟢 Group 3: Larger Investment, High Potential
 
-| Improvement | Description | Expected Impact |
+| Improvement | Status | Description | Expected Impact |
+|---|---|---|---|
+| Multi-channel satellite | ✅ | 3-channel B08/B11/B13 (41×37) | Better cloud detection |
+| Time features | ⬜ | Add hour_of_day, day_of_year as input | "Afternoon rain" pattern |
+| Rate-of-change features | ⬜ | Humidity/temperature derivatives | Pre-rain signals |
+| Attention mechanism | ⬜ | Cross-attention between satellite & sensor branches | Smarter fusion |
+| Transformer encoder | ⬜ | Replace LSTM with Transformer | Longer time dependencies |
+| More historical data | ✅ | 2020-2026 year-by-year training | Better generalization |
+
+---
+
+### 🔵 Group 4: Cloud Training Pipeline Optimization (2025-02-22)
+
+#### Data Pipeline
+| Change | Detail | Impact |
 |---|---|---|
-| Multi-channel satellite | Use both tbb_07 + tbb_14 IR channels | Better cloud detection |
-| Time features | Add hour_of_day, day_of_year as input | "Afternoon rain" pattern |
-| Rate-of-change features | Humidity/temperature derivatives | Pre-rain signals |
-| Attention mechanism | Cross-attention between satellite & sensor branches | Smarter fusion |
-| Transformer encoder | Replace LSTM with Transformer | Longer time dependencies |
-| More historical data | Need 1+ year for seasonal patterns | Better generalization |
+| 10-min pre-aggregation | Resample during CSV generation, not training | 13M → 3.2M rows, 500x faster preprocessing |
+| Pure numpy `__getitem__` | Precompute `_sensor_data_cache`, `_rainfall_cache`, `_sat_utc_cache` | Eliminate all pandas from hot path |
+| Vectorized sample generation | `np.where` + tuple format | 17 min → 2.1s |
+
+#### Training Config (T4 GPU)
+| Config | Value | Reason |
+|---|---|---|
+| Batch Size (CUDA) | 1024 | T4 15GB VRAM only uses ~675 MiB |
+| AMP (Mixed Precision) | ✅ | `autocast` + `GradScaler` for FP16 |
+| Gradient Clipping | max_norm=1.0 | Prevent gradient explosion with large batch |
+| prefetch_factor | 4 | Minimize GPU data starvation |
+
+#### Bug Fixes
+| Bug | Root Cause | Fix |
+|---|---|---|
+| NaN Loss | 0.1% satellite .npy files contain NaN pixels | `torch.nan_to_num(sat_img, nan=0.0)` |
+| Cache pollution | numpy slice returns view, normalization corrupts cache | `.copy()` on slice |
+| False success notification | `tee` pipe hides Python exit code | `PIPESTATUS[0]` check |
+
+#### GPU Utilization: 0% → 33-61%
+- Bottleneck: 4 vCPU (g4dn.xlarge) data feeding
+- Mac UMA has no PCIe transfer overhead → 70% GPU on MPS
+- Future: g4dn.2xlarge (8 vCPU) or pre-computed tensor cache
 
 ---
 
