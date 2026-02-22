@@ -227,7 +227,10 @@ for YEAR in "${YEARS[@]}"; do
 
     # ========== 4. 逐年评估 ==========
     echo "📋 评估 ${YEAR} 年模型..." | tee -a "$LOG_FILE"
-    $PYTHON diagnose_model.py 2>&1 | tee -a "$LOG_FILE"
+    # diagnose_model.py 读取 $WORK_DIR 下的固定文件名，创建 symlink 指向当前年份
+    ln -sf "$CSV_PATH" "$WORK_DIR/real_sensor_data.csv"
+    ln -sfn "$SAT_DIR" "$WORK_DIR/processed_data"
+    CSV_PATH="$CSV_PATH" SAT_DIR="$SAT_DIR" $PYTHON diagnose_model.py 2>&1 | tee -a "$LOG_FILE"
 
     if [ -f "$WORK_DIR/diagnosis_results.json" ]; then
         cp "$WORK_DIR/diagnosis_results.json" "$YEAR_DIR/evaluation.json"
