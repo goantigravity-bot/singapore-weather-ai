@@ -174,7 +174,9 @@ class WeatherDataset(Dataset):
         
         # 2. Sensor data is already resampled to 10-min in CSV generation,
         # just ensure wind columns exist for backward compatibility
-        print("Aligning sensor data with satellite timestamps...")
+        import time as _time
+        _t0 = _time.time()
+        logger.info(f"Phase 2: Aligning {len(self.sensor_df):,} sensor rows with {len(sat_index_df)} sat timestamps...")
         if 'wind_speed' not in self.sensor_df.columns:
             self.sensor_df['wind_speed'] = 0.0
         if 'wind_direction' not in self.sensor_df.columns:
@@ -183,48 +185,51 @@ class WeatherDataset(Dataset):
         full_resampled = self.sensor_df
 
         # 3. Join with Satellite Availability
-        # Left join to preserve sensor history, flag matches
+        logger.info("Phase 3: pd.merge (left join with sat timestamps)...")
         merged = pd.merge(full_resampled, sat_index_df[['ts_match']], left_on='timestamp', right_on='ts_match', how='left', indicator='has_sat')
         merged['valid_sat'] = (merged['has_sat'] == 'both')
+        _t1 = _time.time()
+        logger.info(f"  Merge done: {len(merged):,} rows, {_t1-_t0:.1f}s")
 
-        # 4. Generate Samples
+        # 4. 向量化 sample 生成
+        logger.info("Phase 4: Generating samples...")
         self.samples = []
+        self._group_cache = {}
+        self._rainfall_cache = {}  # sensor_id → numpy array of rainfall values
+        station_count = 0
+        
         for sensor_id, group in merged.groupby('sensor_id'):
-            # group is sorted because resampled was sorted
-            timestamps = group['timestamp'].values
-            valid_sat_flags = group['valid_sat'].values
             num_rows = len(group)
-            
             if num_rows <= self.seq_len:
                 continue
 
-            # Iterate over valid end points
-            for i in range(self.seq_len, num_rows - self.horizon + 1):
-                # We need Satellite Image at input sequence END (i-1)
-                if not valid_sat_flags[i-1]:
-                    continue
-                
-                # Check continuity (optional check for gaps)
-                # ...
+            valid_sat_flags = group['valid_sat'].values
+            self._group_cache[sensor_id] = group
+            self._rainfall_cache[sensor_id] = group['rainfall'].values
 
-                self.samples.append({
-                    'sensor_id': sensor_id,
-                    'input_idx_start': i - self.seq_len,
-                    'input_idx_end': i,
-                    'target_idx': i + self.horizon - 1,
-                    'group_data': group # View into the group dataframe
-                })
+            valid_positions = np.where(valid_sat_flags[self.seq_len - 1 : num_rows - self.horizon])[0]
+            valid_positions += self.seq_len
+
+            for i in valid_positions:
+                self.samples.append((sensor_id, i - self.seq_len, i, i + self.horizon - 1))
+
+            station_count += 1
+            if station_count % 10 == 0:
+                logger.info(f"  Stations: {station_count}, samples so far: {len(self.samples):,}")
+
+        _t2 = _time.time()
+        logger.info(f"✅ Sample generation: {len(self.samples):,} samples, {len(self._group_cache)} stations, {_t2-_t0:.1f}s total")
 
     def __len__(self):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        sample_info = self.samples[idx]
-        group = sample_info['group_data']
+        sensor_id, input_start, input_end, target_idx = self.samples[idx]
+        group = self._group_cache[sensor_id]
         
         # 1. Get Sensor Data (7维: temp, rain, humidity, pm25, wind_speed, wind_dir_sin, wind_dir_cos)
         base_cols = ['temperature', 'rainfall', 'humidity', 'pm25', 'wind_speed', 'wind_direction']
-        raw_seq = group.iloc[sample_info['input_idx_start'] : sample_info['input_idx_end']][base_cols].values.astype(np.float32)
+        raw_seq = group.iloc[input_start : input_end][base_cols].values.astype(np.float32)
         
         # 风向 sin/cos 编码 — 角度是循环量，0° 和 360° 应等价
         wind_dir_rad = np.radians(raw_seq[:, 5])
@@ -249,11 +254,11 @@ class WeatherDataset(Dataset):
         sensor_tensor = torch.tensor(sensor_seq, dtype=torch.float32)
         
         # 2. Get Target
-        target_val = group.iloc[sample_info['target_idx']]['rainfall']
+        target_val = group.iloc[target_idx]['rainfall']
         target_tensor = torch.tensor([target_val], dtype=torch.float32)
         
         # 3. 从内存缓存获取 3 通道卫星图 (B08/B11/B13)
-        current_ts = group.iloc[sample_info['input_idx_end'] - 1]['timestamp']
+        current_ts = group.iloc[input_end - 1]['timestamp']
         
         minute = (current_ts.minute // 10) * 10
         sat_ts = current_ts.replace(minute=minute, second=0)
@@ -274,7 +279,6 @@ class WeatherDataset(Dataset):
             sat_img = torch.zeros(len(SAT_BANDS), SAT_HEIGHT, SAT_WIDTH)
         
         # 坐标特征 (0~1)
-        sensor_id = sample_info['sensor_id']
         px, py = self._station_pixel.get(sensor_id, (IMG_SIZE // 2, IMG_SIZE // 2))
         coord_tensor = torch.tensor([px / IMG_SIZE, py / IMG_SIZE], dtype=torch.float32)
         
@@ -288,19 +292,23 @@ def _build_weighted_sampler(subset, rain_threshold=0.1):
     使每个 batch 中雨/干比例接近 50:50，而非原始的 2:98。
     """
     from torch.utils.data import WeightedRandomSampler
+    import time as _time
+    _t0 = _time.time()
 
-    # 遍历 subset 拿到每个样本的 target（降雨量）
-    rain_flags = []
+    # 直接从 _rainfall_cache numpy 数组读 rainfall，无 pandas 开销
     dataset = subset.dataset
+    rain_flags = []
     for idx in subset.indices:
-        _, _, _, target = dataset[idx]
-        rain_flags.append(target.item() > rain_threshold)
+        sensor_id, _, _, target_idx = dataset.samples[idx]
+        rainfall = dataset._rainfall_cache[sensor_id][target_idx]
+        rain_flags.append(rainfall > rain_threshold)
 
     n_rain = sum(rain_flags)
     n_dry = len(rain_flags) - n_rain
 
+    _t1 = _time.time()
     if n_rain == 0 or n_dry == 0:
-        # 全雨或全干，无法平衡，回退到普通 shuffle
+        logger.info(f"⚖️  WeightedSampler skipped (all {'rain' if n_rain else 'dry'}), {_t1-_t0:.1f}s")
         return None
 
     # 权重 = 1/该类数量，让两类总权重相等
@@ -310,7 +318,7 @@ def _build_weighted_sampler(subset, rain_threshold=0.1):
 
     logger.info(
         f"⚖️  WeightedRandomSampler: {n_rain} rain ({n_rain/len(rain_flags)*100:.1f}%) "
-        f"/ {n_dry} dry ({n_dry/len(rain_flags)*100:.1f}%) → balanced batches"
+        f"/ {n_dry} dry ({n_dry/len(rain_flags)*100:.1f}%) → balanced, {_t1-_t0:.1f}s"
     )
 
     return WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
