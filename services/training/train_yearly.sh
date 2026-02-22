@@ -23,6 +23,12 @@ PYTHON="${PYTHON:-$WORK_DIR/venv/bin/python3}"
 EPOCHS_INITIAL="${EPOCHS_INITIAL:-30}"
 EPOCHS_INCREMENTAL="${EPOCHS_INCREMENTAL:-10}"
 LOG_DIR="$WORK_DIR/logs"
+TRAIN_START_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+
+# 通知函数（静默失败，不阻塞训练）
+notify() {
+    $PYTHON notify.py --type "$1" --year "${2:-}" --details "${3:-}" 2>/dev/null &
+}
 
 # 资源监控：后台每 30 秒记录 CPU/MEM/GPU
 start_resource_monitor() {
@@ -101,7 +107,9 @@ for YEAR in "${YEARS[@]}"; do
     echo "📡 卫星数据: S3日期目录=$S3_DIR_COUNT, 已完成=$LOCAL_COMPLETE, 本地文件=$LOCAL_NPY_COUNT" | tee -a "$SAT_LOG"
 
     if [ "$LOCAL_COMPLETE" -lt "$S3_DIR_COUNT" ]; then
+        DL_START=$(date '+%Y-%m-%d %H:%M:%S')
         echo "📥 下载 ${YEAR} 年卫星数据..." | tee -a "$SAT_LOG"
+        notify download_start "$YEAR" "type=satellite,s3_dirs=$S3_DIR_COUNT,local_complete=$LOCAL_COMPLETE"
         for DIR in $S3_DIRS; do
             MONTH="${DIR:4:2}"
             MONTH_DIR="$SAT_DIR/$MONTH"
@@ -133,6 +141,7 @@ for YEAR in "${YEARS[@]}"; do
         done
         LOCAL_NPY_COUNT=$(find "$SAT_DIR" -name "*.npy" 2>/dev/null | wc -l | tr -d ' ')
         echo "   ✅ 卫星数据下载完成: ${LOCAL_NPY_COUNT} 个 .npy" | tee -a "$SAT_LOG"
+        notify download_end "$YEAR" "type=satellite,npy_files=$LOCAL_NPY_COUNT,start=$DL_START,end=$(date '+%H:%M:%S')"
     else
         echo "   ✅ 卫星数据完整，跳过下载" | tee -a "$SAT_LOG"
     fi
@@ -145,10 +154,15 @@ for YEAR in "${YEARS[@]}"; do
 
     if [ ! -f "$CSV_PATH" ] || [ "$(wc -l < "$CSV_PATH" | tr -d ' ')" -le "1" ]; then
         echo "📊 生成 ${YEAR} 年传感器数据（逐天处理）..." | tee -a "$CSV_LOG"
+        notify download_start "$YEAR" "type=sensor_csv,source=govdata_json"
+        CSV_START=$(date '+%Y-%m-%d %H:%M:%S')
         $PYTHON process_gov_data_from_s3.py --year "$YEAR" --output "$CSV_PATH" 2>&1 | tee -a "$CSV_LOG"
 
         if [ -f "$CSV_PATH" ] && [ "$(wc -l < "$CSV_PATH" | tr -d ' ')" -gt "1" ]; then
-            echo "   ✅ 传感器数据: $(wc -l < "$CSV_PATH" | tr -d ' ') 行" | tee -a "$CSV_LOG"
+            CSV_ROWS=$(wc -l < "$CSV_PATH" | tr -d ' ')
+            CSV_SIZE=$(du -h "$CSV_PATH" | awk '{print $1}')
+            echo "   ✅ 传感器数据: $CSV_ROWS 行" | tee -a "$CSV_LOG"
+            notify download_end "$YEAR" "type=sensor_csv,rows=$CSV_ROWS,size=$CSV_SIZE,start=$CSV_START,end=$(date '+%H:%M:%S')"
         else
             echo "   ❌ 传感器数据生成失败！跳过 ${YEAR}" | tee -a "$CSV_LOG"
             continue
@@ -165,16 +179,27 @@ for YEAR in "${YEARS[@]}"; do
     MONITOR_PID=$!
     echo "📊 资源监控启动 (PID=$MONITOR_PID) → $RESOURCE_LOG" | tee -a "$LOG_FILE"
 
-    if [ ! -f "$WORK_DIR/weather_fusion_model.pth" ]; then
-        echo "🆕 首次训练 (${YEAR}): EPOCHS=$EPOCHS_INITIAL" | tee -a "$LOG_FILE"
+    TRAIN_MODE="initial"
+    TRAIN_EPOCHS=$EPOCHS_INITIAL
+    if [ -f "$WORK_DIR/weather_fusion_model.pth" ]; then
+        TRAIN_MODE="incremental"
+        TRAIN_EPOCHS=$EPOCHS_INCREMENTAL
+    fi
+    echo "🚀 训练 (${YEAR}): mode=$TRAIN_MODE, epochs=$TRAIN_EPOCHS" | tee -a "$LOG_FILE"
+    notify train_start "$YEAR" "mode=$TRAIN_MODE,epochs=$TRAIN_EPOCHS,sat_files=$LOCAL_NPY_COUNT"
+    EPOCH_START=$(date '+%Y-%m-%d %H:%M:%S')
+
+    if [ "$TRAIN_MODE" = "initial" ]; then
         EPOCHS_INITIAL=$EPOCHS_INITIAL $PYTHON train_rolling_window.py 2>&1 | tee -a "$LOG_FILE"
     else
-        echo "🔄 增量训练 (${YEAR}): EPOCHS=$EPOCHS_INCREMENTAL" | tee -a "$LOG_FILE"
         EPOCHS_INCREMENTAL=$EPOCHS_INCREMENTAL $PYTHON train_rolling_window.py 2>&1 | tee -a "$LOG_FILE"
     fi
 
     stop_resource_monitor
     echo "✅ ${YEAR} 年训练完成 $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "$LOG_FILE"
+    # 提取最后一个 epoch 的指标
+    LAST_EPOCH=$(grep 'Epoch \[' "$LOG_FILE" | tail -1 || echo "N/A")
+    notify train_end "$YEAR" "mode=$TRAIN_MODE,start=$EPOCH_START,end=$(date '+%H:%M:%S'),last_epoch=$LAST_EPOCH"
 
     # ========== 4. 逐年评估 ==========
     echo "📋 评估 ${YEAR} 年模型..." | tee -a "$LOG_FILE"
@@ -183,6 +208,16 @@ for YEAR in "${YEARS[@]}"; do
     if [ -f "$WORK_DIR/diagnosis_results.json" ]; then
         cp "$WORK_DIR/diagnosis_results.json" "$YEAR_DIR/evaluation.json"
         echo "   💾 评估结果: $YEAR_DIR/evaluation.json" | tee -a "$LOG_FILE"
+        EVAL_SUMMARY=$(python3 -c "import json;d=json.load(open('$WORK_DIR/diagnosis_results.json'));print(','.join(f'{k}={v}' for k,v in d.items() if isinstance(v,(int,float,str))))" 2>/dev/null || echo "N/A")
+        notify eval "$YEAR" "$EVAL_SUMMARY"
+    fi
+
+    # ========== 5. 备份模型（本地 + S3）==========
+    if [ -f "$WORK_DIR/weather_fusion_model.pth" ]; then
+        cp "$WORK_DIR/weather_fusion_model.pth" "$YEAR_DIR/weather_fusion_model_${YEAR}.pth"
+        aws s3 cp "$WORK_DIR/weather_fusion_model.pth" \
+            "s3://${S3_BUCKET}/models/weather_fusion_model_${YEAR}.pth" --quiet 2>/dev/null
+        echo "   💾 模型备份: $YEAR_DIR/ + s3://models/" | tee -a "$LOG_FILE"
     fi
 
     # 记录到汇总日志
@@ -198,3 +233,6 @@ echo "🎉 全部训练完成！ $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "$LOG_DI
 echo "   模型: $WORK_DIR/weather_fusion_model.pth" | tee -a "$LOG_DIR/train_summary.log"
 echo "   日志: $LOG_DIR/" | tee -a "$LOG_DIR/train_summary.log"
 echo "============================================" | tee -a "$LOG_DIR/train_summary.log"
+
+notify complete "" "years=${YEARS[*]},start=$TRAIN_START_TIME,end=$(date '+%Y-%m-%d %H:%M:%S')"
+wait  # 等待所有后台通知发送完成
