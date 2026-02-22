@@ -1,0 +1,16 @@
+{
+  "best_val_loss": 8.283398591611398,
+  "final_epoch": 9,
+  "max_epochs": 10,
+  "last_train_mae": 0.9094932648647333,
+  "last_val_mae": 0.8455640565504532,
+  "rmse": 2.8780893995168735,
+  "rain_accuracy": 0.05103650454652029,
+  "total_train_samples": 22570650,
+  "training_time_seconds": 14613.0,
+  "early_stopped": true,
+  "device": "mps",
+  "batch_size": 16,
+  "rain_weight": 10.0,
+  "success": true
+}

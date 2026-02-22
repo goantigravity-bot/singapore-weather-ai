@@ -96,13 +96,6 @@ resource "aws_instance" "training_server" {
   vpc_security_group_ids = [aws_security_group.training_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.training_profile.name
 
-  # Spot Instance — 比 On-Demand 便宜 ~60%
-  instance_market_options {
-    market_type = "spot"
-    spot_options {
-      spot_instance_type = "one-time"
-    }
-  }
 
   root_block_device {
     volume_size = 200  # 容纳卫星原始 .nc 和预处理 .npy
