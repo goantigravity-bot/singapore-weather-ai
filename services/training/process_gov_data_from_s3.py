@@ -1,241 +1,237 @@
+"""
+从 S3 govdata 生成传感器 CSV — 逐天处理避免 OOM。
+
+每天有 6 种 JSON 文件 (rainfall, humidity, temperature, pm25, wind-speed, wind-direction)，
+按天合并为横向 CSV 行，追加到输出文件。支持断点恢复。
+
+用法:
+    python3 process_gov_data_from_s3.py --year 2020 --output processed/2020/sensor/real_sensor_data.csv
+"""
 import os
 import json
 import boto3
-import pandas as pd
-import io
+import csv
 import argparse
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
 
-# Configuration
 S3_BUCKET = os.environ.get("S3_BUCKET", "weather-ai-models-de08370c")
 GOVDATA_PREFIX = "govdata"
-PROCESSED_PREFIX = "processed"
-OUTPUT_FILENAME = "real_sensor_data.csv"
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("process_gov_data")
 
-# Region Mapping
+# 6 种数据类型映射到 JSON 文件名前缀
+DATA_TYPES = {
+    'rainfall': 'rainfall',
+    'temperature': 'temperature',
+    'humidity': 'humidity',
+    'pm25': 'pm25',
+    'wind_speed': 'wind-speed',
+    'wind_direction': 'wind-direction',
+}
+
+CSV_COLUMNS = ['timestamp', 'sensor_id', 'humidity', 'pm25', 'rainfall', 'temperature', 'wind_speed', 'wind_direction']
+
 REGION_CENTROIDS = {
     "north": {"lat": 1.41803, "lon": 103.8200},
     "south": {"lat": 1.29587, "lon": 103.8200},
     "east":  {"lat": 1.35735, "lon": 103.9400},
     "west":  {"lat": 1.35735, "lon": 103.7000},
-    "central": {"lat": 1.35735, "lon": 103.8200}
+    "central": {"lat": 1.35735, "lon": 103.8200},
 }
+
 
 def get_s3_client():
     return boto3.client('s3', endpoint_url=S3_ENDPOINT_URL)
 
+
 def get_region_from_latlon(lat, lon):
     min_dist = float('inf')
-    best_region = "central"
-    for region, coords in REGION_CENTROIDS.items():
-        d = ((lat - coords['lat'])**2 + (lon - coords['lon'])**2)**0.5
+    best = "central"
+    for region, c in REGION_CENTROIDS.items():
+        d = ((lat - c['lat'])**2 + (lon - c['lon'])**2)**0.5
         if d < min_dist:
             min_dist = d
-            best_region = region
-    return best_region
+            best = region
+    return best
 
-def list_json_files(date_str=None):
-    """List JSON files in govdata/.
-    
-    若提供 date_str（格式 YYYY-MM-DD），则只扫描对应年份子目录
-    govdata/{year}/，避免对整个 govdata/ 做全量列举（性能优化）。
-    """
-    s3 = get_s3_client()
-    files = []
-    paginator = s3.get_paginator('list_objects_v2')
 
-    if date_str:
-        # 精确到年份子目录，约 1500 个文件，<2 次分页
-        year = date_str[:4]
-        prefix = f"{GOVDATA_PREFIX}/{year}/"
+def build_station_region_map(s3, year):
+    """从 temperature JSON 的 metadata 中提取 station → region 映射（用于 PM2.5）。"""
+    key = f"{GOVDATA_PREFIX}/{year}/temperature_{year}-01-01.json"
+    try:
+        obj = s3.get_object(Bucket=S3_BUCKET, Key=key)
+        data = json.loads(obj['Body'].read().decode('utf-8'))
+        mapping = {}
+        if 'metadata' in data and 'stations' in data['metadata']:
+            for s in data['metadata']['stations']:
+                if 'location' in s and 'latitude' in s['location']:
+                    sid = s['id']
+                    mapping[sid] = get_region_from_latlon(
+                        s['location']['latitude'], s['location']['longitude']
+                    )
+        return mapping
+    except Exception as e:
+        logger.warning(f"Failed to build station map: {e}")
+        return {}
+
+
+def parse_json_file(s3, key, dtype, station_region_map):
+    """解析单个 JSON 文件，返回 {(timestamp, sensor_id): value} 字典。"""
+    try:
+        obj = s3.get_object(Bucket=S3_BUCKET, Key=key)
+        data = json.loads(obj['Body'].read().decode('utf-8'))
+    except Exception as e:
+        logger.warning(f"Error reading {key}: {e}")
+        return {}
+
+    if not data or 'items' not in data:
+        return {}
+
+    result = {}
+
+    if dtype == 'pm25':
+        for item in data['items']:
+            ts = item['timestamp']
+            readings = item.get('readings', {})
+            pm25_data = readings.get('pm25_one_hourly', {})
+            for sid, region_key in station_region_map.items():
+                if region_key in pm25_data:
+                    result[(ts, sid)] = pm25_data[region_key]
     else:
-        prefix = f"{GOVDATA_PREFIX}/"
+        for item in data['items']:
+            ts = item['timestamp']
+            for r in item.get('readings', []):
+                val = r.get('value')
+                if val is not None:
+                    result[(ts, r['station_id'])] = val
 
-    logger.info(f"Listing files in s3://{S3_BUCKET}/{prefix}...")
+    return result
 
+
+def process_day(s3, year, date_str, station_region_map):
+    """处理一天的 6 种 JSON，合并为横向 CSV 行。"""
+    # 获取 6 种数据
+    type_data = {}
+    for col_name, file_prefix in DATA_TYPES.items():
+        key = f"{GOVDATA_PREFIX}/{year}/{file_prefix}_{date_str}.json"
+        type_data[col_name] = parse_json_file(s3, key, col_name, station_region_map)
+
+    # 收集所有 (timestamp, sensor_id) 组合
+    all_keys = set()
+    for d in type_data.values():
+        all_keys.update(d.keys())
+
+    if not all_keys:
+        return []
+
+    # 合并为横向行
+    rows = []
+    for ts, sid in sorted(all_keys):
+        row = {
+            'timestamp': ts,
+            'sensor_id': sid,
+        }
+        for col_name in DATA_TYPES:
+            row[col_name] = type_data[col_name].get((ts, sid), 0.0)
+        rows.append(row)
+
+    return rows
+
+
+def get_processed_days(csv_path):
+    """从已有 CSV 中读取已处理的日期集合（用于断点恢复）。"""
+    processed = set()
+    if not os.path.exists(csv_path):
+        return processed
+    try:
+        with open(csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                day = row['timestamp'][:10]
+                processed.add(day)
+    except Exception:
+        pass
+    return processed
+
+
+def list_available_days(s3, year):
+    """列出 S3 上该年份有哪些天的 govdata。"""
+    prefix = f"{GOVDATA_PREFIX}/{year}/"
+    days = set()
+    paginator = s3.get_paginator('list_objects_v2')
     try:
         for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=prefix):
             for obj in page.get('Contents', []):
                 key = obj['Key']
-                if key.endswith(".json") and (date_str is None or date_str in key):
-                    files.append(key)
+                if key.endswith('.json'):
+                    # humidity_2020-01-01.json → 2020-01-01
+                    fname = key.split('/')[-1]
+                    parts = fname.rsplit('_', 1)
+                    if len(parts) == 2:
+                        date_part = parts[1].replace('.json', '')
+                        if len(date_part) == 10:  # YYYY-MM-DD
+                            days.add(date_part)
     except Exception as e:
-        logger.warning(f"Error listing files: {e}")
+        logger.warning(f"Error listing days: {e}")
+    return sorted(days)
 
-    return files
-
-def process_single_json(s3, key, station_region_map):
-    """Process single JSON file from S3"""
-    try:
-        obj = s3.get_object(Bucket=S3_BUCKET, Key=key)
-        data = json.loads(obj['Body'].read().decode('utf-8'))
-        
-        dtype = 'unknown'
-        if 'rainfall' in key: dtype = 'rainfall'
-        elif 'temperature' in key: dtype = 'temperature'
-        elif 'humidity' in key: dtype = 'humidity'
-        elif 'pm25' in key: dtype = 'pm25'
-        elif 'wind-speed' in key: dtype = 'wind_speed'
-        elif 'wind-direction' in key: dtype = 'wind_direction'
-        
-        records = []
-
-        # wind-speed / wind-direction 与其他指标相同，均为标准 v1 格式：
-        # {items: [{timestamp, readings: [{station_id, value}]}]}
-        # 无需特殊处理，统一走下方 v1 通用逻辑
-
-        # v1 格式: {items: [{timestamp, readings: [{station_id, value}]}]}
-        if not data or 'items' not in data:
-            return []
-
-        if dtype == 'pm25':
-            for item in data['items']:
-                timestamp = item['timestamp']
-                if 'readings' not in item or 'pm25_one_hourly' not in item['readings']:
-                    continue
-                regional_readings = item['readings']['pm25_one_hourly']
-                for sid, region_key in station_region_map.items():
-                    if region_key in regional_readings:
-                        val = regional_readings[region_key]
-                        records.append({
-                            "timestamp": timestamp,
-                            "sensor_id": sid,
-                            "type": "pm25",
-                            "value": val
-                        })
-        else:
-            for item in data['items']:
-                timestamp = item['timestamp']
-                for reading in item['readings']:
-                    sid = reading['station_id']
-                    val = reading['value']
-                    records.append({
-                        "timestamp": timestamp,
-                        "sensor_id": sid,
-                        "type": dtype,
-                        "value": val
-                    })
-        return records
-    except Exception as e:
-        logger.warning(f"Error processing {key}: {e}")
-        return []
-
-def build_station_map(s3, temp_files):
-    station_region_map = {}
-    if not temp_files: return {}
-    latest_file = sorted(temp_files)[-1]
-    try:
-        obj = s3.get_object(Bucket=S3_BUCKET, Key=latest_file)
-        data = json.loads(obj['Body'].read().decode('utf-8'))
-        if 'metadata' in data and 'stations' in data['metadata']:
-            for s in data['metadata']['stations']:
-                if 'location' in s and 'latitude' in s['location']:
-                    lat = s['location']['latitude']
-                    lon = s['location']['longitude']
-                    sid = s['id']
-                    station_region_map[sid] = get_region_from_latlon(lat, lon)
-    except Exception as e:
-        logger.error(f"Error reading metadata: {e}")
-    return station_region_map
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--date", help="Date to process (YYYY-MM-DD)", default=None)
+    parser = argparse.ArgumentParser(description="Generate sensor CSV from S3 govdata (day-by-day)")
+    parser.add_argument("--year", required=True, help="Year to process (e.g., 2020)")
+    parser.add_argument("--output", default=None, help="Output CSV path")
     parser.add_argument("--reset", action="store_true", help="Start fresh (ignore existing CSV)")
     args = parser.parse_args()
-    
+
+    year = args.year
+    output_path = args.output or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "real_sensor_data.csv"
+    )
+
     s3 = get_s3_client()
-    
-    # 1. Download Existing CSV (if not reset)
-    existing_df = pd.DataFrame()
-    if not args.reset:
-        try:
-            logger.info("Downloading existing real_sensor_data.csv...")
-            obj = s3.get_object(Bucket=S3_BUCKET, Key=f"{PROCESSED_PREFIX}/{OUTPUT_FILENAME}")
-            existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
-            logger.info(f"Loaded {len(existing_df)} existing rows.")
-        except s3.exceptions.NoSuchKey:
-            logger.info("No existing CSV found. Creating new.")
-        except Exception as e:
-            logger.warning(f"Error loading existing CSV: {e}")
 
-    # 2. List Files
-    all_files = list_json_files(args.date)
-    logger.info(f"Found {len(all_files)} files to process for date={args.date}")
-    
-    if not all_files:
-        logger.info("No files found. Exiting.")
-        return # Nothing to do
+    # 断点恢复：检查已处理的天
+    if args.reset and os.path.exists(output_path):
+        os.remove(output_path)
 
-    # 3. Build Map
-    temp_files = [f for f in all_files if 'temperature' in f]
-    # If explicit date has no temp files, we might fail to map stations?
-    # TODO: Station Mapping should rely on a static/global mapping if possible.
-    # For now, fallback to whatever we found logic.
-    station_region_map = build_station_map(s3, temp_files)
-    
-    # 4. Process
-    all_records = []
-    for idx, key in enumerate(all_files):
-        records = process_single_json(s3, key, station_region_map)
-        all_records.extend(records)
-    
-    if not all_records:
-        logger.info("No records extracted.")
+    processed_days = get_processed_days(output_path)
+    if processed_days:
+        logger.info(f"断点恢复: 已处理 {len(processed_days)} 天，从断点继续")
+
+    # 列出该年所有可用的天
+    available_days = list_available_days(s3, year)
+    remaining = [d for d in available_days if d not in processed_days]
+    logger.info(f"Year {year}: {len(available_days)} days available, {len(remaining)} to process")
+
+    if not remaining:
+        logger.info("No days to process. Done.")
         return
 
-    # 5. DataFrame Construction
-    new_df = pd.DataFrame(all_records)
-    new_df['timestamp'] = pd.to_datetime(new_df['timestamp'])
-    
-    # Pivot New Data
-    new_pivot = new_df.pivot_table(
-        index=['timestamp', 'sensor_id'], 
-        columns='type', 
-        values='value',
-        aggfunc='mean'
-    ).reset_index()
-    
-    # Standardize Columns
-    required = ['temperature', 'rainfall', 'humidity', 'pm25', 'wind_speed', 'wind_direction']
-    for col in required:
-        if col not in new_pivot.columns:
-            new_pivot[col] = 0.0
-            
-    # 6. Merge with Existing
-    if not existing_df.empty:
-        # Ensure timestamp match
-        existing_df['timestamp'] = pd.to_datetime(existing_df['timestamp'])
-        # Concat
-        combined_df = pd.concat([existing_df, new_pivot])
-        # Deduplicate (Overwrite old with new if distinct? no, just distinct timestamp+sensor)
-        # sort by timestamp desc to keep latest?
-        combined_df = combined_df.drop_duplicates(subset=['timestamp', 'sensor_id'], keep='last')
-    else:
-        combined_df = new_pivot
+    # station region map 用于 PM2.5 数据解析
+    station_region_map = build_station_region_map(s3, year)
 
-    # 7. Final Polish
-    combined_df = combined_df.sort_values(['sensor_id', 'timestamp'])
-    combined_df = combined_df.ffill().fillna(0.0) # Forward fill gaps
-    
-    # 8. Upload
-    csv_buffer = io.StringIO()
-    combined_df.to_csv(csv_buffer, index=False)
-    
-    target_key = f"{PROCESSED_PREFIX}/{OUTPUT_FILENAME}"
-    logger.info(f"Uploading {len(combined_df)} rows to s3://{S3_BUCKET}/{target_key}...")
-    s3.put_object(Bucket=S3_BUCKET, Key=target_key, Body=csv_buffer.getvalue())
-    # Save locally for train_rolling_window.py
-    local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), OUTPUT_FILENAME)
-    combined_df.to_csv(local_path, index=False)
-    logger.info(f"Local CSV saved: {local_path} ({len(combined_df)} rows)")
+    # 写 CSV header（如果是新文件）
+    write_header = not os.path.exists(output_path)
+    with open(output_path, 'a', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
+        if write_header:
+            writer.writeheader()
 
-    logger.info("✅ Done.")
+        for i, date_str in enumerate(remaining):
+            rows = process_day(s3, year, date_str, station_region_map)
+            writer.writerows(rows)
+            f.flush()  # 每天写完 flush，确保中断时数据不丢
+
+            if (i + 1) % 30 == 0 or (i + 1) == len(remaining):
+                logger.info(f"  Progress: {i+1}/{len(remaining)} days, last: {date_str}")
+
+    total_rows = sum(1 for _ in open(output_path)) - 1  # 减去 header
+    logger.info(f"✅ Done: {output_path} ({total_rows} rows)")
+
 
 if __name__ == "__main__":
     main()

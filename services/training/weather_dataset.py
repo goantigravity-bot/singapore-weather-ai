@@ -113,27 +113,26 @@ class WeatherDataset(Dataset):
         logger.info(f"Station pixel map: {len(self._station_pixel)} stations mapped")
 
         # --- 预加载 3 通道卫星 .npy (B08/B11/B13) 到内存 ---
-        # 同一时间戳的 3 个波段文件堆叠为 (3, H, W)
         self._sat_cache = {}
         self.available_sat_timestamps = set()
-        
-        processed_dir = "processed_data"
-        if os.path.exists(processed_dir):
-            # 先按时间戳分组收集各波段文件
+
+        # 使用传入的 sat_dir 参数加载 3 通道卫星数据，支持按月子目录结构
+        if os.path.exists(sat_dir):
+            # 递归扫描所有子目录收集 .npy 文件，按时间戳分组
             band_files = {}  # {ts_str: {band: filepath}}
-            for f in os.listdir(processed_dir):
-                if not f.endswith(".npy"):
-                    continue
-                # 支持 SAT_B08/B11/B13 三种波段命名
-                for band in SAT_BANDS:
-                    prefix = f"SAT_{band}_"
-                    if f.startswith(prefix):
-                        base = f.replace(".npy", "")
-                        parts = base.split("_")
-                        if len(parts) >= 4:
-                            ts_str = f"{parts[2]}_{parts[3]}"
-                            band_files.setdefault(ts_str, {})[band] = os.path.join(processed_dir, f)
-                        break
+            for root, _, files in os.walk(sat_dir):
+                for f in files:
+                    if not f.endswith(".npy"):
+                        continue
+                    for band in SAT_BANDS:
+                        prefix = f"SAT_{band}_"
+                        if f.startswith(prefix):
+                            base = f.replace(".npy", "")
+                            parts = base.split("_")
+                            if len(parts) >= 4:
+                                ts_str = f"{parts[2]}_{parts[3]}"
+                                band_files.setdefault(ts_str, {})[band] = os.path.join(root, f)
+                            break
             
             # 堆叠三个波段为 (3, H, W)
             for ts_str, bands in band_files.items():

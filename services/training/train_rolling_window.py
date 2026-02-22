@@ -69,8 +69,8 @@ WORK_DIR = os.environ.get("WORK_DIR", os.path.join(HOME_DIR, "training"))
 if os.path.exists("/app/data"):
     WORK_DIR = "/app/data"
     
-CSV_PATH = os.path.join(WORK_DIR, "real_sensor_data.csv")
-SAT_DIR = os.path.join(WORK_DIR, "satellite_data")
+CSV_PATH = os.environ.get("CSV_PATH", os.path.join(WORK_DIR, "real_sensor_data.csv"))
+SAT_DIR = os.environ.get("SAT_DIR", os.path.join(WORK_DIR, "processed_data"))
 # Model is saved to /app/models or root?
 # training_service.py expects to upload from somewhere.
 # Let's save to current dir or specific output dir.
