@@ -172,33 +172,15 @@ class WeatherDataset(Dataset):
              sat_index_df['ts_match'] = sat_index_df['ts_match'].dt.tz_localize(None)
 
         
-        # 2. Resample Sensor Data (All at once)
-        print("Resampling and Aligning data...")
-        resampled_dfs = []
-        # 确保风数据列存在（旧CSV可能没有，用默认值填充以保持兼容）
+        # 2. Sensor data is already resampled to 10-min in CSV generation,
+        # just ensure wind columns exist for backward compatibility
+        print("Aligning sensor data with satellite timestamps...")
         if 'wind_speed' not in self.sensor_df.columns:
             self.sensor_df['wind_speed'] = 0.0
         if 'wind_direction' not in self.sensor_df.columns:
             self.sensor_df['wind_direction'] = 0.0
 
-        for sensor_id, group in self.sensor_df.groupby('sensor_id'):
-            group = group.sort_values('timestamp').set_index('timestamp')
-            r = group.resample('10min').agg({
-                'temperature': 'mean',
-                'humidity': 'mean',
-                'rainfall': 'sum',
-                'pm25': 'mean',
-                'wind_speed': 'mean',
-                'wind_direction': 'mean'
-            }).dropna().reset_index()
-            r['sensor_id'] = sensor_id
-            resampled_dfs.append(r)
-            
-        if not resampled_dfs:
-            self.samples = []
-            return
-
-        full_resampled = pd.concat(resampled_dfs)
+        full_resampled = self.sensor_df
 
         # 3. Join with Satellite Availability
         # Left join to preserve sensor history, flag matches

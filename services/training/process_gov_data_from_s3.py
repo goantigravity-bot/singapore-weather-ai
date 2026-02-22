@@ -113,7 +113,7 @@ def parse_json_file(s3, key, dtype, station_region_map):
 
 
 def process_day(s3, year, date_str, station_region_map):
-    """处理一天的 6 种 JSON，合并为横向 CSV 行。"""
+    """处理一天的 6 种 JSON，合并为横向 CSV 行，并做 10 分钟重采样。"""
     # 获取 6 种数据
     type_data = {}
     for col_name, file_prefix in DATA_TYPES.items():
@@ -139,7 +139,20 @@ def process_day(s3, year, date_str, station_region_map):
             row[col_name] = type_data[col_name].get((ts, sid), 0.0)
         rows.append(row)
 
-    return rows
+    # 10 分钟重采样：减少数据量 ~75%，避免训练时重复计算
+    import pandas as pd
+    df = pd.DataFrame(rows)
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    # 按 station 分组，10 分钟聚合（rainfall 求和，其余取均值）
+    df['ts_bucket'] = df['timestamp'].dt.floor('10min')
+    agg_dict = {col: ('sum' if col == 'rainfall' else 'mean')
+                for col in DATA_TYPES}
+    resampled = df.groupby(['ts_bucket', 'sensor_id']).agg(agg_dict).reset_index()
+    resampled.rename(columns={'ts_bucket': 'timestamp'}, inplace=True)
+    # 转回 ISO 格式字符串
+    resampled['timestamp'] = resampled['timestamp'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+
+    return resampled.to_dict('records')
 
 
 def get_processed_days(csv_path):
