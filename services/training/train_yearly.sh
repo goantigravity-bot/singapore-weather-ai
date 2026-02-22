@@ -260,3 +260,10 @@ echo "============================================" | tee -a "$LOG_DIR/train_sum
 
 notify complete "" "years=${YEARS[*]},start=$TRAIN_START_TIME,end=$(date '+%Y-%m-%d %H:%M:%S')"
 wait  # 等待所有后台通知发送完成
+
+# 训练完成后自动关机（节省 GPU 实例费用）
+# 设置 AUTO_SHUTDOWN=false 可跳过
+if [ "${AUTO_SHUTDOWN:-true}" = "true" ]; then
+    echo "🔌 训练完成，60 秒后自动关机..." | tee -a "$LOG_DIR/train_summary.log"
+    sudo shutdown -h +1 "Training pipeline completed, shutting down"
+fi
