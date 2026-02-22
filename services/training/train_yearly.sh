@@ -18,7 +18,11 @@ WORK_DIR="${WORK_DIR:-$(pwd)}"
 cd "$WORK_DIR"
 
 S3_BUCKET="weather-ai-models-de08370c"
-YEARS=(2020 2021 2022 2023 2024 2025 2026)
+if [ -n "$TRAIN_YEARS" ]; then
+    IFS=' ' read -ra YEARS <<< "$TRAIN_YEARS"
+else
+    YEARS=(2020 2021 2022 2023 2024 2025 2026)
+fi
 PYTHON="${PYTHON:-$WORK_DIR/venv/bin/python3}"
 EPOCHS_INITIAL="${EPOCHS_INITIAL:-30}"
 EPOCHS_INCREMENTAL="${EPOCHS_INCREMENTAL:-10}"
@@ -89,86 +93,92 @@ for YEAR in "${YEARS[@]}"; do
     echo "   卫星 (训练读取): $SAT_DIR" | tee -a "$LOG_FILE"
     echo "   传感器 (训练读取): $CSV_PATH" | tee -a "$LOG_FILE"
 
-    # ========== 1. 下载卫星数据（按月目录） ==========
-    if [ ! -d "$SAT_DIR" ]; then
-        mkdir -p "$SAT_DIR"
-        echo "📁 创建卫星目录: $SAT_DIR" | tee -a "$LOG_FILE"
-    fi
+    # ========== 1 & 2. 并行下载卫星 + 生成传感器 CSV ==========
 
-    # 统计 S3 上该年份的日期目录
-    S3_DIRS=$(aws s3 ls "s3://${S3_BUCKET}/processed/satellite-3ch/" 2>/dev/null \
-        | awk '{print $NF}' | grep "^${YEAR}" | tr -d '/')
-    S3_DIR_COUNT=$(echo "$S3_DIRS" | grep -c "^${YEAR}" || echo 0)
+    # --- 任务 A: 卫星下载（后台） ---
+    (
+        if [ ! -d "$SAT_DIR" ]; then mkdir -p "$SAT_DIR"; fi
 
-    # 用 .complete 标记追踪已下载完成的日期目录
-    LOCAL_COMPLETE=$(find "$SAT_DIR" -name ".complete_*" 2>/dev/null | wc -l | tr -d ' ')
-    LOCAL_NPY_COUNT=$(find "$SAT_DIR" -name "*.npy" 2>/dev/null | wc -l | tr -d ' ')
+        S3_DIRS=$(aws s3 ls "s3://${S3_BUCKET}/processed/satellite-3ch/" 2>/dev/null \
+            | awk '{print $NF}' | grep "^${YEAR}" | tr -d '/')
+        S3_DIR_COUNT=$(echo "$S3_DIRS" | grep -c "^${YEAR}" || echo 0)
+        LOCAL_COMPLETE=$(find "$SAT_DIR" -name ".complete_*" 2>/dev/null | wc -l | tr -d ' ')
 
-    echo "📡 卫星数据: S3日期目录=$S3_DIR_COUNT, 已完成=$LOCAL_COMPLETE, 本地文件=$LOCAL_NPY_COUNT" | tee -a "$SAT_LOG"
+        echo "📡 卫星: S3=$S3_DIR_COUNT 天, 已完成=$LOCAL_COMPLETE" | tee -a "$SAT_LOG"
 
-    if [ "$LOCAL_COMPLETE" -lt "$S3_DIR_COUNT" ]; then
-        DL_START=$(date '+%Y-%m-%d %H:%M:%S')
-        echo "📥 下载 ${YEAR} 年卫星数据..." | tee -a "$SAT_LOG"
-        notify download_start "$YEAR" "type=satellite,s3_dirs=$S3_DIR_COUNT,local_complete=$LOCAL_COMPLETE"
-        for DIR in $S3_DIRS; do
-            MONTH="${DIR:4:2}"
-            MONTH_DIR="$SAT_DIR/$MONTH"
-            if [ ! -d "$MONTH_DIR" ]; then
-                mkdir -p "$MONTH_DIR"
-            fi
+        if [ "$LOCAL_COMPLETE" -lt "$S3_DIR_COUNT" ]; then
+            DL_START=$(date '+%Y-%m-%d %H:%M:%S')
+            echo "📥 下载 ${YEAR} 年卫星数据..." | tee -a "$SAT_LOG"
+            notify download_start "$YEAR" "type=satellite,s3_dirs=$S3_DIR_COUNT,local_complete=$LOCAL_COMPLETE"
 
-            # 已完成则跳过
-            if [ -f "$MONTH_DIR/.complete_${DIR}" ]; then
-                continue
-            fi
+            for DIR in $S3_DIRS; do
+                MONTH="${DIR:4:2}"
+                MONTH_DIR="$SAT_DIR/$MONTH"
+                [ ! -d "$MONTH_DIR" ] && mkdir -p "$MONTH_DIR"
+                [ -f "$MONTH_DIR/.complete_${DIR}" ] && continue
 
-            # 下载该日期目录的所有 .npy
-            S3_FILE_COUNT=$(aws s3 ls "s3://${S3_BUCKET}/processed/satellite-3ch/${DIR}/" 2>/dev/null \
-                | grep "\.npy$" | wc -l | tr -d ' ')
+                S3_FC=$(aws s3 ls "s3://${S3_BUCKET}/processed/satellite-3ch/${DIR}/" 2>/dev/null \
+                    | grep "\.npy$" | wc -l | tr -d ' ')
+                aws s3 cp "s3://${S3_BUCKET}/processed/satellite-3ch/${DIR}/" \
+                    "$MONTH_DIR/" --recursive --exclude "*" --include "*.npy" \
+                    --quiet 2>/dev/null || true
+                LOCAL_FC=$(find "$MONTH_DIR" -name "SAT_*${DIR}*.npy" 2>/dev/null | wc -l | tr -d ' ')
+                if [ "$LOCAL_FC" -ge "$S3_FC" ] && [ "$S3_FC" -gt "0" ]; then
+                    touch "$MONTH_DIR/.complete_${DIR}"
+                else
+                    echo "   ⚠️ ${DIR}: 期望 $S3_FC, 实际 $LOCAL_FC" | tee -a "$SAT_LOG"
+                fi
+            done
 
-            aws s3 cp "s3://${S3_BUCKET}/processed/satellite-3ch/${DIR}/" \
-                "$MONTH_DIR/" \
-                --recursive --exclude "*" --include "*.npy" \
-                --quiet 2>/dev/null || true
-
-            # 完整性检查
-            LOCAL_FILE_COUNT=$(find "$MONTH_DIR" -name "SAT_*${DIR}*.npy" 2>/dev/null | wc -l | tr -d ' ')
-            if [ "$LOCAL_FILE_COUNT" -ge "$S3_FILE_COUNT" ] && [ "$S3_FILE_COUNT" -gt "0" ]; then
-                touch "$MONTH_DIR/.complete_${DIR}"
-            else
-                echo "   ⚠️ ${DIR}: 期望 ${S3_FILE_COUNT}, 实际 ${LOCAL_FILE_COUNT}" | tee -a "$SAT_LOG"
-            fi
-        done
-        LOCAL_NPY_COUNT=$(find "$SAT_DIR" -name "*.npy" 2>/dev/null | wc -l | tr -d ' ')
-        echo "   ✅ 卫星数据下载完成: ${LOCAL_NPY_COUNT} 个 .npy" | tee -a "$SAT_LOG"
-        notify download_end "$YEAR" "type=satellite,npy_files=$LOCAL_NPY_COUNT,start=$DL_START,end=$(date '+%H:%M:%S')"
-    else
-        echo "   ✅ 卫星数据完整，跳过下载" | tee -a "$SAT_LOG"
-    fi
-
-    # ========== 2. 并行：卫星下载已在上面完成，生成传感器 CSV ==========
-    if [ ! -d "$SENSOR_DIR" ]; then
-        mkdir -p "$SENSOR_DIR"
-        echo "📁 创建传感器目录: $SENSOR_DIR" | tee -a "$LOG_FILE"
-    fi
-
-    if [ ! -f "$CSV_PATH" ] || [ "$(wc -l < "$CSV_PATH" | tr -d ' ')" -le "1" ]; then
-        echo "📊 生成 ${YEAR} 年传感器数据（逐天处理）..." | tee -a "$CSV_LOG"
-        notify download_start "$YEAR" "type=sensor_csv,source=govdata_json"
-        CSV_START=$(date '+%Y-%m-%d %H:%M:%S')
-        $PYTHON process_gov_data_from_s3.py --year "$YEAR" --output "$CSV_PATH" 2>&1 | tee -a "$CSV_LOG"
-
-        if [ -f "$CSV_PATH" ] && [ "$(wc -l < "$CSV_PATH" | tr -d ' ')" -gt "1" ]; then
-            CSV_ROWS=$(wc -l < "$CSV_PATH" | tr -d ' ')
-            CSV_SIZE=$(du -h "$CSV_PATH" | awk '{print $1}')
-            echo "   ✅ 传感器数据: $CSV_ROWS 行" | tee -a "$CSV_LOG"
-            notify download_end "$YEAR" "type=sensor_csv,rows=$CSV_ROWS,size=$CSV_SIZE,start=$CSV_START,end=$(date '+%H:%M:%S')"
+            LOCAL_NPY_COUNT=$(find "$SAT_DIR" -name "*.npy" 2>/dev/null | wc -l | tr -d ' ')
+            echo "   ✅ 卫星下载完成: ${LOCAL_NPY_COUNT} .npy" | tee -a "$SAT_LOG"
+            notify download_end "$YEAR" "type=satellite,npy=$LOCAL_NPY_COUNT,start=$DL_START,end=$(date '+%H:%M:%S')"
         else
-            echo "   ❌ 传感器数据生成失败！跳过 ${YEAR}" | tee -a "$CSV_LOG"
-            continue
+            echo "   ✅ 卫星数据完整，跳过" | tee -a "$SAT_LOG"
         fi
-    else
-        echo "   ✅ 传感器数据已存在: $(wc -l < "$CSV_PATH" | tr -d ' ') 行" | tee -a "$CSV_LOG"
+    ) &
+    SAT_PID=$!
+
+    # --- 任务 B: 传感器 CSV 生成（后台） ---
+    (
+        [ ! -d "$SENSOR_DIR" ] && mkdir -p "$SENSOR_DIR"
+
+        if [ ! -f "$CSV_PATH" ] || [ "$(wc -l < "$CSV_PATH" 2>/dev/null | tr -d ' ')" -le "1" ]; then
+            echo "📊 生成 ${YEAR} 年传感器 CSV（逐天）..." | tee -a "$CSV_LOG"
+            notify download_start "$YEAR" "type=sensor_csv,source=govdata_json"
+            CSV_START=$(date '+%Y-%m-%d %H:%M:%S')
+            $PYTHON process_gov_data_from_s3.py --year "$YEAR" --output "$CSV_PATH" 2>&1 | tee -a "$CSV_LOG"
+
+            if [ -f "$CSV_PATH" ] && [ "$(wc -l < "$CSV_PATH" | tr -d ' ')" -gt "1" ]; then
+                CSV_ROWS=$(wc -l < "$CSV_PATH" | tr -d ' ')
+                CSV_SIZE=$(du -h "$CSV_PATH" | awk '{print $1}')
+                echo "   ✅ CSV: $CSV_ROWS 行 ($CSV_SIZE)" | tee -a "$CSV_LOG"
+                notify download_end "$YEAR" "type=sensor_csv,rows=$CSV_ROWS,size=$CSV_SIZE,start=$CSV_START,end=$(date '+%H:%M:%S')"
+            else
+                echo "   ❌ CSV 生成失败" | tee -a "$CSV_LOG"
+                notify error "$YEAR" "step=csv_generation,error=no_output"
+                exit 1
+            fi
+        else
+            echo "   ✅ CSV 已存在: $(wc -l < "$CSV_PATH" | tr -d ' ') 行" | tee -a "$CSV_LOG"
+        fi
+    ) &
+    CSV_PID=$!
+
+    echo "⏳ 并行执行: 卫星(PID=$SAT_PID) + CSV(PID=$CSV_PID)" | tee -a "$LOG_FILE"
+
+    # 等待两个任务都完成
+    wait $SAT_PID
+    SAT_EXIT=$?
+    wait $CSV_PID
+    CSV_EXIT=$?
+
+    LOCAL_NPY_COUNT=$(find "$SAT_DIR" -name "*.npy" 2>/dev/null | wc -l | tr -d ' ')
+    echo "✅ 数据就绪: sat_exit=$SAT_EXIT, csv_exit=$CSV_EXIT, npy=$LOCAL_NPY_COUNT" | tee -a "$LOG_FILE"
+
+    if [ "$CSV_EXIT" -ne "0" ]; then
+        echo "❌ CSV 生成失败，跳过 ${YEAR}" | tee -a "$LOG_FILE"
+        continue
     fi
 
     # ========== 3. 训练 ==========
