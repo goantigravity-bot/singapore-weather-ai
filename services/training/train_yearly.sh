@@ -102,7 +102,7 @@ for YEAR in "${YEARS[@]}"; do
         S3_DIRS=$(aws s3 ls "s3://${S3_BUCKET}/processed/satellite-3ch/" 2>/dev/null \
             | awk '{print $NF}' | grep "^${YEAR}" | tr -d '/')
         S3_DIR_COUNT=$(echo "$S3_DIRS" | grep -c "^${YEAR}" || echo 0)
-        LOCAL_COMPLETE=$(find "$SAT_DIR" -name ".complete_*" 2>/dev/null | wc -l | tr -d ' ')
+        LOCAL_COMPLETE=$(find "$SAT_DIR" -name ".complete_*" 2>/dev/null | wc -l | awk '{$1=$1};1')
 
         echo "📡 卫星: S3=$S3_DIR_COUNT 天, 已完成=$LOCAL_COMPLETE" | tee -a "$SAT_LOG"
 
@@ -119,11 +119,11 @@ for YEAR in "${YEARS[@]}"; do
                 [ -f "$MONTH_DIR/.complete_${DIR}" ] && { SAT_DONE=$((SAT_DONE+1)); continue; }
 
                 S3_FC=$(aws s3 ls "s3://${S3_BUCKET}/processed/satellite-3ch/${DIR}/" 2>/dev/null \
-                    | grep "\.npy$" | wc -l | tr -d ' ')
+                    | grep "\.npy$" | wc -l | awk '{$1=$1};1')
                 aws s3 cp "s3://${S3_BUCKET}/processed/satellite-3ch/${DIR}/" \
                     "$MONTH_DIR/" --recursive --exclude "*" --include "*.npy" \
                     --quiet 2>/dev/null || true
-                LOCAL_FC=$(find "$MONTH_DIR" -name "SAT_*${DIR}*.npy" 2>/dev/null | wc -l | tr -d ' ')
+                LOCAL_FC=$(find "$MONTH_DIR" -name "SAT_*${DIR}*.npy" 2>/dev/null | wc -l | awk '{$1=$1};1')
                 if [ "$LOCAL_FC" -ge "$S3_FC" ] && [ "$S3_FC" -gt "0" ]; then
                     touch "$MONTH_DIR/.complete_${DIR}"
                 else
@@ -136,7 +136,7 @@ for YEAR in "${YEARS[@]}"; do
                 fi
             done
 
-            LOCAL_NPY_COUNT=$(find "$SAT_DIR" -name "*.npy" 2>/dev/null | wc -l | tr -d ' ')
+            LOCAL_NPY_COUNT=$(find "$SAT_DIR" -name "*.npy" 2>/dev/null | wc -l | awk '{$1=$1};1')
             echo "   ✅ 卫星下载完成: ${LOCAL_NPY_COUNT} .npy" | tee -a "$SAT_LOG"
             notify download_end "$YEAR" "type=satellite,npy=$LOCAL_NPY_COUNT,start=$DL_START,end=$(date '+%H:%M:%S')"
         else
@@ -149,14 +149,14 @@ for YEAR in "${YEARS[@]}"; do
     (
         [ ! -d "$SENSOR_DIR" ] && mkdir -p "$SENSOR_DIR"
 
-        if [ ! -f "$CSV_PATH" ] || [ "$(wc -l < "$CSV_PATH" 2>/dev/null | tr -d ' ')" -le "1" ]; then
+        if [ ! -f "$CSV_PATH" ] || [ "$(wc -l < "$CSV_PATH" 2>/dev/null | tr -d ' \n')" -le "1" ]; then
             echo "📊 生成 ${YEAR} 年传感器 CSV（逐天）..." | tee -a "$CSV_LOG"
             notify download_start "$YEAR" "type=sensor_csv,source=govdata_json"
             CSV_START=$(date '+%Y-%m-%d %H:%M:%S')
             $PYTHON process_gov_data_from_s3.py --year "$YEAR" --output "$CSV_PATH" 2>&1 | tee -a "$CSV_LOG"
 
-            if [ -f "$CSV_PATH" ] && [ "$(wc -l < "$CSV_PATH" | tr -d ' ')" -gt "1" ]; then
-                CSV_ROWS=$(wc -l < "$CSV_PATH" | tr -d ' ')
+            if [ -f "$CSV_PATH" ] && [ "$(wc -l < "$CSV_PATH" | tr -d ' \n')" -gt "1" ]; then
+                CSV_ROWS=$(wc -l < "$CSV_PATH" | tr -d ' \n')
                 CSV_SIZE=$(du -h "$CSV_PATH" | awk '{print $1}')
                 echo "   ✅ CSV: $CSV_ROWS 行 ($CSV_SIZE)" | tee -a "$CSV_LOG"
                 notify download_end "$YEAR" "type=sensor_csv,rows=$CSV_ROWS,size=$CSV_SIZE,start=$CSV_START,end=$(date '+%H:%M:%S')"
@@ -166,7 +166,7 @@ for YEAR in "${YEARS[@]}"; do
                 exit 1
             fi
         else
-            echo "   ✅ CSV 已存在: $(wc -l < "$CSV_PATH" | tr -d ' ') 行" | tee -a "$CSV_LOG"
+            echo "   ✅ CSV 已存在: $(wc -l < "$CSV_PATH" | tr -d ' \n') 行" | tee -a "$CSV_LOG"
         fi
     ) &
     CSV_PID=$!
@@ -179,7 +179,7 @@ for YEAR in "${YEARS[@]}"; do
     wait $CSV_PID
     CSV_EXIT=$?
 
-    LOCAL_NPY_COUNT=$(find "$SAT_DIR" -name "*.npy" 2>/dev/null | wc -l | tr -d ' ')
+    LOCAL_NPY_COUNT=$(find "$SAT_DIR" -name "*.npy" 2>/dev/null | wc -l | awk '{$1=$1};1')
     echo "✅ 数据就绪: sat_exit=$SAT_EXIT, csv_exit=$CSV_EXIT, npy=$LOCAL_NPY_COUNT" | tee -a "$LOG_FILE"
 
     if [ "$CSV_EXIT" -ne "0" ]; then
