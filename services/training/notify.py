@@ -16,6 +16,8 @@ import sys
 import smtplib
 import argparse
 import logging
+import urllib.request
+import urllib.parse
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -38,6 +40,10 @@ PASSWORD = os.environ.get("SENDER_PASSWORD", "")
 RECIPIENT = os.environ.get("RECIPIENT_EMAIL", "")
 CC = [e.strip() for e in os.environ.get("CC_EMAILS", "").split(",") if e.strip()]
 
+# Telegram
+TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TG_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
 # 通知类型 → emoji + 标题
 TYPES = {
     "download_start": ("📥", "数据下载开始"),
@@ -52,11 +58,20 @@ TYPES = {
 
 
 def send_notification(notify_type, year, details):
+    """同时发送邮件和 Telegram 通知。"""
+    send_email(notify_type, year, details)
+    send_telegram(notify_type, year, details)
+
+
+def send_email(notify_type, year, details):
+    """发送 HTML 邮件通知。"""
+    if not SENDER or not PASSWORD or not RECIPIENT:
+        return False
+
     emoji, title = TYPES.get(notify_type, ("📌", notify_type))
     year_str = f" [{year}]" if year else ""
     subject = f"{emoji} Weather AI{year_str} — {title}"
 
-    # 将 details 格式化为 HTML 表格
     detail_rows = ""
     if details:
         for item in details.split(","):
@@ -78,10 +93,6 @@ def send_notification(notify_type, year, details):
     </div>
     """
 
-    if not SENDER or not PASSWORD or not RECIPIENT:
-        logger.warning(f"邮件未配置，跳过通知: {subject}")
-        return False
-
     try:
         msg = MIMEMultipart()
         msg["From"] = SENDER
@@ -98,6 +109,45 @@ def send_notification(notify_type, year, details):
     except Exception as e:
         logger.warning(f"邮件发送失败: {e}")
         return False
+
+
+def send_telegram(notify_type, year, details):
+    """通过 Telegram Bot 发送通知。"""
+    if not TG_TOKEN or not TG_CHAT_ID:
+        return False
+
+    emoji, title = TYPES.get(notify_type, ("📌", notify_type))
+    year_str = f" [{year}]" if year else ""
+
+    # 构建 HTML 消息（比 Markdown 对特殊字符更宽容）
+    lines = [f"<b>{emoji} {title}{year_str}</b>"]
+    lines.append(f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if details:
+        for item in details.split(","):
+            item = item.strip()
+            if "=" in item:
+                k, v = item.split("=", 1)
+                lines.append(f"• <b>{k.strip()}</b>: {v.strip()}")
+            else:
+                lines.append(f"• {item}")
+
+    text = "\n".join(lines)
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    data = urllib.parse.urlencode({
+        "chat_id": TG_CHAT_ID,
+        "text": text,
+        "parse_mode": "HTML",
+    }).encode()
+
+    try:
+        req = urllib.request.Request(url, data=data, method="POST")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status == 200:
+                logger.info(f"✅ Telegram 已发送: {title}{year_str}")
+                return True
+    except Exception as e:
+        logger.warning(f"Telegram 发送失败: {e}")
+    return False
 
 
 if __name__ == "__main__":
