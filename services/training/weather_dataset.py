@@ -247,8 +247,8 @@ class WeatherDataset(Dataset):
     def __getitem__(self, idx):
         sensor_id, input_start, input_end, target_idx = self.samples[idx]
         
-        # 1. 纯 numpy 取 sensor 数据（无 pandas）
-        raw_seq = self._sensor_data_cache[sensor_id][input_start:input_end]
+        # 1. 纯 numpy 取 sensor 数据（必须 copy，否则归一化会污染缓存）
+        raw_seq = self._sensor_data_cache[sensor_id][input_start:input_end].copy()
         
         # 风向 sin/cos 编码
         wind_dir_rad = np.radians(raw_seq[:, 5])
@@ -277,6 +277,8 @@ class WeatherDataset(Dataset):
         if data is not None:
             sat_img = torch.tensor(data, dtype=torch.float32)
             sat_img = (sat_img - 200) / 100.0
+            # 部分 .npy 文件含 NaN（数据缺失），替换为 0 防止污染整个 batch
+            sat_img = torch.nan_to_num(sat_img, nan=0.0)
         else:
             sat_img = torch.zeros(len(SAT_BANDS), SAT_HEIGHT, SAT_WIDTH)
         
