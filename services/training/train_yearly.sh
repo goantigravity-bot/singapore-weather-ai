@@ -210,8 +210,16 @@ for YEAR in "${YEARS[@]}"; do
     else
         EPOCHS_INCREMENTAL=$EPOCHS_INCREMENTAL $PYTHON train_rolling_window.py 2>&1 | tee -a "$LOG_FILE"
     fi
+    TRAIN_EXIT=${PIPESTATUS[0]}
 
     stop_resource_monitor
+
+    if [ "$TRAIN_EXIT" -ne "0" ]; then
+        echo "❌ 训练异常退出 (exit=$TRAIN_EXIT) $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "$LOG_FILE"
+        notify error "$YEAR" "stage=training,exit_code=$TRAIN_EXIT"
+        continue
+    fi
+
     echo "✅ ${YEAR} 年训练完成 $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "$LOG_FILE"
     # 提取最后一个 epoch 的指标
     LAST_EPOCH=$(grep 'Epoch \[' "$LOG_FILE" | tail -1 || echo "N/A")
