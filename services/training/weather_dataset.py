@@ -196,6 +196,9 @@ class WeatherDataset(Dataset):
         self.samples = []
         self._group_cache = {}
         self._rainfall_cache = {}  # sensor_id → numpy array of rainfall values
+        # 预计算：sensor 特征矩阵 + 卫星 UTC 字符串，__getitem__ 完全无 pandas
+        self._sensor_data_cache = {}  # sensor_id → (N, 6) float32 array
+        self._sat_utc_cache = {}      # sensor_id → list of utc_str
         station_count = 0
         
         for sensor_id, group in merged.groupby('sensor_id'):
@@ -205,7 +208,25 @@ class WeatherDataset(Dataset):
 
             valid_sat_flags = group['valid_sat'].values
             self._group_cache[sensor_id] = group
-            self._rainfall_cache[sensor_id] = group['rainfall'].values
+            self._rainfall_cache[sensor_id] = group['rainfall'].values.astype(np.float32)
+
+            # 预计算 sensor 6 列特征为 numpy array
+            base_cols = ['temperature', 'rainfall', 'humidity', 'pm25', 'wind_speed', 'wind_direction']
+            self._sensor_data_cache[sensor_id] = group[base_cols].values.astype(np.float32)
+
+            # 预计算每行的卫星 UTC 字符串（消除 __getitem__ 中的 timestamp 运算）
+            timestamps = group['timestamp'].values  # numpy datetime64
+            utc_strs = []
+            for ts in timestamps:
+                ts_py = pd.Timestamp(ts)
+                minute = (ts_py.minute // 10) * 10
+                sat_ts = ts_py.replace(minute=minute, second=0)
+                if sat_ts.tzinfo is not None:
+                    sat_ts_utc = sat_ts.tz_convert('UTC')
+                else:
+                    sat_ts_utc = sat_ts - timedelta(hours=8)
+                utc_strs.append(sat_ts_utc.strftime('%Y%m%d_%H%M'))
+            self._sat_utc_cache[sensor_id] = utc_strs
 
             valid_positions = np.where(valid_sat_flags[self.seq_len - 1 : num_rows - self.horizon])[0]
             valid_positions += self.seq_len
@@ -225,60 +246,41 @@ class WeatherDataset(Dataset):
 
     def __getitem__(self, idx):
         sensor_id, input_start, input_end, target_idx = self.samples[idx]
-        group = self._group_cache[sensor_id]
         
-        # 1. Get Sensor Data (7维: temp, rain, humidity, pm25, wind_speed, wind_dir_sin, wind_dir_cos)
-        base_cols = ['temperature', 'rainfall', 'humidity', 'pm25', 'wind_speed', 'wind_direction']
-        raw_seq = group.iloc[input_start : input_end][base_cols].values.astype(np.float32)
+        # 1. 纯 numpy 取 sensor 数据（无 pandas）
+        raw_seq = self._sensor_data_cache[sensor_id][input_start:input_end]
         
-        # 风向 sin/cos 编码 — 角度是循环量，0° 和 360° 应等价
+        # 风向 sin/cos 编码
         wind_dir_rad = np.radians(raw_seq[:, 5])
-        wind_dir_sin = np.sin(wind_dir_rad)
-        wind_dir_cos = np.cos(wind_dir_rad)
-        
-        # 构建 7 维特征: [temp, rain, humidity, pm25, wind_speed, wind_dir_sin, wind_dir_cos]
         sensor_seq = np.column_stack([
-            raw_seq[:, :5],   # temp, rain, humidity, pm25, wind_speed
-            wind_dir_sin,
-            wind_dir_cos
+            raw_seq[:, :5],
+            np.sin(wind_dir_rad),
+            np.cos(wind_dir_rad)
         ])
         
-        # NORMALIZATION (Simple Manual Scaling)
-        sensor_seq[:, 0] = (sensor_seq[:, 0] - 28.0) / 5.0   # Temp: mean~28°C, std~5°C
-        sensor_seq[:, 1] = sensor_seq[:, 1] / 10.0            # Rain: 0~10mm range
-        sensor_seq[:, 2] = (sensor_seq[:, 2] - 80.0) / 20.0   # Humidity: mean~80%, std~20%
-        sensor_seq[:, 3] = (sensor_seq[:, 3] - 20.0) / 20.0   # PM2.5: mean~20, range 0-60
-        sensor_seq[:, 4] = sensor_seq[:, 4] / 10.0            # Wind speed: 0~10 m/s
-        # sin/cos 已在 [-1, 1] 范围，无需额外归一化
+        # 归一化
+        sensor_seq[:, 0] = (sensor_seq[:, 0] - 28.0) / 5.0
+        sensor_seq[:, 1] = sensor_seq[:, 1] / 10.0
+        sensor_seq[:, 2] = (sensor_seq[:, 2] - 80.0) / 20.0
+        sensor_seq[:, 3] = (sensor_seq[:, 3] - 20.0) / 20.0
+        sensor_seq[:, 4] = sensor_seq[:, 4] / 10.0
         
         sensor_tensor = torch.tensor(sensor_seq, dtype=torch.float32)
         
-        # 2. Get Target
-        target_val = group.iloc[target_idx]['rainfall']
+        # 2. Target（纯 numpy）
+        target_val = self._rainfall_cache[sensor_id][target_idx]
         target_tensor = torch.tensor([target_val], dtype=torch.float32)
         
-        # 3. 从内存缓存获取 3 通道卫星图 (B08/B11/B13)
-        current_ts = group.iloc[input_end - 1]['timestamp']
-        
-        minute = (current_ts.minute // 10) * 10
-        sat_ts = current_ts.replace(minute=minute, second=0)
-        
-        if sat_ts.tzinfo is not None:
-             sat_ts_utc = sat_ts.astimezone(timezone.utc)
-             utc_str = sat_ts_utc.strftime('%Y%m%d_%H%M')
-        else:
-             sat_ts_utc = sat_ts - timedelta(hours=8)
-             utc_str = sat_ts_utc.strftime('%Y%m%d_%H%M')
-        
+        # 3. 卫星图（预计算 UTC 字符串，直接查缓存）
+        utc_str = self._sat_utc_cache[sensor_id][input_end - 1]
         data = self._sat_cache.get(utc_str)
         if data is not None:
-            # data shape: (3, 41, 37), 温度单位 K
             sat_img = torch.tensor(data, dtype=torch.float32)
             sat_img = (sat_img - 200) / 100.0
         else:
             sat_img = torch.zeros(len(SAT_BANDS), SAT_HEIGHT, SAT_WIDTH)
         
-        # 坐标特征 (0~1)
+        # 4. 坐标
         px, py = self._station_pixel.get(sensor_id, (IMG_SIZE // 2, IMG_SIZE // 2))
         coord_tensor = torch.tensor([px / IMG_SIZE, py / IMG_SIZE], dtype=torch.float32)
         
@@ -349,18 +351,22 @@ def get_dataloaders(csv_path, sat_dir, batch_size=4, split=0.8):
 
     # 多线程数据预取：4 个子进程并行准备下一批数据
     # pin_memory 加速 CPU→GPU 传输，persistent_workers 避免每 epoch 重建进程
+    # prefetch_factor 控制每个 worker 提前准备的 batch 数
     use_workers = 4 if batch_size > 1 else 0
+    prefetch = 4 if batch_size >= 128 else 2
     train_loader = DataLoader(
         train_ds, batch_size=batch_size,
-        sampler=sampler,             # sampler 和 shuffle 互斥
-        shuffle=(sampler is None),   # 仅 sampler 不可用时 fallback
+        sampler=sampler,
+        shuffle=(sampler is None),
         num_workers=use_workers, pin_memory=True,
-        persistent_workers=(use_workers > 0)
+        persistent_workers=(use_workers > 0),
+        prefetch_factor=prefetch if use_workers > 0 else None
     )
     val_loader = DataLoader(
         val_ds, batch_size=batch_size, shuffle=False,
         num_workers=use_workers, pin_memory=True,
-        persistent_workers=(use_workers > 0)
+        persistent_workers=(use_workers > 0),
+        prefetch_factor=prefetch if use_workers > 0 else None
     )
     return train_loader, val_loader
 

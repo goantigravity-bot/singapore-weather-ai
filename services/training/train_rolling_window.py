@@ -35,7 +35,7 @@ LEARNING_RATE = 1e-3
 # 根据设备动态调整 Batch Size
 # GPU 并行计算能力强，大 batch 提升吞吐量；CPU 保持较小 batch 避免内存压力
 if torch.cuda.is_available():
-    BATCH_SIZE = 32
+    BATCH_SIZE = 256  # T4 有 16GB 显存，大 batch 减少 CPU→GPU 传输次数
 elif torch.backends.mps.is_available():
     BATCH_SIZE = 16
 else:
