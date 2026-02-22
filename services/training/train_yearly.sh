@@ -110,12 +110,13 @@ for YEAR in "${YEARS[@]}"; do
             DL_START=$(date '+%Y-%m-%d %H:%M:%S')
             echo "📥 下载 ${YEAR} 年卫星数据..." | tee -a "$SAT_LOG"
             notify download_start "$YEAR" "type=satellite,s3_dirs=$S3_DIR_COUNT,local_complete=$LOCAL_COMPLETE"
+            SAT_DONE=0
 
             for DIR in $S3_DIRS; do
                 MONTH="${DIR:4:2}"
                 MONTH_DIR="$SAT_DIR/$MONTH"
                 [ ! -d "$MONTH_DIR" ] && mkdir -p "$MONTH_DIR"
-                [ -f "$MONTH_DIR/.complete_${DIR}" ] && continue
+                [ -f "$MONTH_DIR/.complete_${DIR}" ] && { SAT_DONE=$((SAT_DONE+1)); continue; }
 
                 S3_FC=$(aws s3 ls "s3://${S3_BUCKET}/processed/satellite-3ch/${DIR}/" 2>/dev/null \
                     | grep "\.npy$" | wc -l | tr -d ' ')
@@ -127,6 +128,11 @@ for YEAR in "${YEARS[@]}"; do
                     touch "$MONTH_DIR/.complete_${DIR}"
                 else
                     echo "   ⚠️ ${DIR}: 期望 $S3_FC, 实际 $LOCAL_FC" | tee -a "$SAT_LOG"
+                fi
+
+                SAT_DONE=$((SAT_DONE+1))
+                if [ $((SAT_DONE % 30)) -eq 0 ] || [ "$SAT_DONE" -eq "$S3_DIR_COUNT" ]; then
+                    echo "   📡 Progress: $SAT_DONE/$S3_DIR_COUNT days, last: $DIR" | tee -a "$SAT_LOG"
                 fi
             done
 

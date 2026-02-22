@@ -96,6 +96,12 @@ resource "aws_instance" "training_server" {
   vpc_security_group_ids = [aws_security_group.training_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.training_profile.name
 
+  # GPU 实例使用 Deep Learning AMI（已有 PyTorch/CUDA），只需设置时区和基础配置
+  user_data = <<-EOF
+    #!/bin/bash
+    timedatectl set-timezone Asia/Singapore
+    echo "Timezone set to Asia/Singapore at $(date)" >> /var/log/user-data.log
+  EOF
 
   root_block_device {
     volume_size = 200  # 容纳卫星原始 .nc 和预处理 .npy
