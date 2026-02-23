@@ -16,7 +16,7 @@ import random
 import logging
 import threading
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import db as weather_db
 
@@ -83,7 +83,31 @@ def fetch_nea_rainfall():
 
         # 取最新一组读数
         latest = items[0]
-        obs_time = latest.get("timestamp", datetime.utcnow().isoformat())
+        raw_ts = latest.get("timestamp", None)
+
+        # NEA returns SGT with tz offset e.g. "2026-02-21T12:28:40+08:00".
+        # SQLite julianday() cannot parse tz offsets, so we normalise to
+        # a plain UTC isoformat string (the same format forecast_time uses).
+        if raw_ts:
+            try:
+                from datetime import timezone as _tz
+                import re as _re
+                # Parse ISO 8601 with offset using datetime.fromisoformat (Py 3.11+)
+                # or fallback regex strip for Py 3.10
+                try:
+                    parsed = datetime.fromisoformat(raw_ts)
+                except ValueError:
+                    # Strip timezone suffix and treat as SGT (+08:00)
+                    clean = _re.sub(r'[+-]\d{2}:\d{2}$', '', raw_ts)
+                    parsed = datetime.fromisoformat(clean).replace(
+                        tzinfo=timezone(timedelta(hours=8))
+                    )
+                obs_time = parsed.astimezone(_tz.utc).replace(tzinfo=None).isoformat()
+            except Exception:
+                obs_time = datetime.utcnow().isoformat()
+        else:
+            obs_time = datetime.utcnow().isoformat()
+
         readings = {}
         for r in latest.get("readings", []):
             readings[r["station_id"]] = r["value"]

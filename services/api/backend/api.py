@@ -425,7 +425,7 @@ def set_geocoding_config(body: dict):
 
 @api_router.get("/health")
 def health():
-    return {"status": "ok", "version": "0.11.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
+    return {"status": "ok", "version": "0.12.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
 
 @api_router.get("/stations")
 def get_stations():
