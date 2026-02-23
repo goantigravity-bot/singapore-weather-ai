@@ -13,7 +13,10 @@ import json
 import time
 import logging
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+UTC = timezone.utc
+SGT = timezone(timedelta(hours=8))
 
 import boto3
 import requests
@@ -101,7 +104,7 @@ def update_status(mode, date, status, sat_count=0):
             Bucket=S3_BUCKET,
             Key="state/download_state.json",
             Body=json.dumps({
-                "last_updated": datetime.now().isoformat(),
+                "last_updated": datetime.now(UTC).isoformat(),
                 "mode": mode,
                 "current_target_date": date,
                 "satellite_files_count": sat_count,
@@ -116,42 +119,45 @@ def update_status(mode, date, status, sat_count=0):
 # === Thread 1: Satellite（每小时） ===
 
 def satellite_thread():
-    """每小时从 NOAA AWS 下载最新 3-ch 卫星帧"""
-    sat_logger.info("🛰️ Satellite Thread Started (3-ch, hourly)")
+    """每 10 分钟从 NOAA AWS 下载最新 3-ch 卫星帧"""
+    sat_logger.info("🛰️ Satellite Thread Started (3-ch, every 10 min)")
     noaa_s3 = get_noaa_s3_client()
     upload_s3 = get_s3_client()
 
     while True:
         try:
-            now_sgt = datetime.now()
-            # NOAA 数据有 ~30 分钟延迟，取 30 分钟前的 10 分钟整时刻
-            target = now_sgt - timedelta(minutes=30)
+            now_utc = datetime.now(UTC)
+            # NOAA data has ~30 min delay, get the 10-min slot from 30 min ago
+            target = now_utc - timedelta(minutes=30)
             target = target.replace(minute=(target.minute // 10) * 10, second=0, microsecond=0)
-            slot_str = target.strftime("%Y-%m-%d %H:%M")
+            # process_slot expects naive UTC datetime
+            target_naive = target.replace(tzinfo=None)
+            slot_utc = target.strftime("%Y-%m-%d %H:%M UTC")
+            slot_sgt = target.astimezone(SGT).strftime("%H:%M SGT")
 
-            sat_logger.info(f"Processing {slot_str} SGT")
+            sat_logger.info(f"Processing {slot_utc} ({slot_sgt})")
             update_status("real-time", target.strftime("%Y-%m-%d"), "downloading")
 
-            result = process_slot(target, noaa_s3, upload_s3)
-            sat_logger.info(f"{slot_str} SGT → {result}")
+            result = process_slot(target_naive, noaa_s3, upload_s3)
+            sat_logger.info(f"{slot_utc} ({slot_sgt}) → {result}")
             update_status("real-time", target.strftime("%Y-%m-%d"), "sleeping")
 
             if result == "done":
                 send_notification("satellite_done", source="download",
-                                 details=f"slot={slot_str}, bands=B08+B11+B13")
+                                 details=f"slot={slot_sgt}, bands=B08+B11+B13")
             elif result == "skipped":
                 send_notification("satellite_skipped", source="download",
-                                 details=f"slot={slot_str}, reason=already exists in S3")
+                                 details=f"slot={slot_sgt}, reason=already exists in S3")
             elif result == "missing":
-                sat_logger.info(f"No data available for {slot_str} (NOAA source missing)")
+                sat_logger.info(f"No data available for {slot_utc} (NOAA source missing)")
             elif result == "failed":
                 send_notification("satellite_error", source="download",
-                                 details=f"slot={slot_str}, result=failed")
+                                 details=f"slot={slot_sgt}, result=failed")
 
         except Exception as e:
             sat_logger.error(f"Error: {e}")
             send_notification("satellite_error", source="download",
-                             details=f"slot={slot_str}, error={e}")
+                             details=f"error={e}")
 
         time.sleep(SATELLITE_INTERVAL)
 
@@ -164,8 +170,9 @@ def sensor_thread():
     s3 = get_s3_client()
 
     while True:
-        today = datetime.now().strftime("%Y-%m-%d")
-        year = datetime.now().strftime("%Y")
+        now_sgt = datetime.now(SGT)
+        today = now_sgt.strftime("%Y-%m-%d")
+        year = now_sgt.strftime("%Y")
         success_count = 0
         failed_apis = []
         total_bytes = 0

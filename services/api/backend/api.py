@@ -558,7 +558,7 @@ def predict_weather(
                 if has_data.empty:
                     continue
                 # Pick the first station with data (they're all Singapore-wide, close enough)
-                val = float(has_data.iloc[0][col])
+                val = round(float(has_data.iloc[0][col]), 1)
                 if attr == 'current_temp':
                     current_temp = val
                 elif attr == 'current_humidity':
