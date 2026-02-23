@@ -108,6 +108,11 @@ TYPES = {
     "train_end":         ("🏁", "Training Complete"),
     "eval":              ("📋", "Model Evaluation"),
     "complete":          ("🎉", "All Training Complete"),
+    # API Server
+    "sync_done":         ("🔄", "Sync Cycle Complete"),
+    "sync_error":        ("🔄❌", "Sync Failed"),
+    "model_updated":     ("🧠", "Model Updated"),
+    "forecast_query":    ("🔍", "Forecast Query"),
     # General
     "info":              ("ℹ️", "Info"),
     "warning":           ("⚠️", "Warning"),

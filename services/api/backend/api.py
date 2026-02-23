@@ -36,6 +36,11 @@ import db as weather_db
 import logging
 from monitor_api import router as monitor_router
 
+# Shared notification module (email + telegram)
+import sys as _sys
+_sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared'))
+from notify import send_notification
+
 # Logger Setup
 logging.basicConfig(
     level=logging.INFO,
@@ -353,14 +358,17 @@ def sync_assets_thread():
             else:
                  logger.warning("Reload returned empty model/df. Keeping old state.")
 
-            # 4. PSI 缓存更新（PSI 不在 download server 的传感器列表，需直接拉）
+            # 4. PSI cache update
             _refresh_psi_cache()
 
             global _last_sync_time
             _last_sync_time = datetime.now(SGT)
+            send_notification("sync_done", source="api",
+                             details=f"sensor_csv=refreshed, model=loaded, psi=updated")
 
         except Exception as e:
              logger.error(f"Sync thread fatal error: {e}")
+             send_notification("sync_error", source="api", details=f"error={e}")
         
         time.sleep(SYNC_INTERVAL)
 
@@ -375,6 +383,9 @@ def startup_event():
         t.start()
     else:
         logger.warning("S3_BUCKET not set. Sync disabled.")
+
+    send_notification("server_start", source="api",
+                     details=f"version=0.12.0, bucket={S3_BUCKET or 'none'}")
 
     try:
         model, df = load_system()
@@ -648,12 +659,19 @@ def predict_weather(
             except Exception as db_err:
                 logger.warning(f"Structured DB write failed: {db_err}")
         
+        # Send forecast query notification
+        query_label = location or f"{lat:.4f},{lon:.4f}"
+        elapsed_ms = (time.time() - _predict_start) * 1000
+        send_notification("forecast_query", source="api",
+                         details=f"query={query_label}, rainfall={rain:.1f}mm, temp={current_temp:.1f}°C, status={recommendation}, time={elapsed_ms:.0f}ms")
+
         return response
         
     except HTTPException as he:
         raise he
     except Exception as e:
         logger.error(f"Prediction failed: {e}")
+        send_notification("error", source="api", details=f"forecast failed, error={e}")
         raise HTTPException(500, f"Analysis failed: {e}")
 
 @api_router.get("/predict/path")
