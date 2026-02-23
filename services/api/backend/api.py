@@ -708,14 +708,21 @@ def predict_path(query: str):
         # Inject parsed metadata for Frontend
         result['parsed'] = parsed
 
-        # PSI：路径各点取最高区域值
+        # PSI
         path_points = [(d['lat'], d['lon']) for d in result.get('details', [])]
         result['psi'] = get_psi_for_path(path_points)
-        
+
+        # Notification for path query
+        risk = result.get('overall_risk', 'unknown')
+        points_count = len(result.get('details', []))
+        send_notification("forecast_query", source="api",
+                         details=f"type=path, query={query}, risk={risk}, points={points_count}")
+
         return result
         
     except Exception as e:
         logger.error(f"Path prediction failed: {e}")
+        send_notification("error", source="api", details=f"path query failed, query={query}, error={e}")
         raise HTTPException(500, f"Path Analysis failed: {e}")
 
 @api_router.get("/smart-query")
@@ -819,13 +826,20 @@ def smart_query_endpoint(q: str, request: Request):
         except Exception as db_err:
             logger.warning(f"Structured DB write failed: {db_err}")
 
-        # PSI：路径各点取最高区域值
+        # PSI
         path_points = [(d['lat'], d['lon']) for d in result.get('details', [])]
         result['psi'] = get_psi_for_path(path_points)
-        
+
+        # Notification for smart query
+        risk = result.get('overall_risk', 'unknown')
+        advice = result.get('advice', '')[:60]
+        send_notification("forecast_query", source="api",
+                         details=f"type=smart, query={q[:50]}, risk={risk}, advice={advice}, time={elapsed_ms:.0f}ms")
+
         return result
     except Exception as e:
         logger.error(f"Smart query failed: {e}")
+        send_notification("error", source="api", details=f"smart query failed, query={q[:50]}, error={e}")
         raise HTTPException(500, str(e))
 
 @api_router.get("/popular-searches")
