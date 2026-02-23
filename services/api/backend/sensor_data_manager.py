@@ -131,11 +131,22 @@ def _process_day_from_local(
     rows = []
     for ts, sid in sorted(all_keys):
         row = {"timestamp": ts, "sensor_id": sid}
+        has_data = False
         for col_name in DATA_TYPES:
-            row[col_name] = type_data[col_name].get((ts, sid), 0.0)
-        rows.append(row)
+            val = type_data[col_name].get((ts, sid))
+            if val is not None:
+                row[col_name] = val
+                has_data = True
+            else:
+                # Use NaN so resampling mean ignores missing values
+                row[col_name] = float("nan")
+        if has_data:
+            rows.append(row)
 
-    # 10 分钟重采样
+    if not rows:
+        return []
+
+    # 10 分钟重采样（NaN values are excluded from mean automatically）
     df = pd.DataFrame(rows)
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df["ts_bucket"] = df["timestamp"].dt.floor("10min")
@@ -143,6 +154,9 @@ def _process_day_from_local(
     resampled = df.groupby(["ts_bucket", "sensor_id"]).agg(agg_dict).reset_index()
     resampled.rename(columns={"ts_bucket": "timestamp"}, inplace=True)
     resampled["timestamp"] = resampled["timestamp"].dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+    # Replace remaining NaN with 0 for the CSV (rain NaN → 0 is correct)
+    resampled = resampled.fillna(0.0)
 
     return resampled.to_dict("records")
 

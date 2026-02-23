@@ -541,19 +541,32 @@ def predict_weather(
                     nearest_name = s.get('name', nearest_name)
                     break
         
-        # 获取该站点的最新观测数据
+        # 获取最新观测数据（temperature / humidity / pm25）
+        # Note: rainfall stations and temperature stations use DIFFERENT IDs
+        # So we search the entire CSV for the latest non-zero readings
         current_temp = None
         current_humidity = None
         current_pm25 = None
-        if nearest and not df.empty:
-            sensor_df = df[df['sensor_id'] == nearest].sort_values('timestamp')
-            if not sensor_df.empty:
-                latest = sensor_df.iloc[-1]
-                current_temp = float(latest.get('temperature', 0)) if 'temperature' in latest else None
-                current_humidity = float(latest.get('humidity', 0)) if 'humidity' in latest else None
-                current_pm25 = float(latest.get('pm25', 0)) if 'pm25' in latest else None
+        if not df.empty:
+            # Get the latest row per station, then filter for non-zero values
+            latest_per_station = df.sort_values('timestamp').groupby('sensor_id').tail(1)
 
-        # 如果是气候均值 fallback，用气候数据填充 current_weather
+            for col, attr in [('temperature', 'current_temp'), ('humidity', 'current_humidity'), ('pm25', 'current_pm25')]:
+                if col not in latest_per_station.columns:
+                    continue
+                has_data = latest_per_station[latest_per_station[col] > 0]
+                if has_data.empty:
+                    continue
+                # Pick the first station with data (they're all Singapore-wide, close enough)
+                val = float(has_data.iloc[0][col])
+                if attr == 'current_temp':
+                    current_temp = val
+                elif attr == 'current_humidity':
+                    current_humidity = val
+                elif attr == 'current_pm25':
+                    current_pm25 = val
+
+        # Climatology fallback if still no data
         if data_source == "climatology" and current_temp is None:
             climate = get_climatology(req_time.month, req_time.hour)
             current_temp = climate["temperature"]
