@@ -1109,8 +1109,9 @@ def monitor_logs(log_type: str, lines: int = 100):
     path = ""
     
     if log_type == "sync":
-        # API 日志在本地
-        local_log = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "api.log")
+        # API 日志在项目根目录 (/home/ubuntu/weather-ai/api.log)
+        # __file__ = .../services/api/backend/api.py → 上溯 3 级到 weather-ai/
+        local_log = os.path.join(os.path.dirname(__file__), "..", "..", "..", "api.log")
         local_log = os.path.abspath(local_log)
         try:
             if os.path.exists(local_log):
