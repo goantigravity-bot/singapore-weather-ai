@@ -40,24 +40,31 @@ def get_s3_client():
     return boto3.client('s3', endpoint_url=S3_ENDPOINT_URL)
 
 def update_status(mode, date, status, sat_count=0):
-    """Updates status to S3"""
+    """Updates status to S3, including cumulative progress stats."""
     try:
         s3 = get_s3_client()
         import json
+
+        # 统计 S3 中已完成的卫星数据天数（processed/satellite-3ch/ 下的日期目录）
+        completed_days = 0
+        try:
+            paginator = s3.get_paginator('list_objects_v2')
+            for page in paginator.paginate(Bucket=S3_BUCKET, Prefix="processed/satellite-3ch/", Delimiter="/"):
+                completed_days += len(page.get('CommonPrefixes', []))
+        except Exception as e:
+            logger.warning(f"Failed to count satellite dates: {e}")
+
         status_data = {
             "last_updated": datetime.now().isoformat(),
             "mode": mode,
             "current_target_date": date,
             "satellite_files_count": sat_count,
-            "status": status
+            "status": status,
+            # 累计统计 — API Dashboard 直接读取展示
+            "completedDays": completed_days,
+            "totalFiles": completed_days * 144,
         }
-        # Save locally and upload
-        # with open("download_state.json", "w") as f:
-        #    json.dump(status_data, f)
-        
-        # s3.upload_file("download_state.json", S3_BUCKET, "state/download_state.json")
-        
-        # Use put_object to avoid ChecksumMismatch issues in some envs
+
         s3.put_object(
             Bucket=S3_BUCKET,
             Key="state/download_state.json",

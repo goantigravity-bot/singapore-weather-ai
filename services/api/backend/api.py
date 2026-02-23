@@ -979,31 +979,21 @@ def monitor_overview():
             except Exception as e:
                 logger.warning(f"Monitor: Failed to read training_state.json: {e}")
             
-            # 统计 S3 中卫星数据的日期目录和文件数
-            try:
-                paginator = s3.get_paginator('list_objects_v2')
-                for page in paginator.paginate(Bucket=S3_BUCKET, Prefix="satellite/", Delimiter="/"):
-                    for prefix in page.get('CommonPrefixes', []):
-                        date_str = prefix['Prefix'].replace("satellite/", "").rstrip("/")
-                        if date_str:
-                            s3_satellite_dates.add(date_str)
-                s3_total_files = len(s3_satellite_dates) * 144
-                logger.info(f"Monitor: Found {len(s3_satellite_dates)} satellite date folders")
-            except Exception as e:
-                logger.warning(f"Monitor: Failed to list satellite dates: {e}")
         except Exception as e:
             logger.warning(f"Monitor: Failed to create S3 client: {e}")
     else:
         logger.warning("Monitor: S3_BUCKET is not set, returning local-only data")
     
-    completed_days = len(s3_satellite_dates)
+    # completedDays 和 totalFiles 由 download server 计算并写入 download_state.json
+    completed_days = download_state.get("completedDays", 0)
+    total_files = download_state.get("totalFiles", 0)
     
     # --- 2. 构建下载状态 ---
     download_status = {
         "currentDate": download_state.get("current_target_date"),
         "completedDays": completed_days,
         "totalDays": max(completed_days, 120),  # 目标约 120 天的历史数据
-        "filesDownloaded": s3_total_files,
+        "filesDownloaded": total_files,
         "status": download_state.get("status", "idle"),
         "lastUpdate": fmt_time(download_state.get("last_updated")),
         "dateProgress": [],

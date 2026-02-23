@@ -159,6 +159,25 @@ resource "aws_instance" "download_server" {
   vpc_security_group_ids = [aws_security_group.download.id]
   iam_instance_profile   = aws_iam_instance_profile.download_profile.name
 
+  user_data = <<-EOF
+    #!/bin/bash
+    set -e
+    exec > /var/log/user-data.log 2>&1
+    timedatectl set-timezone Asia/Singapore
+
+    # Python venv + 依赖
+    apt-get update -qq
+    apt-get install -y python3.10-venv git
+    su - ubuntu -c '
+      cd /home/ubuntu
+      git clone https://github.com/goantigravity-bot/singapore-weather-ai.git weather-ai || true
+      cd weather-ai
+      python3 -m venv venv
+      venv/bin/pip install -q boto3 requests pandas numpy netCDF4
+    '
+    echo "Setup complete at $(date)"
+  EOF
+
   root_block_device {
     volume_size = var.download_volume_size
     volume_type = "gp3"
@@ -256,8 +275,22 @@ resource "aws_instance" "api_server" {
 
   user_data = <<-EOF
     #!/bin/bash
+    set -e
+    exec > /var/log/user-data.log 2>&1
     timedatectl set-timezone Asia/Singapore
-    echo "Timezone set to Asia/Singapore at $(date)" >> /var/log/user-data.log
+
+    # Python venv + 依赖
+    apt-get update -qq
+    apt-get install -y python3.10-venv git npm
+    su - ubuntu -c '
+      cd /home/ubuntu
+      git clone https://github.com/goantigravity-bot/singapore-weather-ai.git weather-ai || true
+      cd weather-ai
+      python3 -m venv venv
+      venv/bin/pip install -q fastapi uvicorn python-multipart boto3 pandas torch numpy scipy xarray netCDF4 requests
+      cd services/api/frontend && npm install && npm run build
+    '
+    echo "Setup complete at $(date)"
   EOF
 
   root_block_device {
@@ -292,8 +325,20 @@ resource "aws_instance" "training_server" {
 
   user_data = <<-EOF
     #!/bin/bash
+    set -e
+    exec > /var/log/user-data.log 2>&1
     timedatectl set-timezone Asia/Singapore
-    echo "Timezone set to Asia/Singapore at $(date)" >> /var/log/user-data.log
+
+    # Training server 使用 Deep Learning AMI — PyTorch 已预装
+    # 仅需补充项目特有依赖
+    su - ubuntu -c '
+      cd /home/ubuntu
+      git clone https://github.com/goantigravity-bot/singapore-weather-ai.git weather-ai || true
+      cd weather-ai
+      python3 -m venv venv
+      venv/bin/pip install -q boto3 pandas torch numpy scipy xarray netCDF4
+    '
+    echo "Setup complete at $(date)"
   EOF
 
   root_block_device {
