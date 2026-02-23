@@ -174,6 +174,22 @@ resource "aws_instance" "download_server" {
       cd weather-ai
       python3 -m venv venv
       venv/bin/pip install -q boto3 requests pandas numpy netCDF4
+
+      # .env 配置
+      echo "S3_BUCKET=weather-ai-models-gcc" > services/download/.env
+
+      # 日志推送脚本（boto3，无需 aws CLI）
+      cat > /home/ubuntu/push_log.py << "PYEOF"
+import boto3, os
+s3 = boto3.client("s3")
+bucket = os.environ.get("S3_BUCKET", "weather-ai-models-gcc")
+log = "/home/ubuntu/weather-ai/download.log"
+if os.path.exists(log):
+    s3.upload_file(log, bucket, "logs/download.log")
+PYEOF
+
+      # 每 5 分钟推送日志到 S3
+      (crontab -l 2>/dev/null; echo "*/5 * * * * /home/ubuntu/weather-ai/venv/bin/python3 /home/ubuntu/push_log.py > /dev/null 2>&1") | crontab -
     '
     echo "Setup complete at $(date)"
   EOF

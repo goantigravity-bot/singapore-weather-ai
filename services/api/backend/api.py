@@ -1098,61 +1098,57 @@ def monitor_overview():
 
 @api_router.get("/monitor/logs/{log_type}")
 def monitor_logs(log_type: str, lines: int = 100):
-    """返回指定类型的日志内容，优先从 S3 读取（各服务通过 crontab 推送日志到 S3）"""
+    """返回指定类型的日志。
+    - sync (API): 直接读本地 api.log（API Server read-only，不推送到 S3）
+    - download/training: 从 S3 logs/ 读取（由各服务器 crontab 推送）
+    """
     import boto3
-    import subprocess as _sp
     
-    # S3 日志路径映射（由各实例的 push_log 脚本上传）
-    s3_log_keys = {
-        "download": "logs/download.log",
-        "training": "logs/training.log",
-        "sync": "logs/api.log",
-    }
-    
-    s3_key = s3_log_keys.get(log_type)
     log_lines = []
     source = "unknown"
     path = ""
     
-    # 优先从 S3 读取
-    if S3_BUCKET and s3_key:
+    if log_type == "sync":
+        # API 日志在本地
+        local_log = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "api.log")
+        local_log = os.path.abspath(local_log)
         try:
-            s3 = boto3.client('s3', endpoint_url=S3_ENDPOINT_URL)
-            obj = s3.get_object(Bucket=S3_BUCKET, Key=s3_key)
-            content = obj['Body'].read().decode('utf-8', errors='replace')
-            all_lines = content.splitlines()
-            log_lines = all_lines[-lines:]
-            source = f"S3 ({S3_BUCKET})"
-            path = s3_key
-            logger.info(f"Logs: Loaded {len(log_lines)} lines from S3 {s3_key}")
-        except Exception as e:
-            logger.warning(f"Logs: Failed to read from S3 {s3_key}: {e}")
-            # sync 类型的日志在 API 服务器本地（systemd journal），直接从 journalctl 读取
-            if log_type == "sync":
-                try:
-                    result = _sp.run(
-                        ["/usr/bin/journalctl", "-u", "weather-api", "--no-pager", "-n", str(lines)],
-                        capture_output=True, text=True, timeout=5
-                    )
-                    if result.stdout.strip():
-                        log_lines = result.stdout.strip().splitlines()
-                        source = "journalctl (weather-api)"
-                        path = "systemd journal"
-                    else:
-                        log_lines = ["No journal entries found for weather-api"]
-                        source = "journalctl"
-                        path = "systemd journal"
-                except Exception as je:
-                    log_lines = [f"Failed to read from both S3 and journalctl: {je}"]
-                    source = "error"
-                    path = s3_key
+            if os.path.exists(local_log):
+                with open(local_log, 'r', errors='replace') as f:
+                    all_lines = f.readlines()
+                log_lines = [l.rstrip() for l in all_lines[-lines:]]
+                source = "local"
+                path = local_log
             else:
+                log_lines = [f"Log file not found: {local_log}"]
+                source = "error"
+                path = local_log
+        except Exception as e:
+            log_lines = [f"Failed to read local log: {e}"]
+            source = "error"
+    else:
+        # download/training 日志从 S3 读取
+        s3_log_keys = {
+            "download": "logs/download.log",
+            "training": "logs/training.log",
+        }
+        s3_key = s3_log_keys.get(log_type)
+        if S3_BUCKET and s3_key:
+            try:
+                s3 = boto3.client('s3', endpoint_url=S3_ENDPOINT_URL)
+                obj = s3.get_object(Bucket=S3_BUCKET, Key=s3_key)
+                content = obj['Body'].read().decode('utf-8', errors='replace')
+                all_lines = content.splitlines()
+                log_lines = all_lines[-lines:]
+                source = f"S3 ({S3_BUCKET})"
+                path = s3_key
+            except Exception as e:
                 log_lines = [f"Failed to load logs from S3: {e}"]
                 source = "error"
                 path = s3_key
-    else:
-        log_lines = [f"S3 not configured or unknown log type: {log_type}"]
-        source = "none"
+        else:
+            log_lines = [f"Unknown log type: {log_type}"]
+            source = "none"
     
     return {
         "type": log_type,
