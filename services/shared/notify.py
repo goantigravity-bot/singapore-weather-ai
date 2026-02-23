@@ -85,9 +85,9 @@ TYPES = {
     "server_start":      ("🟢", "Server Started"),
     "server_stop":       ("🔴", "Server Stopped"),
     # Download Server — Satellite
-    "satellite_done":    ("🛰️", "Satellite Frame Downloaded"),
+    "satellite_done":    ("🛰️", "Satellite Image Downloaded"),
     "satellite_error":   ("🛰️❌", "Satellite Download Failed"),
-    "satellite_skipped": ("🛰️⏭️", "Satellite Frame Skipped"),
+    "satellite_skipped": ("🛰️⏭️", "Satellite Image Skipped"),
     # Download Server — Sensor
     "sensor_done":       ("📡", "Sensor Sync Complete"),
     "sensor_error":      ("📡❌", "Sensor Sync Failed"),
