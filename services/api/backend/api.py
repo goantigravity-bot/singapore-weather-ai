@@ -143,8 +143,8 @@ CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "processed",
 SYNC_INTERVAL = 300 # 5 minutes
 SGT = timezone(timedelta(hours=8))
 
-# 上次成功拉取实时数据的时间，用于标注数据新鲜度
-_last_realtime_fetch: datetime | None = None
+# 上次成功同步 S3 数据的时间，用于标注数据新鲜度
+_last_sync_time: datetime | None = None
 
 # PSI 缓存 — 按区域存储，后台线程每 5 分钟更新
 _psi_readings: dict[str, int] = {}
@@ -179,71 +179,12 @@ def get_psi_for_path(points: list) -> int | None:
     return max(valid) if valid else None
 
 
-def fetch_realtime_sensor_data():
-    """从 data.gov.sg API 拉取实时传感器数据，追加到 CSV 和内存 DataFrame。
-
-    每 5 分钟由后台线程调用，用户请求路径不会触发此函数。
-    四个 API 按站点 merge 后生成一行完整的传感器记录。
-    """
-    global df, _last_realtime_fetch
-    SGT_TZ = timezone(timedelta(hours=8))
-    TIMEOUT = 10  # 单个 API 最长等待
-
-    apis = {
-        "temperature": "https://api.data.gov.sg/v1/environment/air-temperature",
-        "rainfall":    "https://api.data.gov.sg/v1/environment/rainfall",
-        "humidity":    "https://api.data.gov.sg/v1/environment/relative-humidity",
-        "wind_speed":  "https://api.data.gov.sg/v1/environment/wind-speed",
-        "wind_direction": "https://api.data.gov.sg/v1/environment/wind-direction",
-    }
-
-    raw: dict[str, dict[str, float]] = {}  # station_id -> {field: value}
-    timestamp_str = None
-
-    for field, url in apis.items():
-        try:
-            resp = http_requests.get(url, timeout=TIMEOUT)
-            data = resp.json()
-            items = data.get("items", [])
-            if not items:
-                continue
-            item = items[0]  # 最新一条
-            if timestamp_str is None:
-                timestamp_str = item.get("timestamp")
-            for reading in item.get("readings", []):
-                sid = reading.get("station_id", "")
-                val = reading.get("value")
-                if sid and val is not None:
-                    raw.setdefault(sid, {})[field] = float(val)
-        except Exception as e:
-            logger.warning(f"Realtime fetch {field} failed: {e}")
-
-    if not raw or not timestamp_str:
-        logger.warning("No realtime data fetched")
-        return
-
-    # PM2.5 用 v2 API，结构不同
-    try:
-        pm_resp = http_requests.get(
-            "https://api.data.gov.sg/v2/real-time/api/pm25", timeout=TIMEOUT
-        )
-        pm_data = pm_resp.json()
-        pm_items = (pm_data.get("data") or {}).get("items", [])
-        if pm_items:
-            pm_readings = pm_items[0].get("readings", {})
-            # PM2.5 按区域返回，取全国平均作为各站 fallback
-            pm_vals = [v for v in pm_readings.values() if isinstance(v, (int, float))]
-            avg_pm25 = sum(pm_vals) / len(pm_vals) if pm_vals else 15.0
-            for sid in raw:
-                raw[sid].setdefault("pm25", avg_pm25)
-    except Exception as e:
-        logger.warning(f"Realtime fetch PM2.5 failed: {e}")
-
-    # PSI — 按区域缓存（不绑定站点，全局共用）
+def _refresh_psi_cache():
+    """轻量 PSI 缓存更新 — PSI 不在 download server 的 6 种传感器中，API server 直接拉。"""
     global _psi_readings
     try:
         psi_resp = http_requests.get(
-            "https://api-open.data.gov.sg/v2/real-time/api/psi", timeout=TIMEOUT
+            "https://api-open.data.gov.sg/v2/real-time/api/psi", timeout=10
         )
         psi_data = psi_resp.json()
         psi_items = (psi_data.get("data") or {}).get("items", [])
@@ -253,47 +194,8 @@ def fetch_realtime_sensor_data():
                 _psi_readings.update(psi_24h)
                 logger.info(f"🌫️ PSI updated: {psi_24h}")
     except Exception as e:
-        logger.warning(f"Realtime fetch PSI failed: {e}")
+        logger.warning(f"PSI fetch failed: {e}")
 
-    # 转换为 DataFrame 行并追加
-    import pandas as pd
-    ts = pd.Timestamp(timestamp_str)
-    if ts.tzinfo is None:
-        ts = ts.tz_localize(SGT_TZ)
-
-    rows = []
-    for sid, vals in raw.items():
-        rows.append({
-            "timestamp": ts,
-            "sensor_id": sid,
-            "humidity": vals.get("humidity", 80.0),
-            "pm25": vals.get("pm25", 15.0),
-            "rainfall": vals.get("rainfall", 0.0),
-            "temperature": vals.get("temperature", 28.0),
-            "wind_speed": vals.get("wind_speed", 0.0),
-            "wind_direction": vals.get("wind_direction", 0.0),
-        })
-
-    new_df = pd.DataFrame(rows)
-
-    # 追加到内存 DataFrame（去重：同一 timestamp+station 只保留一条）
-    if df is not None and not df.empty:
-        df = pd.concat([df, new_df], ignore_index=True)
-        df = df.drop_duplicates(subset=["timestamp", "sensor_id"], keep="last")
-        # 只保留最近 7 天数据，避免内存无限增长
-        cutoff = ts - timedelta(days=7)
-        df = df[df["timestamp"] >= cutoff]
-    else:
-        df = new_df
-
-    # 追加到 CSV（持久化，重启后可恢复）
-    try:
-        new_df.to_csv(CSV_PATH, mode="a", header=not os.path.exists(CSV_PATH), index=False)
-    except Exception as e:
-        logger.warning(f"CSV append failed: {e}")
-
-    _last_realtime_fetch = datetime.now(SGT_TZ)
-    logger.info(f"📡 Realtime data fetched: {len(rows)} stations @ {ts}")
 
 def sync_satellite_data(s3, bucket):
     """Sync preprocessed satellite .npy from S3 (instead of raw .nc).
@@ -451,11 +353,11 @@ def sync_assets_thread():
             else:
                  logger.warning("Reload returned empty model/df. Keeping old state.")
 
-            # 4. 拉取实时传感器数据（追加到内存 df + CSV）
-            try:
-                fetch_realtime_sensor_data()
-            except Exception as e:
-                logger.warning(f"Realtime sensor fetch failed: {e}")
+            # 4. PSI 缓存更新（PSI 不在 download server 的传感器列表，需直接拉）
+            _refresh_psi_cache()
+
+            global _last_sync_time
+            _last_sync_time = datetime.now(SGT)
 
         except Exception as e:
              logger.error(f"Sync thread fatal error: {e}")
@@ -665,8 +567,8 @@ def predict_weather(
 
         # 数据新鲜度提示
         freshness = None
-        if _last_realtime_fetch:
-            age_min = (datetime.now(SGT) - _last_realtime_fetch).total_seconds() / 60
+        if _last_sync_time:
+            age_min = (datetime.now(SGT) - _last_sync_time).total_seconds() / 60
             freshness = f"{int(age_min)} min ago" if age_min < 60 else f"{int(age_min/60)}h ago"
 
         response = {
