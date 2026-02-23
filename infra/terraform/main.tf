@@ -132,6 +132,7 @@ resource "aws_instance" "weather_api" {
   key_name      = aws_key_pair.weather_api.key_name
 
   vpc_security_group_ids = [aws_security_group.weather_api.id]
+  iam_instance_profile   = aws_iam_instance_profile.api_profile.name
   
   root_block_device {
     volume_size = var.root_volume_size
@@ -150,6 +151,49 @@ resource "aws_instance" "weather_api" {
   tags = {
     Name = "${var.project_name}-api-server"
   }
+}
+
+# ========== IAM: API Server → S3 只读 ==========
+
+resource "aws_iam_role" "api_role" {
+  name = "${var.project_name}-api-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "api_s3_readonly" {
+  name = "${var.project_name}-api-s3-readonly"
+  role = aws_iam_role.api_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ListBucket"
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = aws_s3_bucket.models.arn
+      },
+      {
+        Sid      = "ReadObjects"
+        Effect   = "Allow"
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.models.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "api_profile" {
+  name = "${var.project_name}-api-profile"
+  role = aws_iam_role.api_role.name
 }
 
 # 下载服务器 — 卫星/传感器数据下载+预处理
