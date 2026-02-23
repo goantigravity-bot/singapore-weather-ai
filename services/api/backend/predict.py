@@ -24,7 +24,7 @@ def latlon2xy(lat, lon):
 
 # --- Config ---
 MODEL_PATH = "weather_fusion_model.pth"
-CSV_PATH = "real_sensor_data.csv"
+CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "processed", "real_sensor_data.csv")
 SAT_DIR = "satellite_data"
 DEVICE = torch.device("cpu")
 
@@ -85,7 +85,12 @@ def load_system():
         df['wind_speed'] = 0.0
     if 'wind_direction' not in df.columns:
         df['wind_direction'] = 0.0
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=False)
+    # CSV 可能无时区信息，统一转为新加坡时区以避免 tz-naive vs tz-aware 比较错误
+    if df['timestamp'].dt.tz is None:
+        df['timestamp'] = df['timestamp'].dt.tz_localize('Asia/Singapore')
+    else:
+        df['timestamp'] = df['timestamp'].dt.tz_convert('Asia/Singapore')
     return model, df
 
 def get_input_data(df, sensor_id, target_time, station_lat=None, station_lon=None, seq_len=6):

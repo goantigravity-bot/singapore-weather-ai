@@ -138,7 +138,8 @@ from climatology import get_climatology
 S3_BUCKET = os.environ.get("S3_BUCKET", "weather-ai-models-de08370c") # Default fallback
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 MODEL_KEY = "models/latest.pth"
-DATA_KEY = "govdata/real_sensor_data.csv"
+# CSV 路径由 sensor_data_manager 管理，位于 processed/real_sensor_data.csv
+CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "processed", "real_sensor_data.csv")
 SYNC_INTERVAL = 300 # 5 minutes
 SGT = timezone(timedelta(hours=8))
 
@@ -287,8 +288,7 @@ def fetch_realtime_sensor_data():
 
     # 追加到 CSV（持久化，重启后可恢复）
     try:
-        csv_path = "real_sensor_data.csv"
-        new_df.to_csv(csv_path, mode="a", header=not os.path.exists(csv_path), index=False)
+        new_df.to_csv(CSV_PATH, mode="a", header=not os.path.exists(CSV_PATH), index=False)
     except Exception as e:
         logger.warning(f"CSV append failed: {e}")
 
@@ -427,20 +427,14 @@ def sync_assets_thread():
             except Exception as e:
                  logger.warning(f"Error syncing model: {e}")
 
-            # 2. Download CSV
-            local_csv = "real_sensor_data.csv"
+            # 2. Refresh sensor CSV（从 S3 govdata 同步最近 N 天并重建 CSV）
             try:
-                s3.download_file(S3_BUCKET, DATA_KEY, local_csv + ".tmp")
-                os.replace(local_csv + ".tmp", local_csv)
-                logger.info("✅ CSV Data synced from S3")
+                from sensor_data_manager import SensorDataManager
+                manager = SensorDataManager(base_dir=os.path.dirname(os.path.dirname(__file__)))
+                manager.run()
+                logger.info("✅ Sensor CSV refreshed from S3 govdata")
             except Exception as e:
-                 # Check 'govdata/real_sensor_data.csv' fallback?
-                 try:
-                     s3.download_file(S3_BUCKET, "govdata/real_sensor_data.csv", local_csv + ".tmp")
-                     os.replace(local_csv + ".tmp", local_csv)
-                     logger.info("✅ CSV Data synced from S3 (fallback path)")
-                 except:
-                     logger.warning(f"Failed to sync CSV data: {e}")
+                logger.warning(f"Failed to refresh sensor CSV: {e}")
 
             # 3. Reload System
             # We reload simply by calling load_system again.
@@ -955,7 +949,7 @@ def monitor_overview():
             return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return iso_str[:19].replace("T", " ")
     
-    csv_exists = os.path.exists("real_sensor_data.csv")
+    csv_exists = os.path.exists(CSV_PATH)
     model_exists = os.path.exists("weather_fusion_model.pth")
     
     # --- 1. 从 S3 获取真实状态 ---
