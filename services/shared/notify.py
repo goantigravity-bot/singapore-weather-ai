@@ -26,10 +26,29 @@ import urllib.request
 import urllib.parse
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
-HOSTNAME = socket.gethostname()
+SGT = timezone(timedelta(hours=8))
+
+# Source labels — human-readable server names
+SOURCE_LABELS = {
+    "download": "Download Server",
+    "training": "Training Server",
+    "api":      "API Server",
+}
+
+
+def _get_public_ip() -> str:
+    """Try to get public IP; fallback to hostname."""
+    try:
+        resp = urllib.request.urlopen("http://checkip.amazonaws.com", timeout=3)
+        return resp.read().decode().strip()
+    except Exception:
+        return socket.gethostname()
+
+
+HOST_ID = _get_public_ip()
 
 # === .env 加载（从调用方目录 或 shared/ 目录） ===
 
@@ -116,9 +135,11 @@ def _send_email(notify_type: str, details: str, source: str, year: str) -> bool:
         return False
 
     emoji, title = TYPES.get(notify_type, ("📌", notify_type))
-    source_str = f" [{source}]" if source else ""
+    source_label = SOURCE_LABELS.get(source, source) if source else ""
+    source_str = f" [{source_label}]" if source_label else ""
     year_str = f" [{year}]" if year else ""
     subject = f"{emoji} Weather AI{source_str}{year_str} — {title}"
+    now_sgt = datetime.now(SGT).strftime("%Y-%m-%d %H:%M:%S SGT")
 
     detail_rows = ""
     if details:
@@ -134,9 +155,9 @@ def _send_email(notify_type: str, details: str, source: str, year: str) -> bool:
     <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto">
         <h2 style="color:{'#d32f2f' if 'error' in notify_type else '#1976d2'}">{emoji} {title}{source_str}{year_str}</h2>
         <table style="border-collapse:collapse;width:100%;border:1px solid #ddd">
-            <tr><td style='padding:4px 12px;font-weight:bold'>Time</td><td style='padding:4px 12px'>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</td></tr>
-            <tr><td style='padding:4px 12px;font-weight:bold'>Host</td><td style='padding:4px 12px'>{HOSTNAME}</td></tr>
-            {f"<tr><td style='padding:4px 12px;font-weight:bold'>Source</td><td style='padding:4px 12px'>{source}</td></tr>" if source else ""}
+            <tr><td style='padding:4px 12px;font-weight:bold'>Time</td><td style='padding:4px 12px'>{now_sgt}</td></tr>
+            <tr><td style='padding:4px 12px;font-weight:bold'>Host</td><td style='padding:4px 12px'>{HOST_ID}</td></tr>
+            {f"<tr><td style='padding:4px 12px;font-weight:bold'>Source</td><td style='padding:4px 12px'>{source_label}</td></tr>" if source_label else ""}
             {f"<tr><td style='padding:4px 12px;font-weight:bold'>Year</td><td style='padding:4px 12px'>{year}</td></tr>" if year else ""}
             {detail_rows}
         </table>
@@ -166,12 +187,14 @@ def _send_telegram(notify_type: str, details: str, source: str, year: str) -> bo
         return False
 
     emoji, title = TYPES.get(notify_type, ("📌", notify_type))
-    source_str = f" [{source}]" if source else ""
+    source_label = SOURCE_LABELS.get(source, source) if source else ""
+    source_str = f" [{source_label}]" if source_label else ""
     year_str = f" [{year}]" if year else ""
+    now_sgt = datetime.now(SGT).strftime("%Y-%m-%d %H:%M:%S SGT")
 
     lines = [f"<b>{emoji} {title}{source_str}{year_str}</b>"]
-    lines.append(f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    lines.append(f"🖥 {HOSTNAME}")
+    lines.append(f"🕐 {now_sgt}")
+    lines.append(f"🖥 {HOST_ID}")
     if details:
         for item in details.split(","):
             item = item.strip()
