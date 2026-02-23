@@ -1236,20 +1236,24 @@ def get_satellite_frames():
                 import base64
                 with open(path, "rb") as fh:
                     b64 = base64.b64encode(fh.read()).decode("ascii")
+                # File timestamps are in UTC, convert to SGT for display
+                dt_sgt = dt + timedelta(hours=8)
                 frames.append({
                     "image": f"data:image/png;base64,{b64}",
-                    "time": dt.strftime("%H:%M"),
-                    "timestamp": dt.isoformat(),
+                    "time": dt_sgt.strftime("%H:%M"),
+                    "timestamp": dt_sgt.isoformat(),
                 })
             except Exception as e:
                 logger.warning(f"Failed to read PNG {path}: {e}")
         else:
             b64 = _npy_to_base64_png(path)
             if b64:
+                # File timestamps are in UTC, convert to SGT for display
+                dt_sgt = dt + timedelta(hours=8)
                 frames.append({
                     "image": f"data:image/png;base64,{b64}",
-                    "time": dt.strftime("%H:%M"),
-                    "timestamp": dt.isoformat(),
+                    "time": dt_sgt.strftime("%H:%M"),
+                    "timestamp": dt_sgt.isoformat(),
                 })
 
     return {"frames": frames, "bounds": SG_BOUNDS}
