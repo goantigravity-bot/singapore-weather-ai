@@ -12,6 +12,7 @@ backfill.py — ad-hoc 回填脚本（手动运行）
 import argparse
 import logging
 import os
+import sys
 from datetime import datetime, timedelta
 
 import boto3
@@ -20,9 +21,13 @@ from botocore.exceptions import ClientError
 
 from download_aws_satellite import process_day, _check_day_complete_s3
 
+# Shared notification module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "shared"))
+from notify import send_notification
+
 S3_BUCKET = os.environ.get("S3_BUCKET", "weather-ai-models-gcc")
 
-# data.gov.sg 传感器 API（与 download_manager 保持一致）
+# data.gov.sg sensor APIs (same as download_manager)
 SENSOR_APIS = {
     "rainfall":        "https://api.data.gov.sg/v1/environment/rainfall",
     "temperature":     "https://api.data.gov.sg/v1/environment/air-temperature",
@@ -40,7 +45,7 @@ logger = logging.getLogger("backfill")
 
 
 def backfill_satellite(start: datetime, end: datetime, workers: int):
-    """逐日回填 3-ch 卫星数据"""
+    """Backfill 3-ch satellite data day by day"""
     from botocore.config import Config
     from download_aws_satellite import UNSIGNED
 
@@ -73,7 +78,7 @@ def backfill_satellite(start: datetime, end: datetime, workers: int):
 
 
 def backfill_sensor(start: datetime, end: datetime):
-    """逐日回填传感器 JSON（S3 已有则跳过）"""
+    """Backfill sensor JSON day by day (skip if S3 key exists)"""
     s3 = boto3.client("s3")
     current = start
     stats = {"days": 0, "skipped": 0, "downloaded": 0, "failed": 0}
@@ -87,7 +92,7 @@ def backfill_sensor(start: datetime, end: datetime):
         for api_name, api_url in SENSOR_APIS.items():
             s3_key = f"govdata/{year}/{api_name}_{date_str}.json"
 
-            # S3 已有则跳过
+            # Skip if already in S3
             try:
                 s3.head_object(Bucket=S3_BUCKET, Key=s3_key)
                 stats["skipped"] += 1
@@ -131,23 +136,45 @@ def main():
     end = datetime.strptime(args.end, "%Y-%m-%d")
     do_satellite = not args.sensor_only
     do_sensor = not args.satellite_only
+    mode_str = "satellite+sensor"
+    if args.satellite_only:
+        mode_str = "satellite-only"
+    elif args.sensor_only:
+        mode_str = "sensor-only"
 
-    logger.info(f"🔄 Backfill: {args.start} → {args.end}")
-    logger.info(f"   Satellite: {'✅' if do_satellite else '⏭️ skip'}")
-    logger.info(f"   Sensor:    {'✅' if do_sensor else '⏭️ skip'}")
+    logger.info(f"🔄 Backfill: {args.start} → {args.end} ({mode_str})")
+    send_notification("backfill_start", source="download",
+                     details=f"range={args.start} to {args.end}, mode={mode_str}, workers={args.workers}")
 
-    if do_satellite:
-        logger.info("=== Satellite Backfill ===")
-        sat_stats = backfill_satellite(start, end, args.workers)
-        logger.info(f"🛰️ Satellite: {sat_stats}")
+    try:
+        if do_satellite:
+            logger.info("=== Satellite Backfill ===")
+            sat_stats = backfill_satellite(start, end, args.workers)
+            logger.info(f"🛰️ Satellite: {sat_stats}")
 
-    if do_sensor:
-        logger.info("=== Sensor Backfill ===")
-        sensor_stats = backfill_sensor(start, end)
-        logger.info(f"📡 Sensor: {sensor_stats}")
+        if do_sensor:
+            logger.info("=== Sensor Backfill ===")
+            sensor_stats = backfill_sensor(start, end)
+            logger.info(f"📡 Sensor: {sensor_stats}")
 
-    logger.info("✅ Backfill complete!")
+        # Build summary
+        summary_parts = []
+        if do_satellite:
+            summary_parts.append(f"sat: done={sat_stats['done']} skipped={sat_stats['skipped']} failed={sat_stats['failed']}")
+        if do_sensor:
+            summary_parts.append(f"sensor: downloaded={sensor_stats['downloaded']} skipped={sensor_stats['skipped']} failed={sensor_stats['failed']}")
+
+        send_notification("backfill_done", source="download",
+                         details=f"range={args.start} to {args.end}, {', '.join(summary_parts)}")
+        logger.info("✅ Backfill complete!")
+
+    except Exception as e:
+        logger.error(f"❌ Backfill failed: {e}")
+        send_notification("backfill_error", source="download",
+                         details=f"range={args.start} to {args.end}, error={e}")
+        raise
 
 
 if __name__ == "__main__":
     main()
+

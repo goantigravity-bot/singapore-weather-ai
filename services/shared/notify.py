@@ -62,11 +62,25 @@ TG_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # All notification types → emoji + English title
 TYPES = {
-    # Download Server
-    "satellite_done":    ("🛰️", "Satellite Download Complete"),
+    # Download Server — Lifecycle
+    "server_start":      ("🟢", "Server Started"),
+    "server_stop":       ("🔴", "Server Stopped"),
+    # Download Server — Satellite
+    "satellite_done":    ("🛰️", "Satellite Frame Downloaded"),
     "satellite_error":   ("🛰️❌", "Satellite Download Failed"),
+    "satellite_skipped": ("🛰️⏭️", "Satellite Frame Skipped"),
+    # Download Server — Sensor
     "sensor_done":       ("📡", "Sensor Sync Complete"),
-    "backfill_done":     ("🔄", "Backfill Complete"),
+    "sensor_error":      ("📡❌", "Sensor Sync Failed"),
+    # Download Server — S3
+    "s3_upload_done":    ("📤", "S3 Upload Complete"),
+    "s3_upload_error":   ("📤❌", "S3 Upload Failed"),
+    "log_push_done":     ("📋", "Log Pushed to S3"),
+    "log_push_error":    ("📋❌", "Log Push Failed"),
+    # Backfill
+    "backfill_start":    ("🔄", "Backfill Started"),
+    "backfill_done":     ("🔄✅", "Backfill Complete"),
+    "backfill_error":    ("🔄❌", "Backfill Failed"),
     # Training Server
     "download_start":    ("📥", "Data Download Started"),
     "download_end":      ("✅", "Data Download Complete"),

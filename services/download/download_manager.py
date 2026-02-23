@@ -113,7 +113,6 @@ def update_status(mode, date, status, sat_count=0):
     except Exception as e:
         logger.warning(f"Failed to update status: {e}")
 
-
 # === Thread 1: Satellite（每小时） ===
 
 def satellite_thread():
@@ -121,7 +120,6 @@ def satellite_thread():
     sat_logger.info("🛰️ Satellite Thread Started (3-ch, hourly)")
     noaa_s3 = get_noaa_s3_client()
     upload_s3 = get_s3_client()
-    consecutive_errors = 0
 
     while True:
         try:
@@ -129,26 +127,31 @@ def satellite_thread():
             # NOAA 数据有 ~30 分钟延迟，取 30 分钟前的 10 分钟整时刻
             target = now_sgt - timedelta(minutes=30)
             target = target.replace(minute=(target.minute // 10) * 10, second=0, microsecond=0)
+            slot_str = target.strftime("%Y-%m-%d %H:%M")
 
-            sat_logger.info(f"Processing {target.strftime('%Y-%m-%d %H:%M')} SGT")
+            sat_logger.info(f"Processing {slot_str} SGT")
             update_status("real-time", target.strftime("%Y-%m-%d"), "downloading")
 
             result = process_slot(target, noaa_s3, upload_s3)
-            sat_logger.info(f"{target.strftime('%H:%M')} SGT → {result}")
+            sat_logger.info(f"{slot_str} SGT → {result}")
             update_status("real-time", target.strftime("%Y-%m-%d"), "sleeping")
 
             if result == "done":
-                consecutive_errors = 0
+                send_notification("satellite_done", source="download",
+                                 details=f"slot={slot_str}, bands=B08+B11+B13")
+            elif result == "skipped":
+                send_notification("satellite_skipped", source="download",
+                                 details=f"slot={slot_str}, reason=already exists in S3")
+            elif result == "missing":
+                sat_logger.info(f"No data available for {slot_str} (NOAA source missing)")
             elif result == "failed":
-                consecutive_errors += 1
-                # 连续 3 次失败才告警，避免偶发网络问题刷屏
-                if consecutive_errors >= 3:
-                    send_notification("satellite_error", source="download",
-                                     details=f"slot={target.strftime('%H:%M')}, consecutive_failures={consecutive_errors}")
+                send_notification("satellite_error", source="download",
+                                 details=f"slot={slot_str}, result=failed")
 
         except Exception as e:
             sat_logger.error(f"Error: {e}")
-            consecutive_errors += 1
+            send_notification("satellite_error", source="download",
+                             details=f"slot={slot_str}, error={e}")
 
         time.sleep(SATELLITE_INTERVAL)
 
@@ -159,12 +162,13 @@ def sensor_thread():
     """每 5 分钟从 data.gov.sg 拉 6 种传感器 → 覆写 S3 govdata/{year}/{type}_{date}.json"""
     sensor_logger.info("📡 Sensor Thread Started (6 APIs, every 5 min)")
     s3 = get_s3_client()
-    error_count = 0
 
     while True:
         today = datetime.now().strftime("%Y-%m-%d")
         year = datetime.now().strftime("%Y")
-        cycle_errors = 0
+        success_count = 0
+        failed_apis = []
+        total_bytes = 0
 
         for api_name, api_url in SENSOR_APIS.items():
             s3_key = f"govdata/{year}/{api_name}_{today}.json"
@@ -178,22 +182,23 @@ def sensor_thread():
                     Body=resp.content,
                     ContentType="application/json",
                 )
+                success_count += 1
+                total_bytes += len(resp.content)
                 sensor_logger.debug(f"{api_name} → {s3_key} ({len(resp.content)} bytes)")
 
             except Exception as e:
                 sensor_logger.warning(f"{api_name} failed: {e}")
-                cycle_errors += 1
+                failed_apis.append(api_name)
 
-        if cycle_errors > 0:
-            error_count += 1
-            sensor_logger.warning(f"Cycle {today}: {cycle_errors}/{len(SENSOR_APIS)} failed")
-            if error_count >= 3:
-                send_notification("error", source="download",
-                                 details=f"sensor sync failing, {cycle_errors} APIs failed for {today}")
-                error_count = 0
+        total_kb = total_bytes // 1024
+        if failed_apis:
+            sensor_logger.warning(f"Cycle {today}: {len(failed_apis)}/{len(SENSOR_APIS)} failed")
+            send_notification("sensor_error", source="download",
+                             details=f"date={today}, ok={success_count}, failed={','.join(failed_apis)}")
         else:
-            error_count = 0
-            sensor_logger.info(f"Cycle done for {today} ({len(SENSOR_APIS)} APIs)")
+            sensor_logger.info(f"Cycle done for {today} ({success_count} APIs, {total_kb}KB)")
+            send_notification("sensor_done", source="download",
+                             details=f"date={today}, apis={success_count}, size={total_kb}KB")
 
         time.sleep(SENSOR_INTERVAL)
 
@@ -210,7 +215,13 @@ def main():
         logger.info(f"✅ S3 Connection OK → {S3_BUCKET}")
     except Exception as e:
         logger.error(f"❌ S3 Connection Failed: {e}")
+        send_notification("error", source="download",
+                         details=f"S3 connection failed, bucket={S3_BUCKET}, error={e}")
         return
+
+    # Startup notification
+    send_notification("server_start", source="download",
+                     details=f"bucket={S3_BUCKET}, satellite_interval={SATELLITE_INTERVAL}s, sensor_interval={SENSOR_INTERVAL}s")
 
     t1 = threading.Thread(target=satellite_thread, daemon=True, name="satellite")
     t2 = threading.Thread(target=sensor_thread, daemon=True, name="sensor")
@@ -223,7 +234,10 @@ def main():
             time.sleep(1)
     except KeyboardInterrupt:
         logger.info("🛑 Stopping Download Manager...")
+        send_notification("server_stop", source="download",
+                         details="manual shutdown (KeyboardInterrupt)")
 
 
 if __name__ == "__main__":
     main()
+
