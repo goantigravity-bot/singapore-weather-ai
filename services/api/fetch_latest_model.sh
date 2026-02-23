@@ -32,6 +32,15 @@ aws s3 cp "$S3_BUCKET/models/latest.pth" "$MODEL_FILE" $ENDPOINT_FLAG
 if [ $? -eq 0 ]; then
     echo "[$(timestamp)] ✅ Successfully downloaded latest model."
     
+    # 同步到 API 实际读取的工作目录
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    for dest in "$SCRIPT_DIR/services/api" "$SCRIPT_DIR/services/api/backend"; do
+        if [ -d "$dest" ]; then
+            cp "$MODEL_FILE" "$dest/$MODEL_FILE"
+            echo "[$(timestamp)]    → Synced to $dest/"
+        fi
+    done
+    
     # 下载传感器数据
     echo "[$(timestamp)] Fetching sensor data..."
     aws s3 cp "$S3_BUCKET/sensor_data/real_sensor_data.csv" "real_sensor_data.csv" $ENDPOINT_FLAG 2>/dev/null

@@ -34,7 +34,9 @@ C1, L1 = latlon2xy(SG_LAT_MAX, SG_LON_MIN)
 SG_LAT_MIN, SG_LON_MAX = 1.15, 104.1
 C2, L2 = latlon2xy(SG_LAT_MIN, SG_LON_MAX)
 
-# R4: 局部 Patch 裁剪参数
+# 卫星参数：与训练代码 weather_dataset.py 保持一致
+SAT_BANDS = ['B08', 'B11', 'B13']  # 3 通道卫星波段
+SAT_CHANNELS = len(SAT_BANDS)
 IMG_SIZE = 128   # 裁剪后的新加坡区域尺寸
 PATCH_SIZE = 32  # 基站局部 patch 尺寸
 
@@ -45,22 +47,22 @@ def _latlon_to_pixel(lat, lon):
     return px, py
 
 def _crop_patch(sat_full, px, py):
-    """从 128×128 全图以 (px, py) 为中心裁剪 PATCH_SIZE×PATCH_SIZE patch。"""
+    """从全图以 (px, py) 为中心裁剪 PATCH_SIZE×PATCH_SIZE patch。支持多通道。"""
     half = PATCH_SIZE // 2
     y1, y2 = max(0, py - half), min(IMG_SIZE, py + half)
     x1, x2 = max(0, px - half), min(IMG_SIZE, px + half)
     patch = sat_full[:, y1:y2, x1:x2]
-    # 边界处 pad 到 PATCH_SIZE×PATCH_SIZE
+    n_channels = patch.shape[0]
     if patch.shape[1] < PATCH_SIZE or patch.shape[2] < PATCH_SIZE:
-        padded = torch.zeros(1, PATCH_SIZE, PATCH_SIZE)
+        padded = torch.zeros(n_channels, PATCH_SIZE, PATCH_SIZE)
         padded[:, :patch.shape[1], :patch.shape[2]] = patch
         patch = padded
     return patch
 
 def load_system():
     print("Loading Model...")
-    # R4: 7 维传感器 + 2 维坐标嵌入
-    model = WeatherFusionNet(sat_channels=1, sensor_features=7, coord_dim=2, prediction_dim=1)
+    # 3 通道卫星 + 7 维传感器 + 2 维坐标嵌入
+    model = WeatherFusionNet(sat_channels=SAT_CHANNELS, sensor_features=7, coord_dim=2, prediction_dim=1)
     if not os.path.exists(MODEL_PATH):
         print(f"Warning: Model file {MODEL_PATH} not found. Starting with initialized model (random weights).")
     else:
@@ -76,7 +78,13 @@ def load_system():
     model.eval()
     
     print("Loading Sensor Database...")
-    df = pd.read_csv(CSV_PATH)
+    # CSV 中可能混有旧格式（6 列）和新格式（8 列含 wind），跳过不兼容行
+    df = pd.read_csv(CSV_PATH, on_bad_lines='skip')
+    # 确保 wind 列存在（旧数据可能缺失）
+    if 'wind_speed' not in df.columns:
+        df['wind_speed'] = 0.0
+    if 'wind_direction' not in df.columns:
+        df['wind_direction'] = 0.0
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     return model, df
 
@@ -176,94 +184,60 @@ def get_input_data(df, sensor_id, target_time, station_lat=None, station_lon=Non
     # Simple heuristic: If raw file missing, try constructing UTC name
     # But files search usually works with wildcards.
     
-    # 1. Try Processed (.npy)
-    # Convert sat_ts to UTC string if needed 
-    # (Assuming sat_ts is Local Time from CSV, which is usually UTC+8)
+    # 加载 3 通道卫星数据 (B08/B11/B13)，与训练时一致
     utc_str = (sat_ts - timedelta(hours=8)).strftime('%Y%m%d_%H%M')
     
-    # 兼容 Himawari-8 (H08) 和 Himawari-9 (H09) 两种卫星命名
-    npy_files = []
-    nc_files = []
-    for sat_prefix in ["NC_H08_", "NC_H09_"]:
-        npy_pattern = f"{sat_prefix}{utc_str}_*.npy"
-        npy_files.extend(glob.glob(os.path.join(processed_dir, npy_pattern)))
+    # 默认 3 通道全零 tensor
+    sat_tensor = torch.zeros(1, SAT_CHANNELS, IMG_SIZE, IMG_SIZE)
     
-    files = []
-    use_npy = False
+    # 优先加载 3-channel .npy (SAT_B08_*, SAT_B11_*, SAT_B13_*)
+    band_data = {}
+    for band in SAT_BANDS:
+        pattern = f"SAT_{band}_{utc_str}*.npy"
+        matches = glob.glob(os.path.join(processed_dir, pattern))
+        if matches:
+            try:
+                band_data[band] = np.load(matches[0])
+            except Exception as e:
+                print(f"Error loading {band}: {e}")
     
-    if npy_files:
-        files = npy_files
-        use_npy = True
+    if len(band_data) == SAT_CHANNELS:
+        # 堆叠 3 波段 → (3, H, W)，与训练 weather_dataset.py 一致
+        layers = [band_data[b] for b in SAT_BANDS]
+        stacked = np.stack(layers, axis=0)
+        sat_tensor = torch.tensor(stacked, dtype=torch.float32).unsqueeze(0)
+        sat_tensor = torch.nan_to_num(sat_tensor, nan=0.0)
+        sat_tensor = (sat_tensor - 200) / 100.0
+        print(f"Loaded 3ch satellite: {utc_str} ({sat_tensor.shape})")
     else:
-        # 2. Try Raw (.nc)
+        # 回退：尝试旧格式单通道 .npy（NC_H08/H09）或 .nc
+        npy_files = []
         for sat_prefix in ["NC_H08_", "NC_H09_"]:
-            pattern = f"{sat_prefix}{utc_str}_*.nc"
-            nc_files.extend(glob.glob(os.path.join(SAT_DIR, pattern)))
-        files = nc_files
-    
-    if not files:
-        # Fallback to dummy name
-        dummy = f"himawari_{sat_ts.strftime('%Y%m%d_%H%M')}.nc"
-        dpath = os.path.join(SAT_DIR, dummy)
-        if os.path.exists(dpath):
-            files = [dpath]
-            use_npy = False
-            
-    # R4: 全图 128×128，后续由调用方按基站坐标裁剪 32×32 patch
-    sat_tensor = torch.zeros(1, 1, IMG_SIZE, IMG_SIZE)
-    
-    if files:
-        try:
-            if use_npy:
-                # FAST PATH
-                data = np.load(files[0])
-                sat_tensor = torch.tensor(data, dtype=torch.float32)
-                if sat_tensor.ndim == 2:
-                    sat_tensor = sat_tensor.unsqueeze(0).unsqueeze(0)
-                elif sat_tensor.ndim == 3:
-                     sat_tensor = sat_tensor.unsqueeze(0)
-                
-                # Normalize (200-300K -> 0-1)
+            npy_files.extend(glob.glob(os.path.join(processed_dir, f"{sat_prefix}{utc_str}_*.npy")))
+        
+        if npy_files:
+            try:
+                data = np.load(npy_files[0])
+                single_ch = torch.tensor(data, dtype=torch.float32)
+                if single_ch.ndim == 2:
+                    single_ch = single_ch.unsqueeze(0)
+                # 复制单通道到 3 通道以兼容模型
+                sat_tensor = single_ch.expand(SAT_CHANNELS, -1, -1).unsqueeze(0)
                 sat_tensor = (sat_tensor - 200) / 100.0
-                print(f"Loaded Cached Image: {os.path.basename(files[0])}")
-                
-            else:
-                # SLOW PATH (Raw NC)
-                ds = xr.open_dataset(files[0], decode_timedelta=False)
-                
-                var_name = 'tbb'
-                if 'tbb_13' in ds:
-                     var_name = 'tbb_13'
-                     
-                if ds[var_name].shape[0] > 1000:
-                    # Full Disk -> Crop to Singapore region
-                    r_min, r_max = min(L1, L2), max(L1, L2)
-                    c_min, c_max = min(C1, C2), max(C1, C2)
-                    data = ds[var_name][r_min:r_max, c_min:c_max].values
-                    temp_tensor = torch.tensor(data, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-                    sat_tensor = torch.nn.functional.interpolate(temp_tensor, size=(IMG_SIZE, IMG_SIZE), mode='bilinear', align_corners=False)
-                else:
-                    data = ds[var_name].values
-                    sat_tensor = torch.tensor(data, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-                
-                # Normalize
-                sat_tensor = (sat_tensor - 200) / 100.0
-                ds.close()
-                print(f"Loaded Raw Image: {os.path.basename(files[0])}")
-        except Exception as e:
-            print(f"Error loading sat image: {e}")
-    else:
-        print(f"Satellite image missing for {sat_ts}")
+                print(f"Loaded 1ch satellite (expanded to 3ch): {os.path.basename(npy_files[0])}")
+            except Exception as e:
+                print(f"Error loading sat image: {e}")
+        else:
+            print(f"Satellite image missing for {sat_ts}")
 
-    # R4: 裁剪基站上方的 32×32 patch + 生成坐标特征
+    # 裁剪基站上方的 PATCH_SIZE×PATCH_SIZE patch + 生成坐标特征
     coord_tensor = None
     if station_lat is not None and station_lon is not None:
         px, py = _latlon_to_pixel(station_lat, station_lon)
-        patch = _crop_patch(sat_tensor[0], px, py)  # (1, 32, 32)
-        sat_tensor = patch.unsqueeze(0)  # (1, 1, 32, 32)
+        patch = _crop_patch(sat_tensor[0], px, py)  # (3, 32, 32)
+        sat_tensor = patch.unsqueeze(0)  # (1, 3, 32, 32)
         coord_tensor = torch.tensor([[px / IMG_SIZE, py / IMG_SIZE]], dtype=torch.float32)
     else:
-        # 无坐标时用中心 patch
         cx, cy = IMG_SIZE // 2, IMG_SIZE // 2
         patch = _crop_patch(sat_tensor[0], cx, cy)
         sat_tensor = patch.unsqueeze(0)
@@ -320,10 +294,10 @@ def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size
         if sat_in is None or sensor_in is None:
             continue
             
-        # Capture TBB from the first (closest) valid sensor for cloud analysis
+        # TBB 云判断：使用 B13 通道 (index=2, 热红外) 的中心区域
         if tbb_val is None and sat_in is not None:
-             # sat_in is (1, 1, 32, 32) normalized (val - 200)/100
-             center_crop = sat_in[0, 0, 12:20, 12:20] 
+             # sat_in is (1, 3, 32, 32) normalized (val - 200)/100, B13 在 channel 2
+             center_crop = sat_in[0, -1, 12:20, 12:20]
              mean_norm = center_crop.mean().item()
              tbb_val = mean_norm * 100.0 + 200.0 # De-normalize
         

@@ -314,20 +314,23 @@ def sync_satellite_data(s3, bucket):
     for d in dates_to_check:
         date_str = d.strftime("%Y%m%d")
         prefix = f"processed/satellite/{date_str}/"
-        try:
-            objs = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
-            if 'Contents' in objs:
-                for obj in objs['Contents']:
-                    key = obj['Key']
-                    filename = os.path.basename(key)
-                    if not filename.endswith(".npy"):
-                        continue
-                    local_path = os.path.join(local_dir, filename)
-                    if not os.path.exists(local_path):
-                        logger.info(f"⬇️ [API] Downloading processed satellite: {filename}")
-                        s3.download_file(bucket, key, local_path)
-        except Exception as e:
-            logger.warning(f"Error syncing processed satellite data: {e}")
+        # 同时下载 3-channel 波段数据（SAT_B08/B11/B13），供模型推理使用
+        prefix_3ch = f"processed/satellite-3ch/{date_str}/"
+        for pfx in [prefix, prefix_3ch]:
+            try:
+                objs = s3.list_objects_v2(Bucket=bucket, Prefix=pfx)
+                if 'Contents' in objs:
+                    for obj in objs['Contents']:
+                        key = obj['Key']
+                        filename = os.path.basename(key)
+                        if not filename.endswith(".npy"):
+                            continue
+                        local_path = os.path.join(local_dir, filename)
+                        if not os.path.exists(local_path):
+                            logger.info(f"⬇️ [API] Downloading processed satellite: {filename}")
+                            s3.download_file(bucket, key, local_path)
+            except Exception as e:
+                logger.warning(f"Error syncing processed satellite data: {e}")
 
     # Cleanup: remove files older than 24 hours (keep full day for cloud animation)
     # SAT_128_YYYYMMDD_HHMM.npy — timestamp is SGT, need -8h to compare with UTC
@@ -526,7 +529,7 @@ def set_geocoding_config(body: dict):
 
 @api_router.get("/health")
 def health():
-    return {"status": "ok", "version": "0.10.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
+    return {"status": "ok", "version": "0.11.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
 
 @api_router.get("/stations")
 def get_stations():
