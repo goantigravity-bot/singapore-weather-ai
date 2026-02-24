@@ -11,7 +11,7 @@ import subprocess
 TRAINING_MODE = os.environ.get("TRAINING_MODE", "DAILY").upper()
 
 # S3
-S3_BUCKET = os.environ.get("S3_BUCKET", "weather-ai-models-de08370c")
+S3_BUCKET = os.environ.get("S3_BUCKET", "weather-ai-models-gcc")
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 
 # Range for Backfill

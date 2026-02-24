@@ -14,6 +14,9 @@ try:
     import mlflow
     import mlflow.pytorch
     MLFLOW_AVAILABLE = True
+    # 支持通过环境变量指定 tracking server 地址（默认本地文件存储）
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "file:///home/ubuntu/mlruns")
+    mlflow.set_tracking_uri(tracking_uri)
 except ImportError:
     MLFLOW_AVAILABLE = False
 
@@ -363,8 +366,9 @@ def train_model():
                 "training_time_seconds": round(total_time, 1),
             })
             mlflow.log_artifact(metrics_path)
-            # 保存 PyTorch 模型到 MLflow，方便后续加载和部署
+            # 保存 PyTorch 模型到 MLflow Model Registry，方便版本管理和部署
             if os.path.exists(MODEL_SAVE_PATH):
+                mlflow.pytorch.log_model(model, "weather_fusion_model")
                 mlflow.log_artifact(MODEL_SAVE_PATH)
             mlflow.end_run()
             logger.info("📊 MLflow run completed, metrics and model logged")
