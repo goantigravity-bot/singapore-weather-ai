@@ -9,6 +9,14 @@ import time
 import logging
 import json
 
+# MLflow 为可选依赖：未安装时训练流程完全不受影响
+try:
+    import mlflow
+    import mlflow.pytorch
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    MLFLOW_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -79,6 +87,19 @@ MODEL_SAVE_PATH = "weather_fusion_model.pth"
 
 def train_model():
     train_start_time = time.time()
+
+    # MLflow 实验追踪：记录每次训练的超参数、指标和模型
+    mlflow_run = None
+    if MLFLOW_AVAILABLE:
+        try:
+            mlflow.set_experiment("weather-ai-rain-prediction")
+            mlflow_run = mlflow.start_run()
+            logger.info(f"📊 MLflow tracking enabled (run_id={mlflow_run.info.run_id})")
+        except Exception as e:
+            logger.warning(f"MLflow init failed, continuing without tracking: {e}")
+            MLFLOW_AVAILABLE_LOCAL = False
+    else:
+        logger.info("MLflow not installed, training without experiment tracking")
 
     # 1. Data
     logger.info(f"Loading Data from {CSV_PATH} and {SAT_DIR}...")
@@ -171,6 +192,22 @@ def train_model():
     logger.info(f"  - Device: {DEVICE}")
     logger.info(f"  - AMP (Mixed Precision): {use_amp}")
     logger.info(f"{'='*60}")
+
+    # MLflow: 记录训练超参数
+    if MLFLOW_AVAILABLE and mlflow_run:
+        try:
+            mlflow.log_params({
+                "learning_rate": LEARNING_RATE,
+                "batch_size": BATCH_SIZE,
+                "max_epochs": EPOCHS,
+                "early_stopping_patience": EARLY_STOPPING_PATIENCE,
+                "rain_weight": RAIN_WEIGHT,
+                "device": str(DEVICE),
+                "amp_enabled": use_amp,
+                "mode": "incremental" if os.path.exists(MODEL_SAVE_PATH) else "initial",
+            })
+        except Exception as e:
+            logger.warning(f"MLflow log_params failed: {e}")
     
     logger.info("Starting Training...")
     best_loss = float('inf')
@@ -257,6 +294,20 @@ def train_model():
             f"MAE: {avg_train_mae:.4f} | Val MAE: {avg_val_mae:.4f} | "
             f"LR: {current_lr:.1e}"
         )
+
+        # MLflow: 记录每个 epoch 的指标，方便在 UI 上看 loss 曲线
+        if MLFLOW_AVAILABLE and mlflow_run:
+            try:
+                mlflow.log_metrics({
+                    "train_loss": avg_train_loss,
+                    "val_loss": avg_val_loss,
+                    "train_mae": avg_train_mae,
+                    "val_mae": avg_val_mae,
+                    "rain_accuracy": rain_accuracy,
+                    "learning_rate": current_lr,
+                }, step=epoch)
+            except Exception:
+                pass
         
         # Early Stopping + Best Model 保存
         if avg_val_loss < best_loss:
@@ -301,6 +352,25 @@ def train_model():
         logger.info(f"✅ Metrics saved to: {metrics_path}")
     except Exception as e:
         logger.error(f"❌ Failed to save metrics to {metrics_path}: {e}")
+    
+    # MLflow: 记录最终指标并保存模型
+    if MLFLOW_AVAILABLE and mlflow_run:
+        try:
+            mlflow.log_metrics({
+                "best_val_loss": best_loss,
+                "best_rmse": best_loss ** 0.5,
+                "final_rain_accuracy": rain_accuracy,
+                "training_time_seconds": round(total_time, 1),
+            })
+            mlflow.log_artifact(metrics_path)
+            # 保存 PyTorch 模型到 MLflow，方便后续加载和部署
+            if os.path.exists(MODEL_SAVE_PATH):
+                mlflow.log_artifact(MODEL_SAVE_PATH)
+            mlflow.end_run()
+            logger.info("📊 MLflow run completed, metrics and model logged")
+        except Exception as e:
+            logger.warning(f"MLflow finalization failed: {e}")
+            mlflow.end_run(status="FAILED")
     
     logger.info("Force exiting to prevent MPS hang...")
     import sys
