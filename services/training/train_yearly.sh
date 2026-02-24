@@ -147,11 +147,30 @@ for YEAR in "${YEARS[@]}"; do
     SAT_PID=$!
 
     # --- 任务 B: 传感器 CSV 生成（后台） ---
+    # 优先级: 本地缓存 → S3 缓存 → 从 govdata JSON 生成
+    S3_CSV_KEY="processed/sensor/${YEAR}/real_sensor_data.csv"
     (
         [ ! -d "$SENSOR_DIR" ] && mkdir -p "$SENSOR_DIR"
 
+        if [ -f "$CSV_PATH" ] && [ "$(wc -l < "$CSV_PATH" 2>/dev/null | tr -d ' \n')" -gt "1" ]; then
+            echo "   ✅ CSV 本地已存在: $(wc -l < "$CSV_PATH" | tr -d ' \n') 行" | tee -a "$CSV_LOG"
+        elif aws s3 ls "s3://${S3_BUCKET}/${S3_CSV_KEY}" >/dev/null 2>&1; then
+            # S3 有缓存，直接下载（比从 JSON 生成快得多）
+            echo "📥 从 S3 下载 ${YEAR} 年传感器 CSV 缓存..." | tee -a "$CSV_LOG"
+            aws s3 cp "s3://${S3_BUCKET}/${S3_CSV_KEY}" "$CSV_PATH" --quiet 2>/dev/null
+            CSV_ROWS=$(wc -l < "$CSV_PATH" 2>/dev/null | tr -d ' \n')
+            if [ "$CSV_ROWS" -gt "1" ]; then
+                CSV_SIZE=$(du -h "$CSV_PATH" | awk '{print $1}')
+                echo "   ✅ S3 缓存下载完成: $CSV_ROWS 行 ($CSV_SIZE)" | tee -a "$CSV_LOG"
+            else
+                echo "   ⚠️ S3 缓存文件为空，回退到重新生成" | tee -a "$CSV_LOG"
+                rm -f "$CSV_PATH"
+            fi
+        fi
+
+        # 如果以上两步都没拿到有效 CSV，从 govdata JSON 生成
         if [ ! -f "$CSV_PATH" ] || [ "$(wc -l < "$CSV_PATH" 2>/dev/null | tr -d ' \n')" -le "1" ]; then
-            echo "📊 生成 ${YEAR} 年传感器 CSV（逐天）..." | tee -a "$CSV_LOG"
+            echo "📊 从 govdata JSON 生成 ${YEAR} 年传感器 CSV..." | tee -a "$CSV_LOG"
             notify download_start "$YEAR" "type=sensor_csv,source=govdata_json"
             CSV_START=$(date '+%Y-%m-%d %H:%M:%S')
             $PYTHON process_gov_data_from_s3.py --year "$YEAR" --output "$CSV_PATH" 2>&1 | tee -a "$CSV_LOG"
@@ -161,13 +180,15 @@ for YEAR in "${YEARS[@]}"; do
                 CSV_SIZE=$(du -h "$CSV_PATH" | awk '{print $1}')
                 echo "   ✅ CSV: $CSV_ROWS 行 ($CSV_SIZE)" | tee -a "$CSV_LOG"
                 notify download_end "$YEAR" "type=sensor_csv,rows=$CSV_ROWS,size=$CSV_SIZE,start=$CSV_START,end=$(date '+%H:%M:%S')"
+
+                # 上传到 S3 缓存，下次训练可直接下载
+                echo "   ☁️ 上传 CSV 到 S3 缓存: s3://${S3_BUCKET}/${S3_CSV_KEY}" | tee -a "$CSV_LOG"
+                aws s3 cp "$CSV_PATH" "s3://${S3_BUCKET}/${S3_CSV_KEY}" --quiet 2>/dev/null
             else
                 echo "   ❌ CSV 生成失败" | tee -a "$CSV_LOG"
                 notify error "$YEAR" "step=csv_generation,error=no_output"
                 exit 1
             fi
-        else
-            echo "   ✅ CSV 已存在: $(wc -l < "$CSV_PATH" | tr -d ' \n') 行" | tee -a "$CSV_LOG"
         fi
     ) &
     CSV_PID=$!
