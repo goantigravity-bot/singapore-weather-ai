@@ -72,7 +72,7 @@ variable "download_volume_size" {
 variable "training_instance_type" {
   description = "训练服务器实例类型 — GPU"
   type        = string
-  default     = "g4dn.xlarge"
+  default     = "g4dn.2xlarge"
 }
 
 variable "training_volume_size" {
