@@ -29,9 +29,10 @@ EPOCHS_INCREMENTAL="${EPOCHS_INCREMENTAL:-10}"
 LOG_DIR="$WORK_DIR/logs"
 TRAIN_START_TIME=$(date '+%Y-%m-%d %H:%M:%S')
 
-# 通知函数（静默失败，不阻塞训练）
+# 通知函数（静默失败，不阻塞训练）— 使用 shared/ 共用通知模块
+NOTIFY_SCRIPT="$(cd "$(dirname "$0")/../shared" && pwd)/notify.py"
 notify() {
-    $PYTHON notify.py --type "$1" --year "${2:-}" --details "${3:-}" 2>/dev/null &
+    $PYTHON "$NOTIFY_SCRIPT" --type "$1" --year "${2:-}" --details "${3:-}" 2>/dev/null &
 }
 
 # 资源监控：后台每 30 秒记录 CPU/MEM/GPU
