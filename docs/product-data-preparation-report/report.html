@@ -1,0 +1,2669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singapore Weather AI — Product Data Preparation Report</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .mermaid {
+            max-width: none;
+            overflow-x: auto;
+            text-align: center;
+        }
+        .mermaid svg {
+            min-width: 1000px;
+        }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+            vertical-align: top;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.3rem; color: var(--text-muted); }
+        strong { color: var(--text); }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="singapore-weather-ai-product-data-preparation-report">Singapore Weather AI — Product Data Preparation Report</h1>
+<blockquote>
+<p><strong>Version</strong>: 1.0 &nbsp; | &nbsp; <strong>Date</strong>: 2026-02-19 &nbsp; | &nbsp; <strong>Status</strong>: 3-Channel Download In Progress (56.9%)</p>
+</blockquote>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-product-vision--evolution">Product Vision &amp; Evolution</a></li>
+<li><a href="#2-satellite-data-source-evolution">Satellite Data Source Evolution</a></li>
+<li><a href="#3-sensor-data--progressive-feature-expansion">Sensor Data — Progressive Feature Expansion</a></li>
+<li><a href="#4-data-cleansing--preprocessing">Data Cleansing &amp; Preprocessing</a></li>
+<li><a href="#5-training-strategy--singapore-weather-characteristics">Training Strategy &amp; Singapore Weather Characteristics</a></li>
+<li><a href="#6-infrastructure-selection--cost-vs-speed-vs-efficiency">Infrastructure Selection — Cost vs Speed vs Efficiency</a></li>
+<li><a href="#7-dashboard--api-data-availability">Dashboard &amp; API Data Availability</a></li>
+<li><a href="#8-monitoring--operations-evolution">Monitoring &amp; Operations Evolution</a></li>
+<li><a href="#9-bug-registry--lessons-learned">Bug Registry &amp; Lessons Learned</a></li>
+<li><a href="#10-continuous-improvement-roadmap">Continuous Improvement Roadmap</a></li>
+<li><a href="#11-source-code-file-change-tracker">Source Code File Change Tracker</a></li>
+<li><a href="#annex-a-abbreviations--glossary">Annex A: Abbreviations &amp; Glossary</a></li>
+</ol>
+<hr />
+<h2 id="1-product-vision-evolution">1. Product Vision &amp; Evolution</h2>
+<h3 id="11-initial-idea">1.1 Initial Idea</h3>
+<p>Build an AI-powered weather prediction system for <strong>Singapore</strong> that combines <strong>satellite imagery</strong> with <strong>ground sensor data</strong> to provide <strong>10-minute ahead rainfall forecasting</strong> at any GPS coordinate.</p>
+<h3 id="12-version-timeline">1.2 Version Timeline</h3>
+<div class="mermaid">
+---
+config:
+  gantt:
+    barHeight: 28
+    fontSize: 13
+    sectionFontSize: 14
+    leftPadding: 200
+    rightPadding: 60
+    numberSectionStyles: 4
+---
+gantt
+    title Singapore Weather AI — Version Timeline
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+    tickInterval 2day
+    section Foundation
+        v0.1.0 Initial Full-Stack             :v01, 2026-01-26, 6d
+        v0.2.0 Search + Stats                 :v02, 2026-02-01, 1d
+        v0.3.0 Path Query                     :v03, 2026-02-02, 1d
+        v0.4.0 Sensor Limit + Logging         :v04, 2026-02-03, 2d
+    section Infrastructure
+        v0.5.0 AWS + PM2.5 + Dashboard        :v05, 2026-02-05, 3d
+        v0.6.0 Training Fix + Email           :v06, 2026-02-08, 2d
+        v0.7.0 SQLite + Parallel              :v07, 2026-02-10, 2d
+    section Data Quality
+        v0.8.0 Forecast Closed-Loop           :v08, 2026-02-12, 2d
+        v0.9.0 Real-time Sensor + Bugs        :v09, 2026-02-14, 1d
+        v0.9.1 Wind + Cloud Animation         :v091, 2026-02-15, 2d
+    section Optimization
+        v0.10.0 NOAA Migration + Tuning       :v10, 2026-02-17, 1d
+        v0.11.0 Telegram + HSD + 3ch          :active, v11, 2026-02-17, 3d
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Milestone</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>v0.1.0</td>
+<td>2026-01-26</td>
+<td>Initial full-stack: React + FastAPI, single predict API</td>
+</tr>
+<tr>
+<td>v0.2.0</td>
+<td>2026-02-01</td>
+<td>Popular search + statistics + mobile responsive</td>
+</tr>
+<tr>
+<td>v0.3.0</td>
+<td>2026-02-02</td>
+<td>Landmark path weather query</td>
+</tr>
+<tr>
+<td>v0.4.0</td>
+<td>2026-02-03</td>
+<td>Sensor 10km radius limit + <code>print</code> → <code>logging</code> refactor</td>
+</tr>
+<tr>
+<td>v0.5.0</td>
+<td>2026-02-05</td>
+<td>AWS deployment, CloudFront proxy, PM2.5 integration, monitor dashboard</td>
+</tr>
+<tr>
+<td>v0.6.0</td>
+<td>2026-02-08</td>
+<td>Training pipeline 7-bug fix, Vitest, multi-recipient email</td>
+</tr>
+<tr>
+<td>v0.7.0</td>
+<td>2026-02-10</td>
+<td>SQLite cache layer + ThreadPool parallel inference</td>
+</tr>
+<tr>
+<td>v0.8.0</td>
+<td>2026-02-12</td>
+<td>Forecast vs Actual closed-loop (SQLite schema)</td>
+</tr>
+<tr>
+<td>v0.9.0</td>
+<td>2026-02-14</td>
+<td>Real-time sensor fetch, WeightedRandomSampler, data pipeline bug fixes</td>
+</tr>
+<tr>
+<td>v0.9.1</td>
+<td>2026-02-15</td>
+<td>Wind field particle animation + satellite cloud overlay</td>
+</tr>
+<tr>
+<td>v0.10.0</td>
+<td>2026-02-17</td>
+<td>NOAA data source migration + model tuning experiments</td>
+</tr>
+<tr>
+<td><strong>v0.11.0</strong></td>
+<td><strong>2026-02-17</strong></td>
+<td><strong>Telegram Bot, GCC Terraform, HSD parser (10x perf), 3-channel download</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Source: <a href="reference/version.html">version.html</a></p>
+</blockquote>
+<hr />
+<h2 id="2-satellite-data-source-evolution">2. Satellite Data Source Evolution</h2>
+<h3 id="21-three-generations-of-data-sources">2.1 Three Generations of Data Sources</h3>
+<div class="mermaid">
+%%{init: {'theme': 'dark'}}%%
+flowchart LR
+    subgraph V1["v1: JAXA FTP<br/>2025-10 ~ 2026-02"]
+        A1["ftp.ptree.jaxa.jp<br/>NC Full Disk ~700MB<br/>Single Channel"]
+    end
+    subgraph V2["v2: NOAA ISatSS<br/>2026-02"]
+        A2["noaa-himawari9<br/>AHI-L2-FLDK-ISatSS<br/>NC L2 Single Channel C13"]
+    end
+    subgraph V3["v3: AWS Open Data L1b<br/>2026-02-17 ~ Current"]
+        A3["noaa-himawari8/9<br/>AHI-L1b-FLDK HSD<br/>3 Channels: B08+B11+B13"]
+    end
+    V1 -- "Problems:<br/>Slow FTP, JAXA auth req'd" --> V2
+    V2 -- "Problems:<br/>10.1TB storage = $53/mo" --> V3
+
+    style V1 fill:#37474f,stroke:#78909c,color:#eceff1
+    style V2 fill:#37474f,stroke:#90a4ae,color:#eceff1
+    style V3 fill:#0d47a1,stroke:#42a5f5,color:#e3f2fd
+    style A1 fill:#455a64,stroke:#78909c,color:#e0e0e0
+    style A2 fill:#455a64,stroke:#90a4ae,color:#eceff1
+    style A3 fill:#1565c0,stroke:#42a5f5,color:#e3f2fd
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>v1: JAXA FTP</th>
+<th>v2: NOAA ISatSS</th>
+<th><strong>v3: AWS Open Data L1b</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Source</strong></td>
+<td><code>ftp://ftp.ptree.jaxa.jp</code></td>
+<td><code>s3://noaa-himawari9/AHI-L2-FLDK-ISatSS/</code></td>
+<td><code>s3://noaa-himawari8/9/AHI-L1b-FLDK/</code></td>
+</tr>
+<tr>
+<td><strong>Format</strong></td>
+<td>NetCDF Full Disk (~700MB)</td>
+<td>NetCDF L2 tile (~3MB)</td>
+<td>HSD .bz2 segment (~30KB)</td>
+</tr>
+<tr>
+<td><strong>Channels</strong></td>
+<td>C13 (IR) — <strong>single channel</strong></td>
+<td>C13 (IR) — <strong>single channel</strong></td>
+<td><strong>B08 + B11 + B13 — 3 channels</strong></td>
+</tr>
+<tr>
+<td><strong>Output</strong></td>
+<td>128×128 .npy (~64KB)</td>
+<td>128×128 .npy (~64KB)</td>
+<td><strong>41×37 .npy (~6KB) × 3</strong></td>
+</tr>
+<tr>
+<td><strong>Auth</strong></td>
+<td>JAXA account required</td>
+<td>No auth (AWS unsigned)</td>
+<td>No auth (AWS unsigned)</td>
+</tr>
+<tr>
+<td><strong>Speed</strong></td>
+<td>~53 files/min (FTP bottleneck)</td>
+<td>Fast (same region S3)</td>
+<td><strong>~237 files/min</strong></td>
+</tr>
+<tr>
+<td><strong>Storage</strong></td>
+<td>10.1TB raw NC on S3 ($53/mo)</td>
+<td>~2.5GB processed</td>
+<td><strong>~6GB total (~970K files)</strong></td>
+</tr>
+<tr>
+<td><strong>Script</strong></td>
+<td><code>download_jaxa_data.py</code></td>
+<td><code>noaa_satellite.py</code></td>
+<td><code>download_aws_satellite.py</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="v1-jaxa-ftp-download_jaxa_datapy">v1: JAXA FTP — <a href="file:///Users/jinhui/development/tools/claude-skill/services/download/download_jaxa_data.py">download_jaxa_data.py</a></h4>
+<p>The first generation downloaded full-disk NetCDF files from JAXA FTP over TLS. Each file was ~700MB containing all of Japan's satellite coverage.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># JAXA FTP download using curl with explicit TLS</span>
+<span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;curl&quot;</span><span class="p">,</span> <span class="s2">&quot;-s&quot;</span><span class="p">,</span> <span class="s2">&quot;--ftp-ssl&quot;</span><span class="p">,</span> <span class="s2">&quot;-l&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;--user&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">JAXA_USER</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">JAXA_PASS</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="sa">f</span><span class="s2">&quot;ftp://ftp.ptree.jaxa.jp</span><span class="si">{</span><span class="n">remote_path</span><span class="si">}</span><span class="s2">/&quot;</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<p><strong>Problems</strong>: Cross-ocean FTP was slow and unstable; required JAXA account registration; raw NC files consumed 10.1TB on S3.</p>
+<h4 id="v2-noaa-isatss-single-channel-noaa_satellitepy">v2: NOAA ISatSS Single Channel — <a href="file:///Users/jinhui/development/tools/claude-skill/services/download/noaa_satellite.py">noaa_satellite.py</a></h4>
+<p>Migrated to AWS Open Data in the same AWS region. Used ISatSS L2 processed tiles with C13 channel only.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># AWS Open Data (no authentication required)</span>
+<span class="n">BUCKET</span> <span class="o">=</span> <span class="s2">&quot;noaa-himawari9&quot;</span>
+<span class="n">PREFIX</span> <span class="o">=</span> <span class="s2">&quot;AHI-L2-FLDK-ISatSS&quot;</span>
+<span class="c1"># Output: 128×128 single channel crop</span>
+<span class="n">CROP_ROW_MIN</span> <span class="o">=</span> <span class="n">_SG_ROW_CENTER</span> <span class="o">-</span> <span class="n">_HALF_SIZE</span>   <span class="c1"># 296</span>
+<span class="n">TARGET_SIZE</span> <span class="o">=</span> <span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Improvement</strong>: Same-region S3 transfer was 10-100x faster than FTP. But still single channel and NC format accumulated massive storage.</p>
+<h4 id="v3-aws-open-data-l1b-3-channel-download_aws_satellitepy">v3: AWS Open Data L1b 3-Channel — <a href="file:///Users/jinhui/development/tools/claude-skill/services/download/download_aws_satellite.py">download_aws_satellite.py</a></h4>
+<p>The current generation downloads raw L1b HSD binary files, parses directly with <a href="file:///Users/jinhui/development/tools/claude-skill/services/download/hsd_parser.py">hsd_parser.py</a>, and outputs 3-channel .npy files.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 3 bands selected for rainfall prediction</span>
+<span class="n">BANDS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;B08&quot;</span><span class="p">,</span> <span class="s2">&quot;B11&quot;</span><span class="p">,</span> <span class="s2">&quot;B13&quot;</span><span class="p">]</span>
+<span class="c1"># Only download segment containing Singapore (12°N ~ 0°N)</span>
+<span class="n">SEGMENT</span> <span class="o">=</span> <span class="s2">&quot;S0510&quot;</span>
+<span class="c1"># Himawari-8 → -9 switch date</span>
+<span class="n">H8_END</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">13</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Why these 3 bands?</strong> (See <a href="file:///Users/jinhui/development/tools/claude-skill/docs/architecture-decisions.md">ADR-001</a>)</p>
+<p>Himawari-8/9 satellites carry the <strong>AHI</strong> (Advanced Himawari Imager) sensor with 16 spectral bands. Each "B" number refers to a specific spectral band — a narrow wavelength range where the sensor measures energy reflected or emitted by the Earth's atmosphere and surface. We selected 3 bands that provide complementary information for rainfall prediction:</p>
+<table>
+<thead>
+<tr>
+<th>Band</th>
+<th>Full Name</th>
+<th>Wavelength</th>
+<th>What It Measures</th>
+<th>Why It Matters for Rain Prediction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>B08</strong></td>
+<td>Water Vapor Band</td>
+<td>6.2μm (mid-infrared)</td>
+<td><strong>Upper-tropospheric water vapor</strong> — the amount of moisture in the atmosphere at 300-500 hPa (~5-9 km altitude)</td>
+<td>High moisture content indicates a humid atmosphere prone to precipitation. A "wet" upper atmosphere often precedes organized rainfall events.</td>
+</tr>
+<tr>
+<td><strong>B11</strong></td>
+<td>Cloud Phase Band</td>
+<td>8.6μm (thermal infrared)</td>
+<td><strong>Cloud particle phase</strong> — distinguishes ice crystals from liquid water droplets by exploiting different absorption properties at this wavelength</td>
+<td>Cumulonimbus clouds (which produce rain) contain ice in their upper portions. Cirrus clouds (no rain) are all-ice but at different altitudes. B11 helps the model tell them apart.</td>
+</tr>
+<tr>
+<td><strong>B13</strong></td>
+<td>Clean IR Window Band</td>
+<td>10.4μm (thermal infrared)</td>
+<td><strong>Cloud-top brightness temperature (TBB)</strong> — directly proportional to cloud-top height. Lower temperature = higher cloud = stronger convection</td>
+<td>Tall convective clouds (low TBB, e.g., 200-220K) are strong rain producers. Shallow clouds (high TBB, e.g., 280-290K) rarely produce significant rain. This is the single most important band for rain detection.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Why not B14 (11.2μm)?</strong> B14 measures almost the same thing as B13 (both are IR window bands) with correlation &gt; 0.99. Replacing it with B11 adds an <strong>independent information dimension</strong> — cloud phase — instead of redundant temperature data.</p>
+<p><strong>Terminology note</strong>: "C13" used in v1/v2 refers to the same physical measurement as B13, but in a different data product format (ISatSS L2 uses "C" channel naming).</p>
+</blockquote>
+<h3 id="22-pros-cons-comparison">2.2 Pros &amp; Cons Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Criteria</th>
+<th>v1: JAXA FTP (1 channel)</th>
+<th>v2: AWS Open Data ISatSS (1 channel)</th>
+<th>v3: AWS Open Data L1b (3 channels)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pros</strong></td>
+<td>• Established data source with long history</td>
+<td>• Same-region S3: 10-100× faster than FTP</td>
+<td>• 3 complementary bands (moisture + cloud type + height)</td>
+</tr>
+<tr>
+<td></td>
+<td>• L2 processed data (ready to use)</td>
+<td>• No auth required (anonymous access)</td>
+<td>• HSD binary: tiny files (~30KB vs 700MB)</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>• Free, no account registration</td>
+<td>• 6 years of data (2020-2026)</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>• Only downloads Segment S05 (Singapore only, 90% less data)</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>• Native resolution preserved (41×37, no interpolation artifacts)</td>
+</tr>
+<tr>
+<td><strong>Cons</strong></td>
+<td>• Cross-ocean FTP: slow, unstable connections</td>
+<td>• Still single channel (C13 IR only)</td>
+<td>• Raw L1b requires custom parser (hsd_parser.py)</td>
+</tr>
+<tr>
+<td></td>
+<td>• Requires JAXA account registration</td>
+<td>• NC format: 3MB/file → 10.1TB cumulative on S3 ($53/mo)</td>
+<td>• Must handle Himawari-8/9 bucket switch (2022-12)</td>
+</tr>
+<tr>
+<td></td>
+<td>• Full disk download (~700MB/file)</td>
+<td>• 128×128 resize introduces interpolation artifacts</td>
+<td>• ProcessPoolExecutor complexity</td>
+</tr>
+<tr>
+<td></td>
+<td>• Only recent data (2025-10+)</td>
+<td>• Only Himawari-9 (2022+), no historical H8 data</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Speed</strong></td>
+<td>~53 files/min</td>
+<td>Fast (not measured)</td>
+<td><strong>~237 files/min</strong></td>
+</tr>
+<tr>
+<td><strong>Cost</strong></td>
+<td>$53/mo (10.1TB storage)</td>
+<td>~$5/mo (2.5GB processed)</td>
+<td><strong>&lt; $1/mo (6GB total)</strong></td>
+</tr>
+<tr>
+<td><strong>Model Impact</strong></td>
+<td>Basic: single IR channel</td>
+<td>Basic: same as v1</td>
+<td><strong>Rich: 3 independent signals for rain detection</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-image-resolution-why-128128-4137">2.3 Image Resolution: Why 128×128 → 41×37</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>v1/v2: 128×128</th>
+<th>v3: 41×37</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>How it was created</strong></td>
+<td>ISatSS L2 tile cropped around Singapore, then <strong>resized</strong> to 128×128 using bilinear interpolation</td>
+<td>L1b HSD segment cropped at <strong>native pixel resolution</strong> — no resize</td>
+</tr>
+<tr>
+<td><strong>Physical coverage</strong></td>
+<td>~130km × 130km (0.05°N ~ 2.65°N)</td>
+<td>~66km × 74km (Singapore + Johor)</td>
+</tr>
+<tr>
+<td><strong>Pixel density</strong></td>
+<td>1 pixel ≈ 1.0km (after interpolation)</td>
+<td>1 pixel ≈ 2.0km (native resolution)</td>
+</tr>
+<tr>
+<td><strong>Data quality</strong></td>
+<td>Bilinear interpolation creates <strong>artificial sub-pixel detail</strong> that doesn't exist in the original sensor data — the model may learn interpolation patterns instead of weather patterns</td>
+<td><strong>No interpolation artifacts</strong> — every pixel is a real sensor measurement</td>
+</tr>
+<tr>
+<td><strong>Compute cost</strong></td>
+<td>128×128 = 16,384 pixels per frame</td>
+<td>41×37 = 1,517 pixels per frame (<strong>10.8× less computation</strong>)</td>
+</tr>
+<tr>
+<td><strong>Model compatibility</strong></td>
+<td>Required fixed-size Conv2d layers</td>
+<td><code>AdaptiveAvgPool2d</code> handles any input size</td>
+</tr>
+<tr>
+<td><strong>Storage per frame</strong></td>
+<td>~64KB per .npy</td>
+<td>~6KB per .npy (<strong>10× smaller</strong>)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Why the change matters</strong>: The resize to 128×128 wasted compute on hallucinated pixels. The native 41×37 gives the model genuine physical signals, trains 10× faster, and uses 10× less storage — all with better data quality.</p>
+</blockquote>
+<h3 id="24-storage-evolution-what-changed-and-why">2.4 Storage Evolution: What Changed and Why</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Raw Data on S3</th>
+<th>Processed Data</th>
+<th>Monthly Cost</th>
+<th>Trigger for Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>v1 (JAXA FTP)</td>
+<td><strong>10.1TB</strong> raw .nc files in <code>satellite/</code> prefix</td>
+<td>~50K .npy in <code>processed/satellite/</code> (~2.5GB)</td>
+<td><strong>$53/mo</strong></td>
+<td>Accumulated 4 months of full-disk NC files</td>
+</tr>
+<tr>
+<td>v2 cleanup</td>
+<td><strong>0 TB</strong> (all 10.1TB raw NC deleted)</td>
+<td>~2.5GB legacy .npy retained</td>
+<td><strong>&lt; $1/mo</strong></td>
+<td>Realized raw NC was never re-read after preprocessing</td>
+</tr>
+<tr>
+<td>v3 (current)</td>
+<td><strong>0 TB</strong> (no raw data kept)</td>
+<td>~6GB in <code>processed/satellite-3ch/</code> (~970K files)</td>
+<td><strong>&lt; $1/mo</strong></td>
+<td>HSD is downloaded to <code>/tmp</code>, parsed, uploaded as .npy, then deleted</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What we did</strong>:
+1. <strong>Deleted 10.1TB</strong> of raw .nc files from S3 (<code>satellite/</code> prefix) — saving $52/month
+2. <strong>Changed architecture</strong> to "process-then-discard": download → parse → upload .npy → delete raw (ADR-005)
+3. <strong>Reduced per-file size</strong> from ~64KB (.npy 128×128) to ~6KB (.npy 41×37) — 10× reduction
+4. <strong>Changed API sync</strong> from raw .nc (~700MB/day) to processed .npy (~2.3MB/day) — fixing BUG-009 disk exhaustion</p>
+<p><strong>Impact</strong>:
+- Storage cost: $53/mo → &lt; $1/mo (<strong>98% reduction</strong>)
+- API server disk: 95% full → 50% full (9.8GB freed)
+- Download server: can operate with minimal disk (~8GB sufficient)</p>
+<h3 id="25-download-data-volume-estimates">2.5 Download Data Volume Estimates</h3>
+<h4 id="raw-vs-processed-data-size-per-day">Raw vs Processed Data Size Per Day</h4>
+<table>
+<thead>
+<tr>
+<th>Data Type</th>
+<th>v1: JAXA FTP</th>
+<th>v2: NOAA ISatSS</th>
+<th><strong>v3: AWS Open Data L1b</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Raw download per day</strong></td>
+<td>144 × ~700MB = <strong>~100GB</strong> (.nc full disk)</td>
+<td>144 × ~3MB = <strong>~432MB</strong> (.nc L2 tile)</td>
+<td>144 × 3 bands × ~30KB = <strong>~13MB</strong> (.bz2 HSD segments)</td>
+</tr>
+<tr>
+<td><strong>After processing</strong></td>
+<td>144 × ~64KB = <strong>~9MB</strong> (.npy 128×128)</td>
+<td>144 × ~64KB = <strong>~9MB</strong> (.npy 128×128)</td>
+<td>144 × 3 × ~6KB = <strong>~2.6MB</strong> (.npy 41×37)</td>
+</tr>
+<tr>
+<td><strong>Reduction ratio</strong></td>
+<td>100GB → 9MB = <strong>~11,000:1</strong></td>
+<td>432MB → 9MB = <strong>~48:1</strong></td>
+<td>13MB → 2.6MB = <strong>~5:1</strong></td>
+</tr>
+<tr>
+<td><strong>6-year total (raw)</strong></td>
+<td>~224 TB (impractical)</td>
+<td>~968 GB</td>
+<td><strong>~29 GB</strong></td>
+</tr>
+<tr>
+<td><strong>6-year total (processed)</strong></td>
+<td>~20 GB</td>
+<td>~20 GB</td>
+<td><strong>~6 GB</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="sensor-data-volume">Sensor Data Volume</h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Per-day CSV growth (69 stations × 6 APIs × 144 timestamps)</td>
+<td>~500KB</td>
+</tr>
+<tr>
+<td>Current <code>real_sensor_data.csv</code></td>
+<td>~34MB (covering ~2 years)</td>
+</tr>
+<tr>
+<td>Estimated 6-year total</td>
+<td>~100MB</td>
+</tr>
+</tbody>
+</table>
+<h4 id="how-we-streamlined-the-download">How We Streamlined the Download</h4>
+<p>The key insight is to <strong>preprocess at the download server</strong> rather than downloading raw data to S3 and preprocessing later. This dramatically reduces network, storage, and compute requirements:</p>
+<div class="highlight"><pre><span></span><code>         Old Approach (v1)                    New Approach (v3)
+         ----------------                    -----------------
+Source:  Full Disk .nc (700MB)       Source:  Segment S05 .bz2 (30KB)
+   ↓                                    ↓
+S3:      Store raw .nc (10.1TB)      Local:   Download to /tmp
+   ↓                                    ↓
+Training: Download .nc from S3       Local:   hsd_parser.py → 41×37 .npy (6KB)
+   ↓                                    ↓
+Local:   netCDF4 crop → .npy         S3:      Upload .npy only
+   ↓                                    ↓
+Cleanup: Manual                      Local:   Auto-delete /tmp files
+
+ Total download: ~224TB               Total download: ~29GB   (7,700× less)
+ Total stored:   ~10.1TB              Total stored:   ~6GB    (1,700× less)
+</code></pre></div>
+
+<p>Four strategies that achieved this reduction:</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Reduction</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Segment-only download</strong> (ADR-007)</td>
+<td><strong>90%</strong></td>
+<td>Full disk has 10 segments; Singapore is only in S05. Download 1 instead of 10.</td>
+</tr>
+<tr>
+<td><strong>3 bands instead of 16</strong> (ADR-001)</td>
+<td><strong>81%</strong></td>
+<td>AHI has 16 bands; we only need B08, B11, B13 for rainfall prediction.</td>
+</tr>
+<tr>
+<td><strong>Native resolution crop</strong> (ADR-002)</td>
+<td><strong>91%</strong></td>
+<td>41×37 = 1,517 pixels vs 128×128 = 16,384 pixels. No wasteful upsampling.</td>
+</tr>
+<tr>
+<td><strong>Process-then-discard</strong> (ADR-005)</td>
+<td><strong>∞</strong></td>
+<td>Raw data never stored — only ~6KB processed .npy persists on S3.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="26-download-performance-evolution">2.6 Download Performance Evolution</h3>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Config</th>
+<th>Instance</th>
+<th>Speed</th>
+<th>Est. Total Time</th>
+<th>Est. Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>02-17 14:51</td>
+<td>4 workers, satpy</td>
+<td>t3.large</td>
+<td>~53 files/min</td>
+<td>~13 days</td>
+<td>~$32</td>
+</tr>
+<tr>
+<td>02-17 16:00</td>
+<td>8 workers, satpy</td>
+<td>t3.xlarge</td>
+<td>~69 files/min</td>
+<td>~10 days</td>
+<td>~$45</td>
+</tr>
+<tr>
+<td>02-17 17:30</td>
+<td>12 workers, satpy</td>
+<td>t3.xlarge</td>
+<td>~107 files/min</td>
+<td>~6 days</td>
+<td>~$30</td>
+</tr>
+<tr>
+<td><strong>02-17 21:08</strong></td>
+<td><strong>12 workers, HSD parser + ProcessPool</strong></td>
+<td><strong>t3.xlarge</strong></td>
+<td><strong>~237 files/min</strong></td>
+<td><strong>~3 days</strong></td>
+<td><strong>~$15</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The final optimization (<a href="file:///Users/jinhui/development/tools/claude-skill/docs/architecture-decisions.md">ADR-010</a>) delivered <strong>+120% throughput</strong> through 3 changes:</p>
+<ol>
+<li><strong>HSD direct parsing</strong> replacing satpy (eliminated dask/xarray overhead)</li>
+<li><strong>ProcessPoolExecutor</strong> replacing ThreadPoolExecutor (bypassed Python GIL)</li>
+<li><strong><code>.completed_days</code> cache</strong> (zero S3 HEAD requests on restart)</li>
+</ol>
+<h3 id="27-current-download-status-2026-02-19-1645">2.7 Current Download Status (2026-02-19 16:45)</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Progress</td>
+<td><strong>1273/2239 days (56.9%)</strong></td>
+</tr>
+<tr>
+<td>Current Date</td>
+<td>2023-06-26</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>~142 timestamps/day, ~1.8 min/day</td>
+</tr>
+<tr>
+<td>Workers</td>
+<td>12 (ProcessPoolExecutor)</td>
+</tr>
+<tr>
+<td>Failed</td>
+<td>0</td>
+</tr>
+<tr>
+<td>ETA</td>
+<td><strong>~Feb 20 evening</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Source: Live log from download server <code>47.129.209.156</code></p>
+</blockquote>
+<hr />
+<h2 id="3-sensor-data-progressive-feature-expansion">3. Sensor Data — Progressive Feature Expansion</h2>
+<h3 id="31-feature-evolution-timeline">3.1 Feature Evolution Timeline</h3>
+<p>The sensor feature set grew progressively as the model demanded richer signals:</p>
+<div class="mermaid">
+%%{init: {'theme': 'dark'}}%%
+flowchart LR
+    subgraph Phase1["Phase 1: v0.1~v0.4<br/>3 Features"]
+        F1["🌡️ Temperature<br/>💧 Humidity<br/>🌧️ Rainfall"]
+    end
+    subgraph Phase2["Phase 2: v0.5<br/>4 Features"]
+        F2["+ 🏭 PM2.5"]
+    end
+    subgraph Phase3["Phase 3: v0.9.1<br/>7 Features"]
+        F3["+ 🌬️ Wind Speed<br/>+ 📐 Wind Dir Sin<br/>+ 📐 Wind Dir Cos"]
+    end
+    Phase1 --> Phase2 --> Phase3
+    style Phase1 fill:#37474f,stroke:#78909c,color:#eceff1
+    style Phase2 fill:#37474f,stroke:#78909c,color:#eceff1
+    style Phase3 fill:#0d47a1,stroke:#42a5f5,color:#e3f2fd
+    style F1 fill:#455a64,stroke:#78909c,color:#e0e0e0
+    style F2 fill:#455a64,stroke:#78909c,color:#e0e0e0
+    style F3 fill:#1565c0,stroke:#42a5f5,color:#e3f2fd
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Features</th>
+<th>Count</th>
+<th>Motivation</th>
+<th>Key File Changed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 1</td>
+<td>Temperature, Humidity, Rainfall</td>
+<td>3</td>
+<td>Core weather variables for basic prediction</td>
+<td><code>weather_dataset.py</code></td>
+</tr>
+<tr>
+<td>Phase 2</td>
+<td>+ PM2.5</td>
+<td>4</td>
+<td>Air quality affects visibility; haze correlates with weather patterns. Also used for outdoor activity recommendations per NEA safety advice (e.g. PSI &gt;100 = reduce prolonged outdoor exertion)</td>
+<td><code>fetch_and_process_gov_data.py</code></td>
+</tr>
+<tr>
+<td><strong>Phase 3</strong></td>
+<td>+ Wind Speed, Wind Dir (sin/cos)</td>
+<td><strong>7</strong></td>
+<td>Wind direction indicates incoming rain systems; critical for tropical convective rain</td>
+<td><code>prepare_station_data.py</code>, <code>weather_fusion_model.py</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-data-source-apis">3.2 Data Source APIs</h3>
+<table>
+<thead>
+<tr>
+<th>API Endpoint</th>
+<th>Data</th>
+<th>Frequency</th>
+<th>Added In</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/environment/rainfall</code></td>
+<td>Rainfall (mm)</td>
+<td>5 min</td>
+<td>v0.1</td>
+</tr>
+<tr>
+<td><code>/environment/air-temperature</code></td>
+<td>Temperature (°C)</td>
+<td>1 min</td>
+<td>v0.1</td>
+</tr>
+<tr>
+<td><code>/environment/relative-humidity</code></td>
+<td>Humidity (%)</td>
+<td>1 min</td>
+<td>v0.1</td>
+</tr>
+<tr>
+<td><code>/environment/pm25</code></td>
+<td>PM2.5 (μg/m³)</td>
+<td>1 hour</td>
+<td>v0.5</td>
+</tr>
+<tr>
+<td><code>/environment/wind-speed</code></td>
+<td>Wind Speed (km/h)</td>
+<td>1 min</td>
+<td>v0.9.1</td>
+</tr>
+<tr>
+<td><code>/environment/wind-direction</code></td>
+<td>Wind Direction (°)</td>
+<td>1 min</td>
+<td>v0.9.1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-wind-direction-engineering">3.3 Wind Direction Engineering</h3>
+<p>Wind direction is circular (0° = 360°), causing discontinuity issues for neural networks. Decomposed into sin/cos components:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># From prepare_station_data.py</span>
+<span class="n">SENSOR_COLS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="s2">&quot;humidity&quot;</span><span class="p">,</span> <span class="s2">&quot;rainfall&quot;</span><span class="p">,</span> <span class="s2">&quot;pm25&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;wind_speed&quot;</span><span class="p">,</span> <span class="s2">&quot;wind_dir_sin&quot;</span><span class="p">,</span> <span class="s2">&quot;wind_dir_cos&quot;</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<p>This ensures the model treats 359° and 1° as neighbors, not maximum-distance points.</p>
+<h3 id="34-current-model-input">3.4 Current Model Input</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># WeatherFusionNet — SensorEncoder accepts 7 features</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SensorEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_size</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">hidden_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">feature_dim</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lstm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LSTM</span><span class="p">(</span><span class="n">input_size</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">,</span> <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="n">feature_dim</span><span class="p">)</span>
+</code></pre></div>
+
+<blockquote>
+<p>Source: <a href="file:///Users/jinhui/development/tools/claude-skill/services/training/weather_fusion_model.py">weather_fusion_model.py</a></p>
+</blockquote>
+<hr />
+<h2 id="4-data-cleansing-preprocessing">4. Data Cleansing &amp; Preprocessing</h2>
+<h3 id="41-satellite-data-pipeline">4.1 Satellite Data Pipeline</h3>
+<h4 id="data-quality-tiers-bronze-silver-gold">Data Quality Tiers (Bronze → Silver → Gold)</h4>
+<div class="mermaid">
+%%{init: {'theme': 'dark'}}%%
+flowchart LR
+    subgraph Bronze["🟫 BRONZE — Raw Source"]
+        B1["🛰️ AWS S3 Public<br/>L1b HSD .bz2<br/>3 bands × 144 slots/day"]
+        B2["📡 data.gov.sg APIs<br/>JSON: temp, humidity,<br/>rainfall, PM2.5, wind"]
+    end
+    subgraph Silver["🩶 SILVER — Cleansed & Aligned"]
+        S1["S3 processed/ bucket<br/>🛰️ 41×37 .npy (calibrated)<br/>📡 7-feature CSV per station<br/>⏱️ Aligned to 10-min UTC"]
+    end
+    subgraph Gold["🥇 GOLD — Distributable"]
+        G1["Training: satellite patch<br/>+ sensor sequence + coord<br/>→ .npz per station"]
+        G2["Frontend: B13 cloud<br/>animation frames<br/>+ live sensor display"]
+    end
+    Bronze --> Silver --> Gold
+    style Bronze fill:#4e342e,stroke:#8d6e63,color:#efebe9
+    style Silver fill:#37474f,stroke:#b0bec5,color:#eceff1
+    style Gold fill:#e65100,stroke:#ffb74d,color:#fff3e0
+    style B1 fill:#5d4037,stroke:#8d6e63,color:#efebe9
+    style B2 fill:#5d4037,stroke:#8d6e63,color:#efebe9
+    style S1 fill:#455a64,stroke:#b0bec5,color:#eceff1
+    style G1 fill:#bf360c,stroke:#ffb74d,color:#fff3e0
+    style G2 fill:#bf360c,stroke:#ffb74d,color:#fff3e0
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Data Source</th>
+<th>Location</th>
+<th>Format</th>
+<th>Key Transformation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>🟫 Bronze</strong></td>
+<td>Satellite</td>
+<td><code>s3://noaa-himawari8/9/</code> (public)</td>
+<td>HSD .bz2 binary segments (~30KB × 3)</td>
+<td>None — raw as-is from AWS Open Data</td>
+</tr>
+<tr>
+<td><strong>🟫 Bronze</strong></td>
+<td>Sensor</td>
+<td><code>api.data.gov.sg/v1/environment/</code></td>
+<td>JSON (3 different structures)</td>
+<td>None — raw API response</td>
+</tr>
+<tr>
+<td><strong>🩶 Silver</strong></td>
+<td>Satellite</td>
+<td><code>s3://weather-ai-models-*/processed/satellite-3ch/</code></td>
+<td>41×37 float32 .npy per band</td>
+<td>Decompress → calibrate → crop → validate vs satpy → upload to S3</td>
+</tr>
+<tr>
+<td><strong>🩶 Silver</strong></td>
+<td>Sensor</td>
+<td><code>s3://weather-ai-models-*/processed/sensor/</code> + station CSV</td>
+<td>7-feature rows per 10-min</td>
+<td>Parse JSON → SGT→UTC conversion → resample to 10-min → fill gaps</td>
+</tr>
+<tr>
+<td><strong>🩶 Silver</strong></td>
+<td>Combined</td>
+<td>Time-aligned in processed bucket</td>
+<td>Satellite timestamp ↔ sensor timestamp</td>
+<td>Match satellite frame (UTC) to nearest sensor reading within ±5 min</td>
+</tr>
+<tr>
+<td><strong>🥇 Gold</strong></td>
+<td>Training</td>
+<td><code>s3://weather-ai-models-*/processed/</code></td>
+<td><code>.npz</code> per station (patch + sensor_seq + coord + label)</td>
+<td>32×32 local patch extraction, 6-step LSTM sequence, coord embedding</td>
+</tr>
+<tr>
+<td><strong>🥇 Gold</strong></td>
+<td>Frontend</td>
+<td>API server <code>/api/satellite/frames</code></td>
+<td>Normalized grayscale PNG stream</td>
+<td>B13 brightness temp → 0-255 opacity for Leaflet overlay</td>
+</tr>
+</tbody>
+</table>
+<h4 id="pipeline-detail">Pipeline Detail</h4>
+<div class="highlight"><pre><span></span><code>🟫 BRONZE — Satellite:
+  AWS S3 (L1b HSD, Segment S05 only, .bz2 compressed)
+    ↓ s3 cp --no-sign-request
+🟫 BRONZE — Sensor:
+  data.gov.sg APIs (temperature, humidity, rainfall, PM2.5, wind)
+    ↓ fetch_and_process_gov_data.py → station CSV files
+
+🩶 SILVER — Satellite cleansing:
+  Local /tmp
+    ↓ hsd_parser.py: bz2.decompress → struct.unpack → np.frombuffer
+    ↓ Brightness Temperature Array (550×5500 segment)
+    ↓ Fixed crop bounds (455:496, 891:928) — validated against satpy
+    ↓ Cropped (41×37) float32 .npy
+🩶 SILVER — Sensor cleansing:
+    ↓ Parse 3 JSON formats (standard / regional PM2.5 / wind)
+    ↓ SGT (UTC+8) → UTC conversion for satellite alignment
+    ↓ Resample to 10-min intervals, forward-fill gaps
+🩶 SILVER — Time alignment:
+    ↓ Match satellite frame timestamp to sensor readings (±5 min tolerance)
+
+🥇 GOLD — Training output:
+  s3://weather-ai-models-de08370c/processed/satellite-3ch/{YYYYMMDD}/
+    ↓ prepare_station_data.py: crop 32×32 patch + build 6-step sensor sequence
+    ↓ Output: rain_samples.npz + dry_samples.npz per station
+🥇 GOLD — Frontend output:
+    ↓ API server syncs latest .npy frames from S3
+    ↓ Cloud animation overlay on dashboard map (B13 band → grayscale opacity)
+</code></pre></div>
+
+<h4 id="hsd-parser-hsd_parserpy">HSD Parser — <a href="file:///Users/jinhui/development/tools/claude-skill/services/download/hsd_parser.py">hsd_parser.py</a></h4>
+<p>Custom lightweight binary parser replacing the heavy satpy stack:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">parse_hsd</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">crop_bounds</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse single HSD .bz2 file → brightness temperature array (float32, Kelvin)&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">bz2</span><span class="o">.</span><span class="n">decompress</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+    <span class="n">blocks</span> <span class="o">=</span> <span class="n">_walk_blocks</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+    <span class="n">cal</span> <span class="o">=</span> <span class="n">_parse_block5</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">blocks</span><span class="p">)</span>     <span class="c1"># Calibration: gain, offset, Planck constants</span>
+    <span class="n">counts</span> <span class="o">=</span> <span class="n">_read_counts</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">blocks</span><span class="p">)</span>   <span class="c1"># 16-bit count array</span>
+    <span class="n">bt</span> <span class="o">=</span> <span class="n">_count_to_bt</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="n">cal</span><span class="p">)</span>       <span class="c1"># count → radiance → brightness temperature</span>
+    <span class="k">if</span> <span class="n">crop_bounds</span><span class="p">:</span>
+        <span class="n">r_min</span><span class="p">,</span> <span class="n">r_max</span><span class="p">,</span> <span class="n">c_min</span><span class="p">,</span> <span class="n">c_max</span> <span class="o">=</span> <span class="n">crop_bounds</span>
+        <span class="n">bt</span> <span class="o">=</span> <span class="n">bt</span><span class="p">[</span><span class="n">r_min</span><span class="p">:</span><span class="n">r_max</span><span class="p">,</span> <span class="n">c_min</span><span class="p">:</span><span class="n">c_max</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">bt</span>
+</code></pre></div>
+
+<p>Validation: max diff vs satpy &lt; 0.0001K across all 3 bands.</p>
+<h4 id="data-file-availability-issues-discovered-during-download">Data File Availability Issues (Discovered During Download)</h4>
+<p>These issues were <strong>not known upfront</strong> — they were discovered progressively during the 6-year historical download and required code changes to handle:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Issue</th>
+<th>Discovery Context</th>
+<th>Impact</th>
+<th>Code Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Missing timestamps on S3</strong></td>
+<td>Some 10-min slots simply don't have files on AWS Open Data (satellite outage, maintenance)</td>
+<td>~2-5% of slots per day return 404</td>
+<td><code>process_slot()</code> returns <code>"missing"</code> status; day is still marked complete if <code>failed == 0</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Himawari-8 → Himawari-9 transition</strong></td>
+<td>Satellite was switched on 2022-12-13 UTC. Before this date, data is in <code>noaa-himawari8</code> bucket; after, in <code>noaa-himawari9</code></td>
+<td>Entire bucket and filename prefix changes mid-dataset</td>
+<td><code>_get_bucket(dt)</code> and <code>_get_sat_prefix(dt)</code> auto-switch based on <code>H8_END = datetime(2022, 12, 13)</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Filename prefix differs (H08 vs H09)</strong></td>
+<td>HSD files use <code>HS_H08_</code> prefix for Himawari-8 and <code>HS_H09_</code> for Himawari-9</td>
+<td>Download fails if wrong prefix used</td>
+<td><code>_s3_key()</code> dynamically constructs filename: <code>HS_{H08/H09}_{date}_{time}_{band}_FLDK_R20_S0510.DAT.bz2</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Older NC files use different prefix</strong></td>
+<td>v1/v2 era <code>.nc</code> files used <code>NC_H08_</code> / <code>NC_H09_</code> naming convention</td>
+<td>Batch preprocessing must scan both patterns</td>
+<td><code>preprocess_images.py</code> loops over <code>["NC_H08_", "NC_H09_"]</code> glob patterns</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Sporadic S3 download failures</strong></td>
+<td>Network timeouts or throttling during burst downloads</td>
+<td>Single slot failure should not abort entire day</td>
+<td>Try/except per-slot; only <code>failed &gt; 0</code> prevents day from being marked <code>.complete</code></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="c1"># download_aws_satellite.py — Himawari-8/9 auto-switching</span>
+<span class="n">H8_END</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">13</span><span class="p">)</span>  <span class="c1"># Satellite transition date</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_bucket</span><span class="p">(</span><span class="n">dt</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pre-2022-12-13 → noaa-himawari8, after → noaa-himawari9&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;noaa-himawari8&quot;</span> <span class="k">if</span> <span class="n">dt</span> <span class="o">&lt;</span> <span class="n">H8_END</span> <span class="k">else</span> <span class="s2">&quot;noaa-himawari9&quot;</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_sat_prefix</span><span class="p">(</span><span class="n">dt</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Filename prefix: H08 or H09&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;H08&quot;</span> <span class="k">if</span> <span class="n">dt</span> <span class="o">&lt;</span> <span class="n">H8_END</span> <span class="k">else</span> <span class="s2">&quot;H09&quot;</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">process_slot</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">s3_client</span><span class="p">,</span> <span class="n">upload_s3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">BANDS</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">_s3_key</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">band</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">s3_client</span><span class="o">.</span><span class="n">download_file</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">local_path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;missing&quot;</span>  <span class="c1"># This timestamp doesn&#39;t exist on S3</span>
+    <span class="k">return</span> <span class="s2">&quot;done&quot;</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># preprocess_images.py — Must scan both H08 and H09 filename patterns</span>
+<span class="k">for</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;NC_H08_&quot;</span><span class="p">,</span> <span class="s2">&quot;NC_H09_&quot;</span><span class="p">]:</span>
+    <span class="n">found_files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">*.nc&quot;</span><span class="p">))</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>Key lesson</strong>: When downloading 6 years of historical data across a satellite transition boundary, file naming conventions and bucket locations are <strong>not uniform</strong>. The download pipeline must be resilient to missing files, prefix changes, and bucket changes — none of which are documented in the AWS Open Data catalog.</p>
+<p>Source: <a href="file:///Users/jinhui/development/tools/claude-skill/services/download/download_aws_satellite.py">download_aws_satellite.py</a> | <a href="file:///Users/jinhui/development/tools/claude-skill/services/download/preprocess_images.py">preprocess_images.py</a></p>
+</blockquote>
+<h4 id="satellite-npy-for-frontend-cloud-animation">Satellite .npy for Frontend Cloud Animation</h4>
+<p>The same processed .npy files serve a <strong>dual purpose</strong> — both model training and frontend visualization:</p>
+<table>
+<thead>
+<tr>
+<th>Purpose</th>
+<th>Band Used</th>
+<th>Processing</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Model training</strong></td>
+<td>B08, B11, B13 (all 3)</td>
+<td>Raw brightness temperature as float32</td>
+<td>3 × 41×37 .npy tensors per timestamp</td>
+</tr>
+<tr>
+<td><strong>Frontend cloud overlay</strong></td>
+<td>B13 only (IR window)</td>
+<td>Normalize to 0-255, invert (cold=bright=cloud), apply opacity</td>
+<td>Grayscale cloud layer on Leaflet map</td>
+</tr>
+</tbody>
+</table>
+<p>The API server's <code>sync_satellite_data()</code> thread continuously syncs the latest .npy frames from S3. The frontend renders these as a time-lapse cloud animation over the Singapore map, with playback controls for speed and frame selection.</p>
+<h3 id="42-sensor-data-cleansing">4.2 Sensor Data Cleansing</h3>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Solution</th>
+<th>File</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wind direction 0°/360° discontinuity</td>
+<td>Decompose to sin/cos</td>
+<td><code>prepare_station_data.py</code></td>
+</tr>
+<tr>
+<td>Missing sensor values</td>
+<td>Fill with 0</td>
+<td><code>weather_dataset.py</code></td>
+</tr>
+<tr>
+<td>Timezone mismatch (UTC vs SGT)</td>
+<td>Satellite = UTC, Sensor -8h for matching</td>
+<td><code>prepare_station_data.py</code></td>
+</tr>
+<tr>
+<td>Sparse nighttime data</td>
+<td>Pad with nearest available value</td>
+<td><code>weather_dataset.py</code></td>
+</tr>
+<tr>
+<td>PM2.5 hourly vs others per-minute</td>
+<td>Resample all to 10-min intervals</td>
+<td><code>weather_dataset.py</code></td>
+</tr>
+<tr>
+<td>Incomplete station coordinates</td>
+<td>Manual supplement <code>station_coords.json</code></td>
+<td><code>station_coords.json</code></td>
+</tr>
+<tr>
+<td><strong>Wind data different JSON format</strong></td>
+<td>Separate parser logic (see §4.3)</td>
+<td><code>api.py</code>, <code>fetch_and_process_gov_data.py</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-sensor-api-json-format-differences">4.3 Sensor API JSON Format Differences</h3>
+<p>The data.gov.sg APIs return <strong>3 different JSON structures</strong>, requiring distinct parsing logic:</p>
+<table>
+<thead>
+<tr>
+<th>API Type</th>
+<th>JSON Structure</th>
+<th>Example</th>
+<th>Handling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Standard</strong> (temperature, rainfall, humidity)</td>
+<td><code>items[].readings[{station_id, value}]</code></td>
+<td><code>{"station_id": "S50", "value": 28.3}</code></td>
+<td>Direct station-level mapping</td>
+</tr>
+<tr>
+<td><strong>Regional</strong> (PM2.5)</td>
+<td><code>items[].readings.pm25_one_hourly.{region: value}</code></td>
+<td><code>{"west": 12, "east": 8, ...}</code></td>
+<td>Map station → nearest region via <code>get_region_from_latlon()</code>, then assign regional value</td>
+</tr>
+<tr>
+<td><strong>Wind</strong> (speed, direction)</td>
+<td><code>items[].readings[{station_id, value}]</code></td>
+<td>Same as standard, but wind direction is in degrees (0-360°)</td>
+<td>Standard parsing, but requires post-processing: decompose angle to <code>sin(θ)</code> and <code>cos(θ)</code> to avoid circular discontinuity</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="c1"># fetch_and_process_gov_data.py — PM2.5 has nested regional structure</span>
+<span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="s1">&#39;pm25&#39;</span><span class="p">:</span>
+    <span class="c1"># Structure: items → [{timestamp, readings: {pm25_one_hourly: {west: X, ...}}}]</span>
+    <span class="n">regional_readings</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;readings&#39;</span><span class="p">][</span><span class="s1">&#39;pm25_one_hourly&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">sid</span><span class="p">,</span> <span class="n">region_key</span> <span class="ow">in</span> <span class="n">station_region_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">region_key</span> <span class="ow">in</span> <span class="n">regional_readings</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">regional_readings</span><span class="p">[</span><span class="n">region_key</span><span class="p">]</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># Standard: items → [{timestamp, readings: [{station_id: ..., value: ...}]}]</span>
+    <span class="k">for</span> <span class="n">reading</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;readings&#39;</span><span class="p">]:</span>
+        <span class="n">sid</span> <span class="o">=</span> <span class="n">reading</span><span class="p">[</span><span class="s1">&#39;station_id&#39;</span><span class="p">]</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">reading</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span>
+</code></pre></div>
+
+<h3 id="44-multi-dimensional-data-alignment">4.4 Multi-Dimensional Data Alignment</h3>
+<p>Training requires precise alignment across <strong>3 independent dimensions</strong>: time, space, and data source.</p>
+<h4 id="temporal-alignment-time">Temporal Alignment (Time)</h4>
+<table>
+<thead>
+<tr>
+<th>Data Source</th>
+<th>Native Timezone</th>
+<th>Native Frequency</th>
+<th>Alignment Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Satellite (AWS S3)</td>
+<td><strong>UTC</strong></td>
+<td>10-min</td>
+<td>10-min UTC slots</td>
+</tr>
+<tr>
+<td>Sensor CSV (data.gov.sg)</td>
+<td><strong>SGT (UTC+8)</strong></td>
+<td>1-5 min</td>
+<td>Resample → 10-min, convert to UTC</td>
+</tr>
+<tr>
+<td>Wind data (data.gov.sg)</td>
+<td><strong>SGT (UTC+8)</strong></td>
+<td>1 min</td>
+<td>Resample → 10-min, convert to UTC</td>
+</tr>
+<tr>
+<td>PM2.5 (data.gov.sg)</td>
+<td><strong>SGT (UTC+8)</strong></td>
+<td>1 hour</td>
+<td>Forward-fill to 10-min</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="c1"># prepare_station_data.py — SGT → UTC for satellite file lookup</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">timestamp_to_3ch_paths</span><span class="p">(</span><span class="n">ts_str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Key: Sensor CSV is SGT (UTC+8), satellite filenames are UTC, subtract 8 hours.</span>
+<span class="sd">    Example: &#39;2025-03-15T14:20:00+08:00&#39; → UTC 06:20 → SAT_B08_20250315_0620.npy</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+</code></pre></div>
+
+<h4 id="spatial-alignment-station-satellite-pixel">Spatial Alignment (Station ↔ Satellite Pixel)</h4>
+<p>Each weather station has physical GPS coordinates that must be mapped to the correct satellite pixel:</p>
+<div class="highlight"><pre><span></span><code>Station S50 (1.3399°N, 103.6844°E)
+   ↓ lat/lon → AHI projection pixel index
+Satellite pixel (row=22, col=15) in 41×37 cropped image
+   ↓ used as coord input to model
+normalized_x = col / 37 = 0.405
+normalized_y = row / 41 = 0.537
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Source</th>
+<th>Process</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Station → Region</strong></td>
+<td><code>station_coords.json</code> (69 stations)</td>
+<td>Manual GPS coordinates (NEA metadata)</td>
+<td><code>{"S50": {"lat": 1.3399, "lon": 103.6844}}</code></td>
+</tr>
+<tr>
+<td><strong>Station → Satellite Pixel</strong></td>
+<td>GPS coord + AHI projection</td>
+<td>Convert lat/lon to 2km-resolution pixel index in 41×37 image</td>
+<td><code>(row, col)</code> pair per station</td>
+</tr>
+<tr>
+<td><strong>Station → Sensor Data</strong></td>
+<td><code>sensor_id</code> column in CSV</td>
+<td>Direct join by station ID and timestamp</td>
+<td>Matched sensor readings</td>
+</tr>
+<tr>
+<td><strong>Pixel → Model Input</strong></td>
+<td>Normalized coordinates</td>
+<td><code>(col/width, row/height, sin(hour), cos(hour), sin(month), cos(month))</code></td>
+<td>6-d coord vector</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Why this matters</strong>: Without precise spatial alignment, the model would associate wrong cloud patterns with wrong sensor readings. A 2km pixel offset in Singapore can mean the difference between sea (always dry) and land (frequently rainy).</p>
+<p>Source: <a href="file:///Users/jinhui/development/tools/claude-skill/services/training/prepare_station_data.py">prepare_station_data.py</a></p>
+</blockquote>
+<hr />
+<h2 id="5-training-strategy-singapore-weather-characteristics">5. Training Strategy &amp; Singapore Weather Characteristics</h2>
+<h3 id="51-singapore-weather-context">5.1 Singapore Weather Context</h3>
+<p>Singapore's tropical climate has unique characteristics that directly impact model training decisions:</p>
+<table>
+<thead>
+<tr>
+<th>Characteristic</th>
+<th>Impact on Model Training</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Convective afternoon rain</strong> (2-6 PM daily)</td>
+<td>Model must learn diurnal cycle → <code>coord</code> includes hour/month cycle encoding</td>
+</tr>
+<tr>
+<td><strong>Northeast Monsoon</strong> (Dec-Mar)</td>
+<td>Persistent rain vs convective = different patterns → need full-year data</td>
+</tr>
+<tr>
+<td><strong>Southwest Monsoon</strong> (Jun-Sep)</td>
+<td>Sumatra squalls approach from west → full satellite view &gt; local patch</td>
+</tr>
+<tr>
+<td><strong>Rain/dry imbalance</strong> (~13% rain at 1.0mm)</td>
+<td>WeightedRandomSampler balances 50:50 per batch</td>
+</tr>
+<tr>
+<td><strong>ENSO influence</strong> (El Niño/La Niña)</td>
+<td>3-7 year cycle → need 6 years of data to cover</td>
+</tr>
+<tr>
+<td><strong>Small geographic area</strong> (~50km)</td>
+<td>All stations share same satellite frame → efficient data usage</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-training-approach-general-specific">5.2 Training Approach: General → Specific</h3>
+<p>The training strategy evolved from "predict everything" to "specifically predict rain events that matter":</p>
+<h4 id="rain-threshold-evolution">Rain Threshold Evolution</h4>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Threshold</th>
+<th>Rain Ratio</th>
+<th>F1 Score</th>
+<th>Problem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 1</td>
+<td>0.1mm/10min</td>
+<td>30.3%</td>
+<td>46.6%</td>
+<td>Too sensitive — drizzle/dew triggers, high FP (477)</td>
+</tr>
+<tr>
+<td>Phase 2</td>
+<td>5.0mm/10min</td>
+<td>2.0%</td>
+<td>35.7%</td>
+<td>Too strict — only 2% positive samples, cannot learn</td>
+</tr>
+<tr>
+<td><strong>Phase 3</strong></td>
+<td><strong>1.0mm/10min</strong></td>
+<td><strong>13.0%</strong></td>
+<td><strong>61.5%</strong> ✅</td>
+<td><strong>Balanced — "need an umbrella" rain</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Key insight</strong>: 0.1mm captures insignificant moisture. 5.0mm is too rare for the model to learn. <strong>1.0mm</strong> = the rain intensity a pedestrian would notice and want to avoid.</p>
+</blockquote>
+<h4 id="model-architecture-iterations-6-rounds">Model Architecture Iterations (6 rounds)</h4>
+<table>
+<thead>
+<tr>
+<th>Round</th>
+<th>Change</th>
+<th>Precision</th>
+<th>F1</th>
+<th>Training Time</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline</td>
+<td>Conv2d + GAP + LSTM</td>
+<td>62.2%</td>
+<td>55.7%</td>
+<td>79s</td>
+<td>Starting point</td>
+</tr>
+<tr>
+<td>R1</td>
+<td>+ Spatial Attention</td>
+<td>57.7%</td>
+<td>57.7%</td>
+<td>80s</td>
+<td>Better cloud focus</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>+ Deeper CNN (5 layers)</td>
+<td>57.7%</td>
+<td>55.8%</td>
+<td>120s</td>
+<td>❌ Overfits with limited data</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>+ Residual Blocks</td>
+<td>48.6%</td>
+<td>54.5%</td>
+<td>209s</td>
+<td>❌ Too shallow for residual benefit</td>
+</tr>
+<tr>
+<td><strong>R4</strong></td>
+<td><strong>Local Patch + Coord Embedding</strong></td>
+<td><strong>61.8%</strong></td>
+<td><strong>61.5%</strong> ✅</td>
+<td><strong>80s</strong></td>
+<td>✅ <strong>Best: sees overhead cloud</strong></td>
+</tr>
+<tr>
+<td>R5</td>
+<td>+ Dropout2d in CNN</td>
+<td>34.0%</td>
+<td>—</td>
+<td>—</td>
+<td>❌ 32×32 patch too small for dropout</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Source: <a href="reference/model-tuning.html">model-tuning.html</a></p>
+</blockquote>
+<h3 id="53-data-volume-strategy">5.3 Data Volume Strategy</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Time Span</th>
+<th>Samples</th>
+<th>Motivation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial (R1-R4)</td>
+<td>2024-02 ~ 2026-02 (1 year)</td>
+<td>~395K</td>
+<td>Quick validation, only NE monsoon season</td>
+</tr>
+<tr>
+<td><strong>Current (3ch)</strong></td>
+<td><strong>2020-01 ~ 2026-02 (6 years)</strong></td>
+<td><strong>~2.4M (est.)</strong></td>
+<td>Full ENSO cycle, both monsoon seasons, Himawari-8→9 transition</td>
+</tr>
+</tbody>
+</table>
+<h4 id="per-station-regional-training">Per-Station Regional Training</h4>
+<p>The model is trained <strong>per station</strong>, with each station representing a region of Singapore. This design decision is driven by the "local patch" approach in R4 — each station's training data pairs its sensor readings with the satellite patch <strong>directly overhead</strong>, making the model learn the relationship between local cloud patterns and local rainfall.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Each station generates its own rain/dry training dataset</span>
+python3<span class="w"> </span>prepare_station_data.py<span class="w"> </span>--station<span class="w"> </span>S66<span class="w">    </span><span class="c1"># Tengah (West)</span>
+python3<span class="w"> </span>prepare_station_data.py<span class="w"> </span>--station<span class="w"> </span>S50<span class="w">    </span><span class="c1"># Clementi (Central-West)</span>
+python3<span class="w"> </span>prepare_station_data.py<span class="w"> </span>--station<span class="w"> </span>S107<span class="w">   </span><span class="c1"># East Coast (East)</span>
+</code></pre></div>
+
+<p>Station selection criteria for region coverage:</p>
+<p><strong>Selection criteria</strong>: (1) High data completeness — station must report consistently with minimal gaps; (2) Geographic spread — one station per NEA region to avoid clustering; (3) Pedestrian relevance — prioritize areas with high foot traffic where rain alerts matter most; (4) Microclimate diversity — include coastal, urban, and open terrain stations that experience different rainfall patterns.</p>
+<table>
+<thead>
+<tr>
+<th>Region</th>
+<th>Selected Station</th>
+<th>Why This Site</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>West</strong></td>
+<td>S66 (Tengah)</td>
+<td>First landfall point for Sumatra squalls (rain approaches from west). Open terrain with unobstructed sky = clean satellite-sensor correlation. High data completeness (~98%)</td>
+</tr>
+<tr>
+<td><strong>Central</strong></td>
+<td>S77 (Marina Bay)</td>
+<td>Singapore's busiest pedestrian area — rain alerts have highest user value here. Urban heat island effects create distinct convective patterns different from other regions</td>
+</tr>
+<tr>
+<td><strong>East</strong></td>
+<td>S107 (East Coast)</td>
+<td>Coastal station directly exposed to NE monsoon rainfall (Dec-Mar). Sea-land boundary creates unique cloud formation patterns the model must distinguish from inland rain</td>
+</tr>
+<tr>
+<td><strong>North</strong></td>
+<td>S104 (Woodlands)</td>
+<td>Near Johor Strait — cross-border weather systems from Malaysia affect this region first. Different microclimate from southern stations due to proximity to mainland peninsula</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Why per-station?</strong> Singapore is small (~50km) but microclimates differ significantly. A single model trained on all stations would average out these local patterns. By training per-station with a local 32×32 satellite patch, the model specifically learns "will it rain <em>at this location</em>" rather than "will it rain <em>somewhere in Singapore</em>."</p>
+<p>Source: <a href="file:///Users/jinhui/development/tools/claude-skill/services/training/prepare_station_data.py">prepare_station_data.py</a> | <a href="file:///Users/jinhui/development/tools/claude-skill/services/training/station_coords.json">station_coords.json</a> (69 stations available)</p>
+</blockquote>
+<h3 id="54-weatherfusionnet-architecture">5.4 WeatherFusionNet Architecture</h3>
+<div class="highlight"><pre><span></span><code>                ┌─────────────────────────┐
+                │   Satellite Encoder      │
+                │  Conv2d(3→16→32→64)     │
+Satellite ──────│  + Spatial Attention     │──── 128-d feature
+(B,3,41,37)     │  + FC(64→128)           │
+                └─────────────────────────┘
+                                            ──── Concat (198-d)
+                ┌─────────────────────────┐     ────┐
+                │   Sensor Encoder         │         │  Fusion Head
+Sensor ─────────│  LSTM(7→128)            │──── 64-d│  FC(198→64) + ReLU
+(B,6,7)         │  + FC(128→64)           │         │  + Dropout(0.2)
+                └─────────────────────────┘         │  + FC(64→1)
+                                            ────────┘
+Coord ──────────────────────────────────────── 6-d      → Rainfall (mm)
+(B,6)           [x, y, sin(h), cos(h), sin(m), cos(m)]
+</code></pre></div>
+
+<blockquote>
+<p>Source: <a href="file:///Users/jinhui/development/tools/claude-skill/services/training/weather_fusion_model.py">weather_fusion_model.py</a></p>
+</blockquote>
+<hr />
+<h2 id="6-infrastructure-selection-cost-vs-speed-vs-efficiency">6. Infrastructure Selection — Cost vs Speed vs Efficiency</h2>
+<h3 id="61-evolution-philosophy">6.1 Evolution Philosophy</h3>
+<p>The infrastructure evolved through 4 phases, each driven by a different priority:</p>
+<div class="mermaid">
+flowchart LR
+    P1["Phase 1<br/>💰 Minimal Cost<br/>Single t3.medium"] --> P2["Phase 2<br/>🏗️ Separation<br/>3-Server Topology"] --> P3["Phase 3<br/>⚡ Speed<br/>GPU g4dn.xlarge"] --> P4["Phase 4<br/>🎯 Efficiency<br/>Spot + Right-sizing"]
+    style P1 fill:#455a64,stroke:#90a4ae,color:#e0e0e0
+    style P2 fill:#455a64,stroke:#90a4ae,color:#e0e0e0
+    style P3 fill:#455a64,stroke:#90a4ae,color:#e0e0e0
+    style P4 fill:#0d47a1,stroke:#42a5f5,color:#e3f2fd
+</div>
+
+<h3 id="62-server-topology">6.2 Server Topology</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Server</th>
+<th>Instance</th>
+<th>Purpose</th>
+<th>Monthly Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 1</td>
+<td>All-in-one</td>
+<td>t3.medium</td>
+<td>API + Training + Download</td>
+<td>~$30</td>
+</tr>
+<tr>
+<td>Phase 2+</td>
+<td><strong>API Server</strong></td>
+<td>t3.medium</td>
+<td>FastAPI, Dashboard, Prediction</td>
+<td>~$30</td>
+</tr>
+<tr>
+<td>Phase 2+</td>
+<td><strong>Training Server</strong></td>
+<td>t3.large → <strong>g4dn.xlarge</strong></td>
+<td>PyTorch training (GPU)</td>
+<td>~$62 (Spot)</td>
+</tr>
+<tr>
+<td>Phase 2+</td>
+<td><strong>Download Server</strong></td>
+<td>t3.micro → t3.large → <strong>t3.xlarge</strong></td>
+<td>Data ingestion to S3</td>
+<td>~$15</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-key-infrastructure-decisions">6.3 Key Infrastructure Decisions</h3>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Context</th>
+<th>Choice</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>3-server split</strong></td>
+<td>API latency affected by training load</td>
+<td>Separate Download / Training / API</td>
+<td>Decouple data-intensive from latency-sensitive</td>
+</tr>
+<tr>
+<td><strong>GPU for training</strong></td>
+<td>CPU training: ~60 min/day batch</td>
+<td>g4dn.xlarge (NVIDIA T4)</td>
+<td><strong>10-20x speedup</strong> (2.5min/epoch → 8sec/epoch)</td>
+</tr>
+<tr>
+<td><strong>Spot Instance</strong></td>
+<td>g4dn.xlarge On-Demand = $0.526/hr</td>
+<td>Spot Instance ($0.16/hr)</td>
+<td><strong>70% cost saving</strong>, acceptable for batch training</td>
+</tr>
+<tr>
+<td><strong>Download server sizing</strong></td>
+<td>t3.micro OOM with 2 workers</td>
+<td>t3.large → t3.xlarge</td>
+<td>12 workers need ~2.5GB RAM; t3.xlarge (16GB) gives headroom</td>
+</tr>
+<tr>
+<td><strong>S3 as data lake</strong></td>
+<td>200GB EBS fills in 1 day of raw data</td>
+<td>Process locally → upload S3 → delete local</td>
+<td><strong>Just-in-Time processing</strong>: 150GB raw → 5MB patches → purge</td>
+</tr>
+<tr>
+<td><strong>AWS Service Quotas</strong></td>
+<td>GPU instance vCPU limit = 0 by default</td>
+<td>Request increase to 4 vCPUs</td>
+<td>Required for g4dn.xlarge deployment</td>
+</tr>
+</tbody>
+</table>
+<h3 id="64-why-not-databricks-snowflake">6.4 Why Not Databricks / Snowflake?</h3>
+<p>We evaluated managed data platforms but decided against them for this project:</p>
+<table>
+<thead>
+<tr>
+<th>Criteria</th>
+<th><strong>Our Stack (S3 + EC2 + PyTorch)</strong></th>
+<th>Databricks</th>
+<th>Snowflake</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Data Type</strong></td>
+<td>Binary satellite .npy + CSV sensor — fits S3 naturally</td>
+<td>Designed for tabular/Spark — poor fit for binary image tensors</td>
+<td>SQL-centric — cannot process binary satellite data natively</td>
+</tr>
+<tr>
+<td><strong>ML Training</strong></td>
+<td>Direct PyTorch on GPU (g4dn.xlarge) — full control over model architecture</td>
+<td>Spark MLlib / MLflow — would need workaround for custom CNN+LSTM fusion</td>
+<td>No native ML training — would still need separate GPU compute</td>
+</tr>
+<tr>
+<td><strong>Cost</strong></td>
+<td>~$62/mo Spot GPU + &lt;$1/mo S3</td>
+<td><strong>$150-300/mo minimum</strong> (DBU costs + storage)</td>
+<td><strong>$100-200/mo</strong> (warehouse credits + storage)</td>
+</tr>
+<tr>
+<td><strong>Data Volume</strong></td>
+<td>~6GB processed, ~100MB sensor — too small to justify cluster overhead</td>
+<td>Designed for TB-PB scale — massive overkill for our volume</td>
+<td>Designed for analytical queries — our workload is batch ML, not SQL analytics</td>
+</tr>
+<tr>
+<td><strong>Latency</strong></td>
+<td>Sub-second inference on always-on t3.medium</td>
+<td>Cold start 30-60s for serverless clusters</td>
+<td>Not applicable — no real-time inference capability</td>
+</tr>
+<tr>
+<td><strong>Operational Fit</strong></td>
+<td>3-server topology maps directly to our 3 workloads</td>
+<td>Would consolidate but add abstraction layers we don't need</td>
+<td>Would only cover storage/analytics, still need separate ML compute</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Decision</strong>: Our data volume (~6GB), custom binary format (.npy tensors), and need for direct GPU access make S3 + EC2 + PyTorch the right choice. Managed platforms add $100-200/mo overhead without matching benefit. Reconsider at &gt;100GB or if team size grows beyond 3.</p>
+</blockquote>
+<h3 id="65-cost-optimization-milestones">6.5 Cost Optimization Milestones</h3>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Before</th>
+<th>After</th>
+<th>Saving</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S3 raw NC cleanup (10.1TB)</td>
+<td>$53/mo storage</td>
+<td>&lt; $1/mo</td>
+<td><strong>$52/mo</strong></td>
+</tr>
+<tr>
+<td>GPU Spot vs On-Demand</td>
+<td>$0.526/hr</td>
+<td>$0.16/hr</td>
+<td><strong>70%</strong></td>
+</tr>
+<tr>
+<td>HSD parser: 3 days vs 13 days download</td>
+<td>$32 server cost</td>
+<td>$15</td>
+<td><strong>53%</strong></td>
+</tr>
+<tr>
+<td>.npy sync instead of raw .nc (API)</td>
+<td>700MB/day disk growth</td>
+<td>2.3MB/day</td>
+<td><strong>99.7%</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Source: <a href="reference/architecture-decisions.html">architecture-decisions.html</a></p>
+</blockquote>
+<hr />
+<h2 id="7-dashboard-api-data-availability">7. Dashboard &amp; API Data Availability</h2>
+<h3 id="71-data-flow-for-prediction">7.1 Data Flow for Prediction</h3>
+<div class="mermaid">
+flowchart TB
+    subgraph Sources["Data Sources"]
+        SAT["🛰️ Satellite .npy<br/>(S3 → local sync)"]
+        SENSOR["🌡️ Real-time Sensors<br/>(data.gov.sg API)"]
+        MODEL["🧠 Model Weights<br/>(S3 → local sync)"]
+    end
+
+    subgraph API["FastAPI Prediction Engine"]
+        LOAD["Load Model<br/>weather_fusion_model.pth"]
+        IDW["IDW Interpolation<br/>3 nearest stations"]
+        PREDICT["WeatherFusionNet<br/>Forward Pass"]
+        CLIMO["Climatology<br/>Fallback"]
+    end
+
+    subgraph Output["API Response"]
+        RESULT["rainfall_mm<br/>temperature<br/>humidity<br/>wind<br/>pm25<br/>confidence"]
+    end
+
+    SAT --> LOAD
+    SENSOR --> IDW
+    MODEL --> LOAD
+    IDW --> PREDICT
+    LOAD --> PREDICT
+    PREDICT --> RESULT
+    CLIMO -.-> RESULT
+
+    style Sources fill:#37474f,stroke:#78909c,color:#eceff1
+    style API fill:#1a237e,stroke:#5c6bc0,color:#e8eaf6
+    style Output fill:#37474f,stroke:#78909c,color:#eceff1
+</div>
+
+<h3 id="72-api-endpoints">7.2 API Endpoints</h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Purpose</th>
+<th>Data Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /predict</code></td>
+<td>Point forecast at (lat, lon)</td>
+<td>Model + real-time sensors + satellite</td>
+</tr>
+<tr>
+<td><code>GET /predict-path</code></td>
+<td>Weather along a route</td>
+<td>Multi-point prediction with 2km sampling</td>
+</tr>
+<tr>
+<td><code>GET /smart-query</code></td>
+<td>Natural language query</td>
+<td>Geocoding + prediction</td>
+</tr>
+<tr>
+<td><code>GET /stations</code></td>
+<td>Station list with coordinates</td>
+<td><code>station_coords.json</code></td>
+</tr>
+<tr>
+<td><code>GET /monitor/overview</code></td>
+<td>System status</td>
+<td>S3 state files</td>
+</tr>
+<tr>
+<td><code>GET /accuracy/summary</code></td>
+<td>Forecast accuracy</td>
+<td>SQLite: forecast_result ⟕ actual_result</td>
+</tr>
+<tr>
+<td><code>GET /telegram/status</code></td>
+<td>Telegram bot config</td>
+<td>Environment variables</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-data-sync-mechanism">7.3 Data Sync Mechanism</h3>
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Sync Method</th>
+<th>Frequency</th>
+<th>Script</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model weights</td>
+<td>S3 → API server via cron</td>
+<td>Every 10 min</td>
+<td><code>fetch_latest_model.sh</code></td>
+</tr>
+<tr>
+<td>Sensor CSV</td>
+<td>S3 sync from training server</td>
+<td>Every 10 min</td>
+<td><code>fetch_latest_model.sh</code></td>
+</tr>
+<tr>
+<td>Satellite .npy</td>
+<td>S3 processed/ folder sync</td>
+<td>Background thread</td>
+<td><code>sync_satellite_data()</code> in <code>api.py</code></td>
+</tr>
+<tr>
+<td>Real-time sensors</td>
+<td>data.gov.sg API direct</td>
+<td>Every 5 min</td>
+<td><code>fetch_realtime_sensor_data()</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Source: <a href="file:///Users/jinhui/development/tools/claude-skill/services/api/backend/api.py">api.py</a></p>
+</blockquote>
+<hr />
+<h2 id="8-monitoring-operations-evolution">8. Monitoring &amp; Operations Evolution</h2>
+<h3 id="81-notification-channel-evolution">8.1 Notification Channel Evolution</h3>
+<div class="mermaid">
+flowchart LR
+    subgraph V1["v0.6: Email Only"]
+        E1["📧 Gmail SMTP<br/>Training success/failure"]
+    end
+    subgraph V2["v0.9: + Dashboard"]
+        E2["📊 React Monitor<br/>3-tab: Download/Train/API"]
+    end
+    subgraph V3["v0.11: + Telegram"]
+        E3["🤖 @WeatherAIAlertBot<br/>Rain alerts + system alerts"]
+    end
+    V1 --> V2 --> V3
+    style V1 fill:#455a64,stroke:#90a4ae,color:#e0e0e0
+    style V2 fill:#455a64,stroke:#90a4ae,color:#e0e0e0
+    style V3 fill:#0d47a1,stroke:#42a5f5,color:#e3f2fd
+</div>
+
+<h3 id="82-email-notifications-notificationpy">8.2 Email Notifications — <a href="file:///Users/jinhui/development/tools/claude-skill/services/training/notification.py">notification.py</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Training completion email with HTML report + plots</span>
+<span class="n">send_training_success_email</span><span class="p">(</span><span class="n">metrics</span><span class="p">,</span> <span class="n">report_path</span><span class="p">,</span> <span class="n">plot_path</span><span class="p">)</span>
+<span class="c1"># Pipeline failure alert with error logs</span>
+<span class="n">send_training_failure_email</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">error_msg</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="83-telegram-bot-integration-telegram_notifierpy">8.3 Telegram Bot Integration — <a href="file:///Users/jinhui/development/tools/claude-skill/services/shared/telegram_notifier.py">telegram_notifier.py</a></h3>
+<p>Added in v0.11.0 for instant mobile alerts:</p>
+<div class="highlight"><pre><span></span><code><span class="n">TELEGRAM_BOT_TOKEN</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;TELEGRAM_BOT_TOKEN&quot;</span><span class="p">)</span>
+<span class="n">TELEGRAM_CHAT_ID</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;TELEGRAM_CHAT_ID&quot;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">send_rain_alert</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">rainfall_mm</span><span class="p">,</span> <span class="n">temperature</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;🌧️ Rain alert with weather details&quot;&quot;&quot;</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">send_test_message</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;✅ Connectivity verification&quot;&quot;&quot;</span>
+</code></pre></div>
+
+<p>API endpoints: <code>/telegram/status</code>, <code>/telegram/test</code>, <code>/telegram/alert</code></p>
+<h3 id="84-monitoring-dashboard">8.4 Monitoring Dashboard</h3>
+<p>React + TypeScript SPA with 3-tab interface:</p>
+<table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>Data Source</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>File Download</strong></td>
+<td>S3 <code>download_state.json</code></td>
+<td>Download progress, speed, errors</td>
+</tr>
+<tr>
+<td><strong>Training Process</strong></td>
+<td>S3 <code>training_state.json</code></td>
+<td>Current epoch, loss curves, batch progress</td>
+</tr>
+<tr>
+<td><strong>API Application</strong></td>
+<td>Real-time API health</td>
+<td>Uptime, request count, model version</td>
+</tr>
+</tbody>
+</table>
+<h3 id="85-watchdog-auto-recovery">8.5 Watchdog &amp; Auto-Recovery</h3>
+<table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Script</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>systemd <code>satellite-download.service</code></td>
+<td>—</td>
+<td>Auto-restart download on crash</td>
+</tr>
+<tr>
+<td><code>watchdog.sh</code></td>
+<td>Download server cron</td>
+<td>Health check + SNS alert</td>
+</tr>
+<tr>
+<td>S3 log relay</td>
+<td><code>push_download_log.sh</code></td>
+<td>Centralize logs for dashboard</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-bug-registry-lessons-learned">9. Bug Registry &amp; Lessons Learned</h2>
+<h3 id="91-bug-summary">9.1 Bug Summary</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Severity</th>
+<th>Status</th>
+<th>Title</th>
+<th>Root Cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BUG-001</td>
+<td>Critical</td>
+<td>✅</td>
+<td>Training completes in 0.1s</td>
+<td>0 samples loaded</td>
+</tr>
+<tr>
+<td>BUG-002</td>
+<td>Critical</td>
+<td>✅</td>
+<td>Sensor data source mismatch</td>
+<td>NEA API (2026) vs local govdata (2025)</td>
+</tr>
+<tr>
+<td>BUG-003</td>
+<td>Critical</td>
+<td>✅</td>
+<td>Off-by-one loop condition</td>
+<td><code>while current &lt; end</code> skips single-day</td>
+</tr>
+<tr>
+<td>BUG-006</td>
+<td>High</td>
+<td>✅</td>
+<td>Redundant JAXA FTP in training</td>
+<td>Duplicate download step</td>
+</tr>
+<tr>
+<td>BUG-009</td>
+<td>Critical</td>
+<td>✅</td>
+<td>API disk exhaustion</td>
+<td>Raw .nc download + TODO cleanup</td>
+</tr>
+<tr>
+<td>BUG-010</td>
+<td>Critical</td>
+<td>✅</td>
+<td>Empty dataset loop + email spam</td>
+<td>12/144 .npy, narrow time window</td>
+</tr>
+<tr>
+<td>BUG-012</td>
+<td>Critical</td>
+<td>🔴</td>
+<td>Timezone mismatch in accuracy JOIN</td>
+<td>SQLite <code>julianday()</code> rejects timezone offsets</td>
+</tr>
+<tr>
+<td>BUG-013</td>
+<td>Medium</td>
+<td>🔴</td>
+<td>Negative rainfall predictions</td>
+<td>Model output unclamped</td>
+</tr>
+<tr>
+<td>BUG-015</td>
+<td>Medium</td>
+<td>✅</td>
+<td>ProcessPool SEGV</td>
+<td>netCDF4 not fork-safe</td>
+</tr>
+</tbody>
+</table>
+<h3 id="92-key-lessons">9.2 Key Lessons</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Lesson</th>
+<th>Bug</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>TODO ≠ done</strong> — critical cleanup must be implemented immediately</td>
+<td>BUG-009</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Data pipeline must be end-to-end aligned</strong> — download and training same source</td>
+<td>BUG-002</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Silent failures are the worst</strong> — <code>julianday()</code> returns NULL without error</td>
+<td>BUG-012</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Fork-safety matters</strong> — netCDF4 + ProcessPoolExecutor = SEGV</td>
+<td>BUG-015</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Full details: <a href="reference/bugs.html">bugs.html</a></p>
+</blockquote>
+<hr />
+<h2 id="10-continuous-improvement-roadmap">10. Continuous Improvement Roadmap</h2>
+<h3 id="101-immediate-in-progress">10.1 Immediate (In Progress)</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>ETA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Complete 6-year 3-channel download</td>
+<td>56.9% (1273/2239 days)</td>
+<td>Feb 20</td>
+</tr>
+<tr>
+<td>Train model with 3-channel + 6-year data</td>
+<td>Blocked on download</td>
+<td>Feb 21+</td>
+</tr>
+<tr>
+<td>Fix BUG-012 (timezone mismatch)</td>
+<td>Open</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Fix BUG-013 (negative rainfall clamping)</td>
+<td>Open</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="102-next-model-iteration-plan-r5">10.2 Next Model Iteration Plan (R5)</h3>
+<p>After the 6-year 3-channel data download completes, the next training round will focus on these improvements:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Improvement</th>
+<th>Current (R4)</th>
+<th>Target (R5)</th>
+<th>Expected Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>3-channel input</strong></td>
+<td>Single B13 IR channel</td>
+<td>B08 (moisture) + B11 (cloud phase) + B13 (cloud height)</td>
+<td>+15-25% Precision — model can now distinguish rain-producing cumulonimbus from non-rain cirrus</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>6× more training data</strong></td>
+<td>~395K samples (2024-02 ~ 2026-02, 1 year)</td>
+<td>~2.4M samples (2020-01 ~ 2026-02, 6 years)</td>
+<td>Covers full ENSO cycle + both monsoon seasons + Himawari-8→9 transition</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Weighted loss function</strong></td>
+<td>MSE (equal penalty for rain and dry errors)</td>
+<td><code>loss = MSE × (1 + 2.0 × is_rain)</code> — 3× penalty for missed rain events</td>
+<td>Current model misses 38.2% of rain events (FN=164 at 1.0mm threshold). Weighted loss targets this directly</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Multi-frame temporal input</strong></td>
+<td>Single satellite frame at time t</td>
+<td>3 consecutive frames (t-20min, t-10min, t)</td>
+<td>Current R4 only sees cloud position, not <strong>direction of movement</strong>. Sequential frames let the model predict "will this cloud reach the station?"</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Asymmetric sampling</strong></td>
+<td>50:50 rain:dry per batch (WeightedRandomSampler)</td>
+<td>60:40 rain:dry + oversample heavy rain (&gt;5mm/10min)</td>
+<td>Current R4 rain recall = 61.5% (F1). Heavy rain (&gt;5mm) precision is much lower because these events are &lt;2% of samples</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Time-series cross-validation</strong></td>
+<td>Random 80:20 split</td>
+<td>Chronological split (train 2020-2024, validate 2025-2026)</td>
+<td>Current random split leaks temporal patterns. Real-world deployment predicts future from past, so validation must reflect this</td>
+</tr>
+</tbody>
+</table>
+<p>Expected combined improvement: F1 from <strong>61.5% (R4 baseline at 1.0mm threshold, 395K samples)</strong> → <strong>~72-78%</strong> (based on published literature for CNN+LSTM fusion models with multi-channel satellite input and 6× data volume).</p>
+<h3 id="103-short-term">10.3 Short-Term</h3>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Current</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model input</td>
+<td>3-channel satellite</td>
+<td>Multi-frame temporal (consecutive frames for cloud movement)</td>
+</tr>
+<tr>
+<td>Training data</td>
+<td>30-day sliding window</td>
+<td>60-90 day window</td>
+</tr>
+<tr>
+<td>Loss function</td>
+<td>MSE</td>
+<td>Weighted loss (heavier penalty for heavy rain misses)</td>
+</tr>
+<tr>
+<td>Sampling</td>
+<td>WeightedRandomSampler</td>
+<td>+ Asymmetric loss for rain vs dry</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Random split</td>
+<td>Time-series cross-validation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="104-long-term">10.4 Long-Term</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NLU Interface</strong></td>
+<td>Google Gemini for natural language weather queries ("Should I bring an umbrella for jogging?")</td>
+</tr>
+<tr>
+<td><strong>GNN Spatial Modeling</strong></td>
+<td>Graph Neural Network for inter-station relationships (replace IDW)</td>
+</tr>
+<tr>
+<td><strong>Ensemble Methods</strong></td>
+<td>RF + NN + XGBoost voting for robust predictions</td>
+</tr>
+<tr>
+<td><strong>SageMaker Training</strong></td>
+<td>Managed training on ml.g4dn.xlarge with S3 Channels</td>
+</tr>
+<tr>
+<td><strong>Terraform IaC</strong></td>
+<td>Full infrastructure managed by Terraform (GCC account)</td>
+</tr>
+<tr>
+<td><strong>Multi-frame prediction</strong></td>
+<td>Use consecutive satellite frames to predict cloud movement direction</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-source-code-file-change-tracker">11. Source Code File Change Tracker</h2>
+<h3 id="111-data-ingestion-files">11.1 Data Ingestion Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/download/download_jaxa_data.py">download_jaxa_data.py</a></td>
+<td>❌ Deprecated</td>
+<td>v1: JAXA FTP single channel download</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/download/bulk_download_to_s3_parallel.sh">bulk_download_to_s3_parallel.sh</a></td>
+<td>❌ Deprecated</td>
+<td>v1: Shell-based FTP→S3 streaming with <code>xargs -P</code></td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/download/noaa_satellite.py">noaa_satellite.py</a></td>
+<td>❌ Deprecated</td>
+<td>v2: NOAA ISatSS single channel C13 tile</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/download/download_aws_satellite.py">download_aws_satellite.py</a></td>
+<td>✅ <strong>Active</strong></td>
+<td>v3: AWS Open Data 3-channel L1b download</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/download/hsd_parser.py">hsd_parser.py</a></td>
+<td>✅ <strong>New (v0.11)</strong></td>
+<td>Lightweight HSD binary parser replacing satpy</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/download/download_manager.py">download_manager.py</a></td>
+<td>⏸️ Stopped</td>
+<td>Old unified download manager (JAXA + gov data)</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/download/fetch_and_process_gov_data.py">fetch_and_process_gov_data.py</a></td>
+<td>✅ Active</td>
+<td>NEA sensor data fetcher (all 6 metrics)</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/download/preprocess_images.py">preprocess_images.py</a></td>
+<td>❌ Deprecated</td>
+<td>Old NC→npy preprocessor (replaced by hsd_parser)</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/download/satellite_preprocessor.py">satellite_preprocessor.py</a></td>
+<td>❌ Deprecated</td>
+<td>Old satpy-based preprocessor</td>
+</tr>
+</tbody>
+</table>
+<h3 id="112-training-files">11.2 Training Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/training/weather_fusion_model.py">weather_fusion_model.py</a></td>
+<td>✅ Active</td>
+<td>WeatherFusionNet: SpatialAttention + SatEncoder + SensorEncoder + Fusion</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/training/weather_dataset.py">weather_dataset.py</a></td>
+<td>✅ Active</td>
+<td>Dataset loader with 7-feature sensor, satellite patch, coordinate embedding</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/training/prepare_station_data.py">prepare_station_data.py</a></td>
+<td>✅ <strong>New (v0.11)</strong></td>
+<td>Per-station rain/dry sample extraction with 3ch satellite patch pairing</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/training/training_scheduler.py">training_scheduler.py</a></td>
+<td>✅ Active</td>
+<td>Day-by-day batch orchestrator with S3 readiness detection</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/training/train_rolling_window.py">train_rolling_window.py</a></td>
+<td>✅ Active</td>
+<td>Sliding window trainer with S3 checkpoint persistence</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/training/notification.py">notification.py</a></td>
+<td>✅ Active</td>
+<td>Gmail SMTP notifications (success/failure emails)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="113-api-monitoring-files">11.3 API &amp; Monitoring Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/api/backend/api.py">api.py</a></td>
+<td>✅ Active</td>
+<td>Main FastAPI app (1430 lines): predict, monitor, accuracy, telegram</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/api/backend/predict.py">predict.py</a></td>
+<td>✅ Active</td>
+<td>Prediction engine with IDW interpolation</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/shared/telegram_notifier.py">telegram_notifier.py</a></td>
+<td>✅ <strong>New (v0.11)</strong></td>
+<td>Telegram Bot API integration for weather alerts</td>
+</tr>
+<tr>
+<td><a href="file:///Users/jinhui/development/tools/claude-skill/services/api/backend/climatology.py">climatology.py</a></td>
+<td>✅ Active</td>
+<td>Climatological fallback data</td>
+</tr>
+</tbody>
+</table>
+<h3 id="114-configuration-infrastructure">11.4 Configuration &amp; Infrastructure</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="reference/architecture-decisions.html">architecture-decisions.html</a></td>
+<td>✅ Active</td>
+<td>10 ADRs documenting all key technical decisions</td>
+</tr>
+<tr>
+<td><a href="reference/data-source-progress.html">data-source-progress.html</a></td>
+<td>✅ Active</td>
+<td>Live data source status and performance metrics</td>
+</tr>
+<tr>
+<td><a href="reference/bugs.html">bugs.html</a></td>
+<td>✅ Active</td>
+<td>15-bug registry with root causes and fixes</td>
+</tr>
+<tr>
+<td><a href="reference/model-tuning.html">model-tuning.html</a></td>
+<td>✅ Active</td>
+<td>6-round model iteration experiments and results</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="annex-a-abbreviations-glossary">Annex A: Abbreviations &amp; Glossary</h2>
+<table>
+<thead>
+<tr>
+<th>Abbreviation</th>
+<th>Full Name</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>AHI</strong></td>
+<td>Advanced Himawari Imager</td>
+<td>The imaging sensor aboard Himawari-8/9 satellites, with 16 spectral bands</td>
+</tr>
+<tr>
+<td><strong>ADR</strong></td>
+<td>Architecture Decision Record</td>
+<td>A document recording a key technical design decision and its rationale</td>
+</tr>
+<tr>
+<td><strong>AMP</strong></td>
+<td>Automatic Mixed Precision</td>
+<td>PyTorch feature using float16 for faster GPU computation where possible</td>
+</tr>
+<tr>
+<td><strong>B08, B11, B13</strong></td>
+<td>AHI Band Numbers</td>
+<td>Specific spectral channels on the AHI sensor (see <a href="#21-three-generations-of-data-sources">§2.1</a> for detailed wavelength and purpose)</td>
+</tr>
+<tr>
+<td><strong>BT / TBB</strong></td>
+<td>Brightness Temperature</td>
+<td>Temperature in Kelvin inferred from infrared radiation; used as proxy for cloud-top height</td>
+</tr>
+<tr>
+<td><strong>C13</strong></td>
+<td>Channel 13 (ISatSS naming)</td>
+<td>Same physical measurement as B13, but in the ISatSS L2 product naming convention</td>
+</tr>
+<tr>
+<td><strong>CNN</strong></td>
+<td>Convolutional Neural Network</td>
+<td>Neural network architecture for spatial pattern recognition (used for satellite images)</td>
+</tr>
+<tr>
+<td><strong>EBS</strong></td>
+<td>Elastic Block Store</td>
+<td>AWS disk storage attached to EC2 instances</td>
+</tr>
+<tr>
+<td><strong>ENSO</strong></td>
+<td>El Niño-Southern Oscillation</td>
+<td>Climate cycle (3-7 years) that strongly influences Singapore's rainfall patterns</td>
+</tr>
+<tr>
+<td><strong>FTP</strong></td>
+<td>File Transfer Protocol</td>
+<td>Network protocol for file transfer; JAXA uses FTP over TLS for satellite data</td>
+</tr>
+<tr>
+<td><strong>GAP</strong></td>
+<td>Global Average Pooling</td>
+<td>Neural network layer that averages all spatial positions into a single vector</td>
+</tr>
+<tr>
+<td><strong>GCC</strong></td>
+<td>Government Commercial Cloud</td>
+<td>Singapore government's AWS cloud environment</td>
+</tr>
+<tr>
+<td><strong>GIL</strong></td>
+<td>Global Interpreter Lock</td>
+<td>Python mechanism that prevents true multi-threaded CPU parallelism</td>
+</tr>
+<tr>
+<td><strong>GPU</strong></td>
+<td>Graphics Processing Unit</td>
+<td>Hardware accelerator for neural network training (NVIDIA T4 in this project)</td>
+</tr>
+<tr>
+<td><strong>HSD</strong></td>
+<td>Himawari Standard Data</td>
+<td>Binary file format for Himawari satellite data (11 header blocks + data)</td>
+</tr>
+<tr>
+<td><strong>IDW</strong></td>
+<td>Inverse Distance Weighting</td>
+<td>Spatial interpolation method: closer stations have more influence on prediction</td>
+</tr>
+<tr>
+<td><strong>IR</strong></td>
+<td>Infrared</td>
+<td>Electromagnetic radiation with wavelength &gt; 0.7μm; used to measure temperature</td>
+</tr>
+<tr>
+<td><strong>ISatSS</strong></td>
+<td>International Satellite Sounding System</td>
+<td>NOAA's processed satellite product that converts raw measurements into physical values</td>
+</tr>
+<tr>
+<td><strong>JAXA</strong></td>
+<td>Japan Aerospace Exploration Agency</td>
+<td>Japanese space agency that operates Himawari-8/9 satellites</td>
+</tr>
+<tr>
+<td><strong>L1b / L2</strong></td>
+<td>Processing Level 1b / Level 2</td>
+<td>L1b = calibrated raw sensor data; L2 = derived physical measurements (e.g., temperature)</td>
+</tr>
+<tr>
+<td><strong>LSTM</strong></td>
+<td>Long Short-Term Memory</td>
+<td>Recurrent neural network architecture for learning time-series patterns</td>
+</tr>
+<tr>
+<td><strong>MAE</strong></td>
+<td>Mean Absolute Error</td>
+<td>Average of absolute differences between predictions and actual values</td>
+</tr>
+<tr>
+<td><strong>MJO</strong></td>
+<td>Madden-Julian Oscillation</td>
+<td>30-60 day tropical weather cycle affecting Singapore's rain patterns</td>
+</tr>
+<tr>
+<td><strong>NC / NetCDF</strong></td>
+<td>Network Common Data Form</td>
+<td>Scientific data file format commonly used for satellite and climate data</td>
+</tr>
+<tr>
+<td><strong>NEA</strong></td>
+<td>National Environment Agency</td>
+<td>Singapore government agency providing weather sensor data via API</td>
+</tr>
+<tr>
+<td><strong>NOAA</strong></td>
+<td>National Oceanic and Atmospheric Administration</td>
+<td>US agency that hosts Himawari data on AWS Open Data</td>
+</tr>
+<tr>
+<td><strong>OOM</strong></td>
+<td>Out of Memory</td>
+<td>System kills a process when it exceeds available RAM (Linux OOM Killer)</td>
+</tr>
+<tr>
+<td><strong>PM2.5</strong></td>
+<td>Particulate Matter ≤ 2.5μm</td>
+<td>Fine air pollution particles; measured in μg/m³</td>
+</tr>
+<tr>
+<td><strong>RMSE</strong></td>
+<td>Root Mean Square Error</td>
+<td>Square root of average of squared differences; penalizes large errors more than MAE</td>
+</tr>
+<tr>
+<td><strong>S3</strong></td>
+<td>Simple Storage Service</td>
+<td>AWS cloud object storage, used as the project's data lake</td>
+</tr>
+<tr>
+<td><strong>S0510 / S05</strong></td>
+<td>Segment 05 (10 sectors)</td>
+<td>One of 10 vertical strips of the Himawari full-disk image; covers 0°N~12°N including Singapore</td>
+</tr>
+<tr>
+<td><strong>SEGV</strong></td>
+<td>Segmentation Violation</td>
+<td>OS-level crash when a program accesses invalid memory (caused by fork-unsafe libraries)</td>
+</tr>
+<tr>
+<td><strong>SGT</strong></td>
+<td>Singapore Time (UTC+8)</td>
+<td>Local time zone used for sensor data; satellite data uses UTC</td>
+</tr>
+<tr>
+<td><strong>SPA</strong></td>
+<td>Single Page Application</td>
+<td>Web application architecture (React frontend in this project)</td>
+</tr>
+<tr>
+<td><strong>Spot Instance</strong></td>
+<td>AWS Spot Instance</td>
+<td>EC2 instances using spare AWS capacity at 60-90% discount; can be reclaimed with 2-min notice</td>
+</tr>
+<tr>
+<td><strong>TLS</strong></td>
+<td>Transport Layer Security</td>
+<td>Encryption protocol used for secure FTP connections to JAXA</td>
+</tr>
+<tr>
+<td><strong>UTC</strong></td>
+<td>Coordinated Universal Time</td>
+<td>Global time standard; satellite file timestamps use UTC</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<blockquote>
+<p><strong>Related Documents</strong>: <a href="reference/architecture-decisions.html">architecture-decisions.html</a> | <a href="reference/data-source-progress.html">data-source-progress.html</a> | <a href="reference/bugs.html">bugs.html</a> | <a href="reference/model-tuning.html">model-tuning.html</a> | <a href="reference/version.html">version.html</a></p>
+</blockquote>
+        <footer>Weather AI — Singapore Weather AI — Product Data Preparation Report — Generated 2026-02-14</footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

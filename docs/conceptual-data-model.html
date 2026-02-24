@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conceptual Data Model — Weather AI</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .mermaid {
+            max-width: none;
+            overflow-x: auto;
+            text-align: center;
+        }
+        .mermaid svg {
+            min-width: 1000px;
+        }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+            vertical-align: top;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        strong { color: var(--text); }
+
+        img {
+            max-width: 100%; height: auto; display: block;
+            margin: 2rem auto; padding: 1rem; background: #ffffff;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="conceptual-data-model-weather-ai">Conceptual Data Model — Weather AI</h1>
+<blockquote>
+<p><strong>Date</strong>: 2026-02-20 | <strong>Audience</strong>: Business Stakeholders &amp; Product Managers
+<strong>Core Principle</strong>: Pure business perspective. Describes the core business concepts and their relationships, stripping away all technical implementation details.</p>
+</blockquote>
+<hr />
+<h2 id="1-core-business-concepts-entities">1. Core Business Concepts (Entities)</h2>
+<p>This system is built upon the following <strong>4 core business concepts</strong>:</p>
+<ol>
+<li><strong>User</strong>: A person utilizing the weather forecast service to plan outdoor activities.</li>
+<li><strong>Activity</strong>: The outdoor action the user intends to perform (e.g., cycling, walking, delivery).</li>
+<li><strong>Place</strong>: The geographical area of interest where the activity will take place.</li>
+<li><strong>Forecast</strong>: The weather prediction delivered to the user for the chosen place and activity.</li>
+</ol>
+<hr />
+<h2 id="2-business-relationships">2. Business Relationships</h2>
+<ul>
+<li>A <strong>User</strong> performs one or more <strong>Activities</strong>.</li>
+<li>An <strong>Activity</strong> takes place at a <strong>Place</strong>.</li>
+<li>A <strong>Place</strong> receives a <strong>Forecast</strong>.</li>
+<li>A <strong>User</strong> requests a <strong>Forecast</strong>.</li>
+</ul>
+<div class="mermaid">
+erDiagram
+    USER ||--o{ ACTIVITY : "performs"
+    ACTIVITY ||--|| PLACE : "takes place at"
+    PLACE ||--o{ FORECAST : "receives"
+    USER ||--o{ FORECAST : "requests"
+</div>
+
+<hr />
+<h2 id="3-key-metrics-and-business-rules">3. Key Metrics and Business Rules</h2>
+<p>The core business value proposition of this system is <strong>"Accuracy"</strong>. To define what "accurate" means, the business has established the following evaluation metrics:</p>
+<ul>
+<li><strong>Hit Rate</strong>: The percentage of times rain was forecasted and it actually rained.</li>
+<li><strong>False Alarm Rate</strong>: The percentage of times rain was forecasted but it did not actually rain.</li>
+<li><strong>Time Error</strong>: The deviation between the forecasted rain start time and the actual rain start time.</li>
+</ul>
+        <footer>Weather AI — Conceptual Data Model — Weather AI — Generated 2026-02-14</footer>
+    </div>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        
+        mermaid.registerIconPacks([
+            { name: 'logos', loader: () => fetch('https://unpkg.com/@iconify-json/logos@1/icons.json').then(res => res.json()) },
+            { name: 'mdi', loader: () => fetch('https://unpkg.com/@iconify-json/mdi@1/icons.json').then(res => res.json()) }
+        ]);
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

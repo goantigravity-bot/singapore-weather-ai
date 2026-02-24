@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Version History</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.3rem; color: var(--text-muted); }
+        strong { color: var(--text); }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="version-history">Version History</h1>
+<h2 id="v0110-2026-02-17">v0.11.0 (2026-02-17)</h2>
+<p><strong>Telegram 通知集成 + GCC 账号 Terraform + 多通道下载优化</strong></p>
+<ul>
+<li>🔔 Telegram Bot 集成 (@WeatherAIAlertBot): rain alert, system alert, test message</li>
+<li>🏗️ GCC AWS 账号 Terraform 配置 (<code>infra/terraform-gcc/</code>)</li>
+<li>⚡ HSD 解析器替代 satpy (10x 性能提升)</li>
+<li>📡 <code>download_aws_satellite.py</code> 多通道 3ch 下载</li>
+<li>🌡️ 传感器数据下载和预处理</li>
+<li>🧠 单站点模型训练框架</li>
+<li>📝 TODO 清单、架构决策文档、英文模型调优报告</li>
+</ul>
+<h2 id="v0100-2026-02-17">v0.10.0 (2026-02-17)</h2>
+<p><strong>文档整理 + NOAA 数据源迁移 + 模型优化实验</strong></p>
+<h2 id="v091-2026-02-15">v0.9.1 (2026-02-15)</h2>
+<p><strong>风场动画 + 卫星云图叠加</strong></p>
+<ul>
+<li>🌬️ Canvas 粒子动画风场可视化 (IDW 插值)</li>
+<li>☁️ 卫星云图叠加动画</li>
+</ul>
+<h2 id="v090-2026-02-14">v0.9.0 (2026-02-14)</h2>
+<p><strong>基础设施修复 + 数据管道报告 + 下载并行化</strong></p>
+<ul>
+<li>实时传感器数据抓取 + 时间参数化预测 API</li>
+<li>WeightedRandomSampler 平衡雨/晴训练批次</li>
+<li>性能测试 v2 + 精度 API 优化</li>
+</ul>
+<h2 id="v080-2026-02-12">v0.8.0 (2026-02-12)</h2>
+<p><strong>预测 vs 实际闭环</strong></p>
+<ul>
+<li>数据存储 schema: forecast_result + actual_result</li>
+<li>ER 图文档更新</li>
+<li>文件锁 + 单 worker 收集器</li>
+</ul>
+<h2 id="v070-2026-02-10">v0.7.0 (2026-02-10)</h2>
+<p><strong>SQLite 缓存层 + ThreadPool 并行推理</strong></p>
+<h2 id="v061-2026-02-09">v0.6.1 (2026-02-09)</h2>
+<p><strong>服务独立环境配置</strong></p>
+<h2 id="v060-2026-02-08">v0.6.0 (2026-02-08)</h2>
+<p><strong>修复训练管道 + API 日志增强</strong></p>
+<ul>
+<li>训练流水线 7 个 bug 修复</li>
+<li>Vitest 测试框架</li>
+<li>邮件通知多收件人 (CC_EMAILS)</li>
+</ul>
+<h2 id="v050-2026-02-05">v0.5.0 (2026-02-05)</h2>
+<p><strong>AWS 部署 + 本地开发改进</strong></p>
+<ul>
+<li>CloudFront API 代理</li>
+<li>PM2.5 数据集成</li>
+<li>自动化训练管线</li>
+<li>监控仪表盘 + 并行下载优化</li>
+</ul>
+<h2 id="v040-2026-02-03">v0.4.0 (2026-02-03)</h2>
+<p><strong>传感器半径限制 + 日志重构</strong></p>
+<ul>
+<li>强制 10km 半径限制</li>
+<li>print → logging 重构</li>
+</ul>
+<h2 id="v030-2026-02-02">v0.3.0 (2026-02-02)</h2>
+<p><strong>Landmark Path 功能</strong></p>
+<ul>
+<li>智能路径搜索</li>
+</ul>
+<h2 id="v020-2026-02-01">v0.2.0 (2026-02-01)</h2>
+<p><strong>热门搜索 + 统计页面 + 移动端</strong></p>
+<h2 id="v010-2026-01-26">v0.1.0 (2026-01-26)</h2>
+<p><strong>初始版本</strong></p>
+<ul>
+<li>全栈实现: React + FastAPI</li>
+<li>预测 API + 批量预测</li>
+<li>新加坡天气 AI 系统初始提交</li>
+</ul>
+        <footer>Weather AI — Version History — Generated 2026-02-14</footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

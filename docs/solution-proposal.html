@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Proposal — Singapore Weather AI</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .mermaid {
+            max-width: none;
+            overflow-x: auto;
+            text-align: center;
+        }
+        .mermaid svg {
+            min-width: 1000px;
+        }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+            vertical-align: top;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        strong { color: var(--text); }
+
+        img {
+            max-width: 100%; height: auto; display: block;
+            margin: 2rem auto; padding: 1rem; background: #ffffff;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="solution-proposal-singapore-weather-ai">Solution Proposal — Singapore Weather AI</h1>
+<blockquote>
+<p><strong>Team</strong>: Jin Hui | <strong>Date</strong>: 2026-02-20 | <strong>Capstone Project</strong></p>
+</blockquote>
+<hr />
+<h2 id="1-overall-solution-proposal">1. Overall Solution Proposal</h2>
+<h3 id="11-solution-architectural-overview">1.1 Solution Architectural Overview</h3>
+<p>The team proposes a <strong>Data Engineering Solution</strong> built on AWS to ingest, process, and serve hyper-local weather intelligence for Singapore. The overall software architecture follows a <strong>Medallion Architecture (Bronze → Silver → Gold)</strong> pattern deployed across managed AWS services.</p>
+<p><strong>Architecture Components:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Service</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>External Data Sources</strong></td>
+<td>NOAA AWS Open Data (Himawari-9 satellite), NEA data.gov.sg APIs</td>
+<td>Raw weather data providers</td>
+</tr>
+<tr>
+<td><strong>Ingestion</strong></td>
+<td>EC2 Download Server</td>
+<td>Downloads satellite HSD files (.bz2, 3 bands: B08, B11, B13) and NEA JSON (Temp, Rain, Humidity, PM2.5, Wind)</td>
+</tr>
+<tr>
+<td><strong>Bronze (Raw/Archived)</strong></td>
+<td>S3 Bucket</td>
+<td>Stores raw, unprocessed satellite and sensor data</td>
+</tr>
+<tr>
+<td><strong>Processing</strong></td>
+<td>EC2 GPU Training Server</td>
+<td>PyTorch distributed training, outputs model checkpoints</td>
+</tr>
+<tr>
+<td><strong>Silver (Processed)</strong></td>
+<td>S3 Bucket</td>
+<td>Cleaned .npy arrays and CSV feature files ready for consumption</td>
+</tr>
+<tr>
+<td><strong>Gold (Trained Model)</strong></td>
+<td>S3 Bucket</td>
+<td>Production-grade model artifacts (latest.pth)</td>
+</tr>
+<tr>
+<td><strong>Serving</strong></td>
+<td>EC2 API Server (FastAPI)</td>
+<td>Real-time prediction API with SQLite read/write cache</td>
+</tr>
+<tr>
+<td><strong>NLU</strong></td>
+<td>Google Gemini API</td>
+<td>Parses free-text user queries into structured intent</td>
+</tr>
+<tr>
+<td><strong>CDN</strong></td>
+<td>Amazon CloudFront</td>
+<td>HTTPS proxy and caching for REST API and frontend assets</td>
+</tr>
+<tr>
+<td><strong>Frontend</strong></td>
+<td>React SPA (S3 + CloudFront)</td>
+<td>Interactive weather map for end users</td>
+</tr>
+<tr>
+<td><strong>Analytics</strong></td>
+<td>Databricks / Snowflake</td>
+<td>Consumes Silver-tier performance data for BI dashboards and model evaluation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture Diagram:</strong></p>
+<p><img alt="AWS Data-Driven Architecture" src="aws-architecture.png" /></p>
+<hr />
+<h3 id="12-project-plan-and-task">1.2 Project Plan and Task</h3>
+<p>Over the course of the Capstone Delivery, team members will be assigned different tasks. The following states the expected project timeline and tasks:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Timeline</th>
+<th>Tasks</th>
+<th>Deliverables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Phase 1: Data Ingestion</strong></td>
+<td>Week 1–2</td>
+<td>Set up S3 buckets (Bronze/Silver/Gold), build satellite download scripts, configure NEA API data fetch</td>
+<td>Working data pipeline, S3 folder structure</td>
+</tr>
+<tr>
+<td><strong>Phase 2: Data Processing</strong></td>
+<td>Week 3–4</td>
+<td>Build HSD parser, numpy array converter, feature engineering scripts</td>
+<td>Processed .npy and CSV files in Silver bucket</td>
+</tr>
+<tr>
+<td><strong>Phase 3: Model Training</strong></td>
+<td>Week 5–6</td>
+<td>Train PyTorch weather prediction model on GPU instance, evaluate MAE/RMSE</td>
+<td>Trained model artifact in Gold bucket</td>
+</tr>
+<tr>
+<td><strong>Phase 4: API &amp; Serving</strong></td>
+<td>Week 7–8</td>
+<td>Deploy FastAPI prediction server, integrate Gemini NLU, set up CloudFront</td>
+<td>Live REST API endpoint</td>
+</tr>
+<tr>
+<td><strong>Phase 5: Frontend &amp; Dashboard</strong></td>
+<td>Week 9–10</td>
+<td>Build React weather map, integrate real-time satellite overlay and wind animation</td>
+<td>Deployed frontend application</td>
+</tr>
+<tr>
+<td><strong>Phase 6: Analytics &amp; Reporting</strong></td>
+<td>Week 11–12</td>
+<td>Set up Databricks/Snowflake, create performance dashboards, final documentation</td>
+<td>BI dashboards, final report</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="13-methodology">1.3 Methodology</h3>
+<p>The team adopts the <strong>Medallion Architecture</strong> as the core methodology for managing the lifecycle of data:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Naming Convention</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bronze</strong></td>
+<td><code>{source}/{YYYYMMDD}/raw_filename.ext</code></td>
+<td>Raw, immutable archive of source data exactly as received</td>
+<td><code>satellite/20260220/HS_H09_20260220_0300_B13_FLDK_R20_S0110.DAT.bz2</code></td>
+</tr>
+<tr>
+<td><strong>Silver</strong></td>
+<td><code>{domain}/{YYYYMMDD}/{TYPE}_{BAND}_{YYYYMMDD}_{HHMM}.npy</code></td>
+<td>Parsed, cleaned, and standardized data ready for analysis</td>
+<td><code>processed/satellite/20260220/SAT_B13_20260220_0300.npy</code></td>
+</tr>
+<tr>
+<td><strong>Gold</strong></td>
+<td><code>models/latest.pth</code></td>
+<td>Final, consumption-ready business artifacts</td>
+<td>Trained PyTorch model weights</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Data Transformation Rules:</strong>
+1. <strong>Bronze → Silver</strong>: HSD binary decompression → numpy array extraction → coordinate cropping to Singapore bounding box → 10-min interval alignment
+2. <strong>Silver → Gold</strong>: Multi-day feature stacking → PyTorch DataLoader batching → GPU training → model checkpoint selection by best validation MAE</p>
+<hr />
+<h2 id="2-data-source">2. Data Source</h2>
+<h3 id="21-datasets-info">2.1 Datasets Info</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Data Source</th>
+<th>Data Size</th>
+<th>No. of Records</th>
+<th>Data Type</th>
+<th>Key Data Fields</th>
+<th>Change Data Capture</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>NOAA AWS Open Data</strong> (Himawari-9 Satellite)</td>
+<td>~500 MB/day (3 bands × 144 intervals)</td>
+<td>~432 files/day</td>
+<td>Binary HSD (.bz2)</td>
+<td>Band (B08/B11/B13), Timestamp, Lat/Lon grid, Brightness temperature</td>
+<td>Append-only, new files every 10 minutes</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>NEA data.gov.sg — Rainfall</strong></td>
+<td>~50 KB/call</td>
+<td>~50 stations per call</td>
+<td>JSON</td>
+<td>station_id, timestamp, rainfall_mm</td>
+<td>Polling every 5 minutes</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>NEA data.gov.sg — Temperature</strong></td>
+<td>~50 KB/call</td>
+<td>~50 stations per call</td>
+<td>JSON</td>
+<td>station_id, timestamp, temperature_°C</td>
+<td>Polling every 5 minutes</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>NEA data.gov.sg — Humidity</strong></td>
+<td>~50 KB/call</td>
+<td>~50 stations per call</td>
+<td>JSON</td>
+<td>station_id, timestamp, relative_humidity_%</td>
+<td>Polling every 5 minutes</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>NEA data.gov.sg — Wind</strong></td>
+<td>~50 KB/call</td>
+<td>~50 stations per call</td>
+<td>JSON</td>
+<td>station_id, timestamp, wind_speed_knots, wind_direction_°</td>
+<td>Polling every 5 minutes</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>NEA data.gov.sg — PM2.5</strong></td>
+<td>~20 KB/call</td>
+<td>~5 regions per call</td>
+<td>JSON</td>
+<td>region, timestamp, pm25_µg/m³</td>
+<td>Polling every 1 hour</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>User Query Logs</strong> (Internal)</td>
+<td>~1 KB/record</td>
+<td>Growing (~100/day)</td>
+<td>SQLite → CSV</td>
+<td>query_id, query_text, ip_address, response_time_ms, forecast_outcome</td>
+<td>Append-only, real-time</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-security-design">2.2 Security Design</h3>
+<p>The following section describes the security access design and data masking strategy:</p>
+<p><strong>Access Control:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Access Policy</th>
+<th>Who Can Access</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>S3 Bronze/Silver/Gold</strong></td>
+<td>IAM Role-based, bucket policies</td>
+<td>Download Server (write), Training Server (read/write), API Server (read)</td>
+</tr>
+<tr>
+<td><strong>API Server (FastAPI)</strong></td>
+<td>CloudFront origin access, no direct public IP</td>
+<td>End users via HTTPS only</td>
+</tr>
+<tr>
+<td><strong>SQLite Cache</strong></td>
+<td>Local file-system only, no remote access</td>
+<td>API Server process only</td>
+</tr>
+<tr>
+<td><strong>Databricks / Snowflake</strong></td>
+<td>Cross-account IAM Role with read-only S3 access</td>
+<td>Data Science team</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Data Masking &amp; Privacy:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Data Field</th>
+<th>Sensitivity</th>
+<th>Masking Strategy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ip_address</code></td>
+<td>PII (Personal)</td>
+<td>Hashed using SHA-256 before storage; original IP never persisted in Silver/Gold layers</td>
+</tr>
+<tr>
+<td><code>query_text</code></td>
+<td>Low sensitivity</td>
+<td>Retained for NLU analysis; no personal identifiers expected</td>
+</tr>
+<tr>
+<td>AWS Access Keys</td>
+<td>Secret</td>
+<td>Stored in environment variables / AWS Secrets Manager; never hardcoded in source code</td>
+</tr>
+<tr>
+<td>Databricks PAT Token</td>
+<td>Secret</td>
+<td>Stored in Databricks Secret Scope; rotated every 90 days</td>
+</tr>
+</tbody>
+</table>
+        <footer>Weather AI — Solution Proposal — Singapore Weather AI — Generated 2026-02-14</footer>
+    </div>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        
+        mermaid.registerIconPacks([
+            { name: 'logos', loader: () => fetch('https://unpkg.com/@iconify-json/logos@1/icons.json').then(res => res.json()) },
+            { name: 'mdi', loader: () => fetch('https://unpkg.com/@iconify-json/mdi@1/icons.json').then(res => res.json()) }
+        ]);
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

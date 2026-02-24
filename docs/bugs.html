@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singapore Weather AI — Bug Registry</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.3rem; color: var(--text-muted); }
+        strong { color: var(--text); }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="singapore-weather-ai-bug-registry">Singapore Weather AI — Bug Registry</h1>
+<blockquote>
+<p><strong>Consolidated</strong>: 2026-02-16</p>
+</blockquote>
+<hr />
+<h2 id="summary">Summary</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Date</th>
+<th>Severity</th>
+<th>Status</th>
+<th>Title</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BUG-001</td>
+<td>2026-02-07</td>
+<td>Critical</td>
+<td>✅ Fixed</td>
+<td>Training completes in 0.1s with 0 samples</td>
+</tr>
+<tr>
+<td>BUG-002</td>
+<td>2026-02-07</td>
+<td>Critical</td>
+<td>✅ Fixed</td>
+<td>Sensor data source mismatch</td>
+</tr>
+<tr>
+<td>BUG-003</td>
+<td>2026-02-07</td>
+<td>Critical</td>
+<td>✅ Fixed</td>
+<td>Off-by-one loop condition</td>
+</tr>
+<tr>
+<td>BUG-004</td>
+<td>2026-02-07</td>
+<td>Medium</td>
+<td>✅ Fixed</td>
+<td>PyTorch <code>verbose</code> deprecation</td>
+</tr>
+<tr>
+<td>BUG-005</td>
+<td>2026-02-07</td>
+<td>Medium</td>
+<td>✅ Fixed</td>
+<td>S3 sync warning misclassified as error</td>
+</tr>
+<tr>
+<td>BUG-006</td>
+<td>2026-02-07</td>
+<td>High</td>
+<td>✅ Fixed</td>
+<td>Redundant JAXA FTP download in training</td>
+</tr>
+<tr>
+<td>BUG-007</td>
+<td>2026-02-07</td>
+<td>Low</td>
+<td>✅ Fixed</td>
+<td>Email notification epoch count hardcoded</td>
+</tr>
+<tr>
+<td>BUG-008</td>
+<td>2026-02-07</td>
+<td>Low</td>
+<td>✅ Fixed</td>
+<td>Training log buffered (not real-time)</td>
+</tr>
+<tr>
+<td>BUG-009</td>
+<td>2026-02-14</td>
+<td>Critical</td>
+<td>✅ Fixed</td>
+<td>API server disk exhaustion (satellite cleanup TODO)</td>
+</tr>
+<tr>
+<td>BUG-010</td>
+<td>2026-02-14</td>
+<td>Critical</td>
+<td>✅ Fixed</td>
+<td>Empty dataset training loop (incomplete .npy)</td>
+</tr>
+<tr>
+<td>BUG-011</td>
+<td>2026-02-14</td>
+<td>Medium</td>
+<td>✅ Fixed</td>
+<td>API downloads raw .nc instead of processed .npy</td>
+</tr>
+<tr>
+<td>BUG-012</td>
+<td>2026-02-14</td>
+<td>Critical</td>
+<td>🔴 Open</td>
+<td>Timezone mismatch in actual_collector JOIN</td>
+</tr>
+<tr>
+<td>BUG-013</td>
+<td>2026-02-14</td>
+<td>Medium</td>
+<td>🔴 Open</td>
+<td>Negative rainfall predictions (model output unclamped)</td>
+</tr>
+<tr>
+<td>BUG-014</td>
+<td>2026-02-14</td>
+<td>Low</td>
+<td>🟡 Won't Fix</td>
+<td>Choa Chu Kang benchmark outside 2km range</td>
+</tr>
+<tr>
+<td>BUG-015</td>
+<td>2026-02-16</td>
+<td>Medium</td>
+<td>✅ Fixed</td>
+<td>ProcessPoolExecutor SEGV with netCDF4 under systemd</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="bug-001-008-training-pipeline-failures-2026-02-07">BUG-001 ~ 008: Training Pipeline Failures (2026-02-07)</h2>
+<p><strong>Root cause</strong>: 7 bugs combined to make training report "complete in 0.1s" with 0 actual learning.</p>
+<table>
+<thead>
+<tr>
+<th>Bug</th>
+<th>File</th>
+<th>Issue</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BUG-002: Sensor source</td>
+<td><code>train_rolling_window.py</code></td>
+<td>Called NEA API (returns 2026-01) instead of downloaded govdata JSON (2025-10)</td>
+<td>Use <code>convert_govdata_to_csv.py</code> for local JSON</td>
+</tr>
+<tr>
+<td>BUG-003: Off-by-one</td>
+<td><code>train_rolling_window.py</code></td>
+<td><code>while current &lt; end</code> skips single-day batches (<code>start == end</code>)</td>
+<td>Changed to <code>&lt;=</code></td>
+</tr>
+<tr>
+<td>BUG-004: PyTorch API</td>
+<td><code>train.py</code></td>
+<td><code>ReduceLROnPlateau(verbose=True)</code> removed in PyTorch 2.x</td>
+<td>Removed parameter</td>
+</tr>
+<tr>
+<td>BUG-005: S3 warning</td>
+<td><code>training_scheduler.py</code></td>
+<td><code>aws s3 sync</code> warning → non-zero exit → false failure</td>
+<td>Parse stderr for actual errors only</td>
+</tr>
+<tr>
+<td>BUG-006: Redundant FTP</td>
+<td><code>train_rolling_window.py</code></td>
+<td>Re-downloaded from JAXA FTP after scheduler already had data on S3</td>
+<td>Removed duplicate download step</td>
+</tr>
+<tr>
+<td>BUG-007: Hardcoded epochs</td>
+<td><code>notification.py</code></td>
+<td>Email shows 100 epochs when early stopping at 10</td>
+<td>Read actual from <code>training_metrics.json</code></td>
+</tr>
+<tr>
+<td>BUG-008: Log buffering</td>
+<td><code>train_rolling_window.py</code></td>
+<td><code>train.py</code> stdout buffered in subprocess</td>
+<td>Added <code>PYTHONUNBUFFERED=1</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verification</strong>:</p>
+<div class="highlight"><pre><span></span><code>修复前: Training Complete in 0.1s  (0 batches, 0 samples)
+修复后: Training Complete in 270s (547 batches, 10 epochs)
+       Epoch [1/10] Time: 27.4s | Loss: 0.4296 | Val Loss: 0.1348
+</code></pre></div>
+
+<hr />
+<h2 id="bug-009-api-disk-exhaustion-2026-02-14">BUG-009: API Disk Exhaustion (2026-02-14) ✅</h2>
+<p><strong>Severity</strong>: Critical</p>
+<p><code>sync_satellite_data()</code> downloaded raw .nc (~700MB/day) but cleanup was <code># TODO</code>. Disk hit 96% (914MB free).</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># api.py L175-176 (before fix)</span>
+<span class="c1"># Cleanup old files (&gt; 6 hours)</span>
+<span class="c1"># TODO: Implement strict cleanup to avoid disk fill</span>
+</code></pre></div>
+
+<p><strong>Fix</strong>: Added 3-hour cleanup window based on filename timestamp (not <code>os.stat</code> mtime — filename is the true data time).</p>
+<div class="highlight"><pre><span></span><code>修复前: 磁盘 95% (914MB free), satellite_data/ = 8.8GB
+修复后: 磁盘 50% (9.8GB free), satellite_data/ = 16KB
+</code></pre></div>
+
+<hr />
+<h2 id="bug-010-empty-dataset-training-loop-2026-02-14">BUG-010: Empty Dataset Training Loop (2026-02-14) ✅</h2>
+<p><strong>Severity</strong>: Critical</p>
+<p>Training scheduler stuck on <code>2026-01-05</code>, failing every ~3 minutes with email spam:</p>
+<div class="highlight"><pre><span></span><code>ValueError: Dataset is empty (0 samples)
+</code></pre></div>
+
+<p><strong>Root cause chain</strong>:</p>
+<div class="highlight"><pre><span></span><code>143 complete raw .nc on S3
+  → but only 12 .npy (partial preprocess, SGT 01:40-03:30 only)
+    → scheduler detects .npy, takes fast path (skips full-day reprocess)
+      → 12 .npy cover midnight window only
+        → nighttime sensor data extremely sparse
+          → 0 valid aligned samples → ValueError → retry loop
+</code></pre></div>
+
+<p><strong>Fix</strong>: Delete incomplete .npy from S3, force full re-preprocess from 143 raw .nc.</p>
+<hr />
+<h2 id="bug-011-raw-nc-instead-of-processed-npy-2026-02-14">BUG-011: Raw .nc Instead of Processed .npy (2026-02-14) ✅</h2>
+<p><strong>Severity</strong>: Medium (optimization)</p>
+<p>API server downloaded raw <code>.nc</code> (5MB each, ~700MB/day) for inference when it only needs the cropped Singapore 64×64 matrix. Root cause of BUG-009.</p>
+<p><strong>Fix</strong>: Changed <code>sync_satellite_data()</code> to sync <code>.npy</code> from <code>processed/satellite/</code> (~16KB each, ~2.3MB/day).</p>
+<hr />
+<h2 id="bug-012-timezone-mismatch-in-actual_collector-2026-02-14">BUG-012: Timezone Mismatch in actual_collector (2026-02-14) 🔴</h2>
+<p><strong>Severity</strong>: Critical</p>
+<p>All 5 accuracy endpoints (<code>/accuracy/summary</code>, etc.) return <code>sample_count: 0</code> despite data existing.</p>
+<p><strong>Root cause</strong>: NEA API returns <code>observation_time</code> with timezone offset (<code>2026-02-14T21:15:00+08:00</code>). SQLite <code>julianday()</code> returns NULL for this format — no error raised, JOIN silently matches 0 rows.</p>
+<div class="highlight"><pre><span></span><code>forecast_result.forecast_time  = &#39;2026-02-14 21:21:13&#39;       ← naive ✅
+actual_result.observation_time = &#39;2026-02-14T21:15:00+08:00&#39;  ← offset ❌
+</code></pre></div>
+
+<p><strong>Proposed fix</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_normalize_timestamp</span><span class="p">(</span><span class="n">ts</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Strip timezone for SQLite julianday() compatibility&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%S%z&quot;</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%S&quot;</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">fmt</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">continue</span>
+    <span class="k">return</span> <span class="n">ts</span><span class="p">[:</span><span class="mi">19</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Impact</strong>: All historically collected <code>actual_result</code> data has invalid timestamps — needs retroactive SQL UPDATE.</p>
+<hr />
+<h2 id="bug-013-negative-rainfall-predictions-2026-02-14">BUG-013: Negative Rainfall Predictions (2026-02-14) 🔴</h2>
+<p><strong>Severity</strong>: Medium</p>
+<p>Model produces negative values (e.g., -6.34mm, -6.70mm). Physically impossible for rainfall.</p>
+<p><strong>Proposed fix</strong>: <code>rainfall_mm = max(0.0, raw_prediction)</code> in <code>predict.py</code></p>
+<p><strong>Impact</strong>: Distorts MAE/bias in accuracy endpoints; confuses <code>status</code> field mapping.</p>
+<hr />
+<h2 id="bug-014-choa-chu-kang-benchmark-2026-02-14">BUG-014: Choa Chu Kang Benchmark (2026-02-14) 🟡</h2>
+<p><strong>Severity</strong>: Low — <strong>Won't Fix</strong></p>
+<p>Benchmark coords 3.2km from nearest NEA station (exceeds 2km <code>MAX_MATCH_DISTANCE_KM</code>). 9/10 locations match successfully.</p>
+<p><strong>Decision</strong>: 2km threshold is intentional for accuracy. Consider replacing with Jurong West or Bukit Timah.</p>
+<hr />
+<h2 id="bug-015-processpoolexecutor-segv-2026-02-16">BUG-015: ProcessPoolExecutor SEGV (2026-02-16) ✅</h2>
+<p><strong>Severity</strong>: Medium</p>
+<p>netCDF4 library is not fork-safe. <code>ProcessPoolExecutor</code> in <code>download_manager.py</code> caused SEGV in child processes under systemd.</p>
+<p><strong>Fix</strong>: Reverted to serial download for backfill stability. ~6s/frame, ~14 min/day.</p>
+<hr />
+<h2 id="lessons-learned">Lessons Learned</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Lesson</th>
+<th>Related</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>TODO ≠ done</strong> — critical cleanup must be implemented immediately</td>
+<td>BUG-009</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Data pipeline must be end-to-end aligned</strong> — download and training must use same data source</td>
+<td>BUG-002</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Boundary conditions</strong> — <code>start == end</code> is a common edge case</td>
+<td>BUG-003</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Silent failures are the worst</strong> — <code>julianday()</code> returns NULL without error</td>
+<td>BUG-012</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Background threads need monitoring</strong> — invisible disk growth, email storms</td>
+<td>BUG-009/010</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Subprocess exit codes lie</strong> — warnings ≠ errors for <code>aws s3 sync</code></td>
+<td>BUG-005</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Fork-safety matters</strong> — netCDF4 + ProcessPool = SEGV</td>
+<td>BUG-015</td>
+</tr>
+</tbody>
+</table>
+        <footer>Weather AI — Singapore Weather AI — Bug Registry — Generated 2026-02-14</footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

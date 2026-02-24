@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture Decision Record (ADR)</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.3rem; color: var(--text-muted); }
+        strong { color: var(--text); }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="architecture-decision-record-adr">Architecture Decision Record (ADR)</h1>
+<p>本文档记录 Weather AI 项目中的关键技术决策，方便团队回溯设计意图。</p>
+<hr />
+<h2 id="adr-001">ADR-001: 多通道卫星波段选择</h2>
+<p><strong>日期</strong>: 2025-02-17
+<strong>状态</strong>: 已采纳</p>
+<h3 id="_1">决策</h3>
+<p>使用 <strong>B08 + B11 + B13</strong> 三个 AHI 波段作为模型输入。</p>
+<h3 id="_2">背景</h3>
+<p>Himawari-8/9 AHI 传感器有 16 个波段，需要选择与降雨预测最相关的 3 个。</p>
+<h3 id="_3">考虑的方案</h3>
+<table>
+<thead>
+<tr>
+<th>波段</th>
+<th>波长</th>
+<th>信息</th>
+<th>选中</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B08</td>
+<td>6.2μm</td>
+<td>高层水汽 → 大气湿度</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B11</td>
+<td>8.6μm</td>
+<td>云相态（冰晶 vs 水滴）→ 区分积雨云和卷云</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B13</td>
+<td>10.4μm</td>
+<td>Clean IR Window → 云顶高度/对流强度</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B14</td>
+<td>11.2μm</td>
+<td>IR Longwave → 与 B13 高度相关，信息冗余</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_4">理由</h3>
+<ul>
+<li>B14 与 B13 相关性极高，替换为 B11 可获得独立信息维度</li>
+<li>B11 对冰/水相态敏感，可区分积雨云（降雨）和卷云（不降雨）</li>
+<li>3 通道组合覆盖：湿度 + 云类型 + 云高度</li>
+</ul>
+<hr />
+<h2 id="adr-002-resize">ADR-002: 保留原始分辨率，不 Resize</h2>
+<p><strong>日期</strong>: 2025-02-17
+<strong>状态</strong>: 已采纳</p>
+<h3 id="_5">决策</h3>
+<p>裁剪后的卫星图保持原始分辨率 <strong>(41×37)</strong>，不 resize 到 128×128。</p>
+<h3 id="_6">理由</h3>
+<ul>
+<li>避免 bilinear 插值引入伪影</li>
+<li>模型 <code>AdaptiveAvgPool2d</code> 已支持任意输入尺寸</li>
+<li>41×37 ≈ 1,500 像素 vs 128×128 = 16,384 像素，计算量降低 ~10 倍</li>
+</ul>
+<hr />
+<h2 id="adr-003-crop-patch">ADR-003: 全图入模型，不 Crop Patch</h2>
+<p><strong>日期</strong>: 2025-02-17
+<strong>状态</strong>: 已采纳</p>
+<h3 id="_7">决策</h3>
+<p>所有气象站共享同一张 41×37 全图（覆盖新加坡+柔佛新山），通过 <code>coord</code> 输入传递站点位置。</p>
+<h3 id="_8">旧方案</h3>
+<p>每个站从 128×128 图裁 32×32 patch（仅看头顶 ~10km）。</p>
+<h3 id="_9">新方案优势</h3>
+<ul>
+<li>CNN 能看到 ~70km 范围内正在逼近的云团</li>
+<li>热带对流降雨的云团经常从周边移过来，只看头顶会错过</li>
+<li><code>coord</code> 让模型自学空间关系，比硬裁剪更灵活</li>
+</ul>
+<hr />
+<h2 id="adr-004-aws-open-data">ADR-004: 数据源选择 AWS Open Data</h2>
+<p><strong>日期</strong>: 2025-02-17
+<strong>状态</strong>: 已采纳</p>
+<h3 id="_10">决策</h3>
+<p>使用 AWS Open Data S3 (<code>noaa-himawari8/9</code>) 下载 L1b HSD 文件，而非 JAXA FTP。</p>
+<h3 id="_11">理由</h3>
+<ul>
+<li>Download server 在 AWS 同区域，S3 传输速度远快于跨洋 FTP</li>
+<li>S3 支持并行下载，无连接数限制</li>
+<li>免费无需认证（<code>UNSIGNED</code> config）</li>
+</ul>
+<hr />
+<h2 id="adr-005-s3">ADR-005: 处理后上传 S3 并删本地</h2>
+<p><strong>日期</strong>: 2025-02-17
+<strong>状态</strong>: 已采纳</p>
+<h3 id="_12">决策</h3>
+<p>卫星数据 <code>保存本地 → 上传 S3 → 删除本地文件</code>，skip 判断通过 <code>head_object</code> 检查 S3。</p>
+<h3 id="_13">理由</h3>
+<ul>
+<li>Download server 磁盘空间有限（~8GB 可用）</li>
+<li>全量 ~97 万文件约 6GB，会耗尽磁盘</li>
+<li>S3 存储便宜且持久</li>
+</ul>
+<h3 id="_14">存储路径</h3>
+<div class="highlight"><pre><span></span><code>s3://weather-ai-models-de08370c/processed/satellite-3ch/
+  SAT_B08_YYYYMMDD_HHMM.npy
+  SAT_B11_YYYYMMDD_HHMM.npy
+  SAT_B13_YYYYMMDD_HHMM.npy
+</code></pre></div>
+
+<hr />
+<h2 id="adr-006">ADR-006: 裁剪区域扩展到柔佛新山</h2>
+<p><strong>日期</strong>: 2025-02-17
+<strong>状态</strong>: 已采纳</p>
+<h3 id="_15">决策</h3>
+<p>卫星裁剪区域从仅新加坡扩展到 <strong>新加坡 + 柔佛新山</strong>。</p>
+<h3 id="_16">坐标</h3>
+<div class="highlight"><pre><span></span><code>SG_LON_MIN = 103.5   SG_LON_MAX = 104.2
+SG_LAT_MIN = 1.10    SG_LAT_MAX = 1.70
+</code></pre></div>
+
+<h3 id="_17">理由</h3>
+<ul>
+<li>柔佛方向的云团是新加坡北部降雨的主要来源之一</li>
+<li>扩大视野有助于模型学习云团移动趋势</li>
+</ul>
+<hr />
+<h2 id="adr-007-segment-s05">ADR-007: 只下载 Segment S05</h2>
+<p><strong>日期</strong>: 2025-02-17
+<strong>状态</strong>: 已采纳</p>
+<h3 id="_18">决策</h3>
+<p>Himawari 全盘有 10 个 segment，只下载 <strong>S0510</strong>（12°N ~ 0°N）。</p>
+<h3 id="_19">理由</h3>
+<ul>
+<li>新加坡 (1.3°N) 仅在 S05 段内</li>
+<li>每个 segment ~3MB（3 波段），全盘 ~30MB，节省 90% 下载量</li>
+</ul>
+<hr />
+<h2 id="adr-008-workers">ADR-008: 并行 Workers 下载</h2>
+<p><strong>日期</strong>: 2025-02-17
+<strong>状态</strong>: 已更新（ADR-010 迁移至多进程）</p>
+<h3 id="_20">决策</h3>
+<p>~~使用 <code>ThreadPoolExecutor</code>~~ → 已迁移至 <code>ProcessPoolExecutor</code>（ADR-010）。</p>
+<h3 id="_21">注意事项</h3>
+<ul>
+<li>~~所有 S3 client 必须在主线程串行创建~~ → 多进程后每个子进程独立创建，无线程安全问题</li>
+<li>~~8 workers 在 8GB 内存服务器上会 OOM~~ → ADR-009 升级实例解决</li>
+</ul>
+<h2 id="adr-009-t3large-t3xlarge">ADR-009: 下载服务器升级 t3.large → t3.xlarge</h2>
+<p><strong>日期</strong>: 2026-02-17
+<strong>状态</strong>: 已采纳</p>
+<h3 id="_22">背景</h3>
+<p>8 workers 在 t3.large (8GB) 上运行时触发 OOM Kill（python3 占 7.3GB），进程被系统杀死。Watchdog 自动重启后降为 4 workers 继续运行，但速度减半。</p>
+<h3 id="_23">决策</h3>
+<p>升级到 <strong>t3.xlarge</strong> (4 vCPU / 16GB)，最终使用 12 workers。</p>
+<h3 id="_24">性能矩阵</h3>
+<table>
+<thead>
+<tr>
+<th>Workers</th>
+<th>实例</th>
+<th>内存占用</th>
+<th>速度 (文件/分)</th>
+<th>预计总时间</th>
+<th>预计总费用</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>t3.large (8GB)</td>
+<td>1.5GB</td>
+<td>~53</td>
+<td>~13 天</td>
+<td>~$32</td>
+<td>OOM 后降级</td>
+</tr>
+<tr>
+<td>8</td>
+<td>t3.xlarge (16GB)</td>
+<td>2.4GB</td>
+<td>~69</td>
+<td>~9-10 天</td>
+<td>~$45</td>
+<td>升级后初始</td>
+</tr>
+<tr>
+<td><strong>12</strong></td>
+<td>t3.xlarge (16GB)</td>
+<td><strong>2.5GB</strong></td>
+<td><strong>~107</strong></td>
+<td><strong>~6 天</strong></td>
+<td><strong>~$30</strong></td>
+<td>✅ <strong>当前</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>12 workers 较 4 workers 提速 <strong>2×</strong>，较 8 workers 提速 <strong>55%</strong>，内存仅增 0.1GB，总费用最低。</p>
+</blockquote>
+<h3 id="_25">后续</h3>
+<p>下载完成后应降回 t3.large 或停止实例以节省费用。</p>
+<h2 id="adr-010">ADR-010: 下载脚本三项性能优化</h2>
+<p><strong>日期</strong>: 2026-02-17
+<strong>状态</strong>: 已采纳</p>
+<h3 id="_26">背景</h3>
+<p>12 workers 在 t3.xlarge 上 CPU 占 88%（load average 6.41 &gt; 4 核），接近饱和。</p>
+<h4 id="_27">瓶颈排查</h4>
+<table>
+<thead>
+<tr>
+<th>可能瓶颈</th>
+<th>实测</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S3 API 限流</td>
+<td>~1.8 req/s（限制 5,500/s）</td>
+<td>❌ 余量 3000×</td>
+</tr>
+<tr>
+<td>AWS Open Data 限流</td>
+<td>~54KB/s, 无显式配额</td>
+<td>❌ 远低于阈值</td>
+</tr>
+<tr>
+<td>网络带宽</td>
+<td>t3.xlarge baseline ~1.25Gbps</td>
+<td>❌ 文件仅 30KB</td>
+</tr>
+<tr>
+<td><strong>CPU (satpy + GIL)</strong></td>
+<td><strong>88% us+sy, idle 10.7%</strong></td>
+<td>✅ <strong>主要瓶颈</strong></td>
+</tr>
+<tr>
+<td>内存</td>
+<td>2.5GB / 16GB</td>
+<td>❌ 余量充足</td>
+</tr>
+</tbody>
+</table>
+<h4 id="_28">备选方案（未采纳）</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>换 c6i.xlarge</td>
+<td>单核性能 +30%，但软件优化已足够</td>
+</tr>
+<tr>
+<td>升级 t3.2xlarge (8 vCPU)</td>
+<td>多花 ~$10 只快 2 天，性价比低</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_29">决策</h3>
+<h4 id="1-hsd-satpy">1. HSD 直接解析替代 satpy</h4>
+<p>新增 <code>hsd_parser.py</code>，直接用 <code>bz2.decompress</code> + <code>struct.unpack</code> + <code>np.frombuffer</code> 解析 HSD 二进制文件，跳过 satpy 的 Scene/reader/dask/xarray 链。</p>
+<ul>
+<li>回归验证: 3 波段 max diff &lt; 0.0001K（与 satpy 对比）</li>
+<li>本地实测: <strong>1.8× 加速</strong></li>
+<li>crop bounds <code>(455, 496, 891, 928)</code> 为 satpy 验证过的固定常量</li>
+</ul>
+<h4 id="2-completed_days">2. completed_days 本地缓存</h4>
+<p>新增 <code>.completed_days</code> 文件记录已处理日期。重启时跳过已完成天，<strong>零 S3 HEAD 请求</strong>。</p>
+<p>原问题: 每个 slot 需 3× S3 HEAD 检查，已完成 100 天 = 43,200 次无用请求 (~40s 延迟)。</p>
+<h4 id="3-thread-process">3. Thread → Process</h4>
+<p><code>ThreadPoolExecutor</code> → <code>ProcessPoolExecutor</code>，绕过 Python GIL，真正并行利用 4 核 CPU。</p>
+<p>每个子进程通过全局变量缓存 S3 client（创建一次，后续复用），额外内存 ~240MB（16GB 中可忽略）。</p>
+<h3 id="02-17-2108">部署结果 (02-17 21:08 实测)</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>优化前 (satpy+threads)</th>
+<th>优化后 (hsd+process)</th>
+<th>变化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU</td>
+<td>88% us, 7% sy</td>
+<td>96.5% us, 3% sy</td>
+<td>真并行利用更充分</td>
+</tr>
+<tr>
+<td>Load Average</td>
+<td>6.41 (4核)</td>
+<td>9.04</td>
+<td>12 进程真并行</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>2.5 GB</td>
+<td>2.0 GB</td>
+<td>-20%</td>
+</tr>
+<tr>
+<td>网络下载</td>
+<td>—</td>
+<td>9,108 KB/s (~9MB/s)</td>
+<td>带宽利用更高</td>
+</tr>
+<tr>
+<td>处理速度</td>
+<td>~107 文件/分</td>
+<td><strong>~237 文件/分</strong></td>
+<td><strong>+120%</strong></td>
+</tr>
+<tr>
+<td>预计总时间</td>
+<td>~6 天</td>
+<td><strong>~3 天</strong></td>
+<td>-50%</td>
+</tr>
+<tr>
+<td>预计总费用</td>
+<td>~$30</td>
+<td><strong>~$15</strong></td>
+<td>-50%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_30">预期收益</h3>
+<table>
+<thead>
+<tr>
+<th>优化</th>
+<th>收益</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HSD 解析</td>
+<td>CPU 减少 ~45%</td>
+<td>已验证, shape/值完全匹配</td>
+</tr>
+<tr>
+<td>completed_days</td>
+<td>重启追赶时间 → 0</td>
+<td>无（纯追加文件）</td>
+</tr>
+<tr>
+<td>Thread → Process</td>
+<td>多核真并行</td>
+<td>内存 +240MB，可忽略</td>
+</tr>
+</tbody>
+</table>
+        <footer>Weather AI — Architecture Decision Record (ADR) — Generated 2026-02-14</footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

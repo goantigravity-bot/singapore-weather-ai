@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Source & Cleansing Progress</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --border: #334155;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        h1 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            font-size: 1.35rem; font-weight: 600; color: var(--accent);
+            margin: 2rem 0 1rem; padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 1.1rem; font-weight: 600; color: var(--accent2);
+            margin: 1.5rem 0 0.8rem;
+        }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 0.8rem; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        blockquote {
+            border-left: 3px solid var(--accent); padding: 0.5rem 1rem;
+            background: rgba(56,189,248,0.06); margin: 1rem 0; border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em;
+            background: rgba(56,189,248,0.1); padding: 0.15rem 0.4rem;
+            border-radius: 4px; color: var(--accent);
+        }
+        pre {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0;
+            overflow-x: auto; line-height: 1.5;
+        }
+        pre code {
+            background: none; padding: 0; color: var(--text); font-size: 0.85rem;
+        }
+
+        table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            text-align: left; padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border); font-size: 0.9rem;
+            vertical-align: top;
+        }
+        th {
+            color: var(--accent); font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(56,189,248,0.06);
+        }
+        td { color: var(--text-muted); }
+        td:first-child { color: var(--text); font-weight: 500; }
+        tr:hover td { background: rgba(56,189,248,0.04); }
+
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.3rem; color: var(--text-muted); }
+        strong { color: var(--text); }
+
+        .mermaid {
+            display: flex; justify-content: center;
+            padding: 1.5rem 0; overflow-x: auto;
+        }
+
+        footer {
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+            margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="data-source-cleansing-progress">Data Source &amp; Cleansing Progress</h1>
+<p>本文档记录 Weather AI 项目各数据源的获取进度、清洗状态和质量问题。</p>
+<blockquote>
+<p>详细 Bug 清单见 <a href="file:///Users/jinhui/development/tools/claude-skill/docs/bugs.md">bugs.md</a>、架构决策见 <a href="file:///Users/jinhui/development/tools/claude-skill/docs/architecture-decisions.md">architecture-decisions.md</a></p>
+</blockquote>
+<hr />
+<h2 id="_1">数据源总览</h2>
+<table>
+<thead>
+<tr>
+<th>数据源</th>
+<th>类型</th>
+<th>覆盖范围</th>
+<th>频率</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#1-传感器数据">data.gov.sg 传感器</a></td>
+<td>温度/湿度/降雨/风/PM2.5</td>
+<td>2020-01 ~ 至今</td>
+<td>1 分钟</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td><a href="#2-卫星数据多通道">Himawari L1b 卫星</a></td>
+<td>B08/B11/B13 亮温</td>
+<td>2020-01 ~ 2026-02</td>
+<td>10 分钟</td>
+<td>🔄 下载中</td>
+</tr>
+<tr>
+<td><a href="#3-旧版单通道卫星已弃用">旧版 JAXA 卫星</a></td>
+<td>单通道 NC 全盘</td>
+<td>2025-10 ~ 2026-02</td>
+<td>10 分钟</td>
+<td>❌ 已弃用</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1">1. 传感器数据</h2>
+<p><strong>来源</strong>: data.gov.sg API (温度/湿度/降雨/PM2.5/风速风向)</p>
+<h3 id="_2">采集状态</h3>
+<ul>
+<li>CSV 文件: <code>real_sensor_data.csv</code></li>
+<li>覆盖: 2020-01-01 ~ 至今（download_manager.py 实时+回填）</li>
+<li>约 60+ 基站，1 分钟粒度</li>
+</ul>
+<h3 id="_3">清洗处理</h3>
+<ul>
+<li>风向分解为 sin/cos 分量（消除 0°/360° 跳变）</li>
+<li>缺失值填 0</li>
+<li>按 station_id + timestamp 排序</li>
+</ul>
+<h3 id="_4">已知问题</h3>
+<ul>
+<li>部分时段 API 返回空数据</li>
+<li>少量基站坐标缺失（已手动补充 station_coords.json）</li>
+<li>download_manager.py 旧服务已停止（2026-02-17），由新 3ch 脚本替代卫星下载</li>
+</ul>
+<hr />
+<h2 id="2">2. 卫星数据（多通道）</h2>
+<p><strong>来源</strong>: AWS Open Data S3 → Himawari-8/9 AHI L1b HSD</p>
+<h3 id="_5">波段选择</h3>
+<table>
+<thead>
+<tr>
+<th>波段</th>
+<th>波长</th>
+<th>物理意义</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B08</td>
+<td>6.2μm</td>
+<td>高层水汽</td>
+<td>大气湿度</td>
+</tr>
+<tr>
+<td>B11</td>
+<td>8.6μm</td>
+<td>云相态（冰/水）</td>
+<td>区分积雨云 vs 卷云</td>
+</tr>
+<tr>
+<td>B13</td>
+<td>10.4μm</td>
+<td>红外窗区</td>
+<td>云顶高度/对流强度</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_6">采集状态</h3>
+<div class="highlight"><pre><span></span><code>下载脚本: download_aws_satellite.py (12 workers, ProcessPoolExecutor, t3.xlarge)
+解析器: hsd_parser.py (直接二进制解析, 替代 satpy)
+数据路径: s3://weather-ai-models-de08370c/processed/satellite-3ch/
+文件格式: SAT_{Band}_{YYYYMMDD}_{HHMM}.npy
+文件大小: ~6KB/文件, shape (41, 37)
+时间基准: UTC
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>时段</th>
+<th>卫星</th>
+<th>Bucket</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2020-01 ~ 2022-12</td>
+<td>Himawari-8</td>
+<td>noaa-himawari8</td>
+<td>🔄 下载中</td>
+</tr>
+<tr>
+<td>2022-12 ~ 2026-02</td>
+<td>Himawari-9</td>
+<td>noaa-himawari9</td>
+<td>🔄 下载中</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>开始时间</strong>: 2026-02-17 14:51 UTC</li>
+<li><strong>性能调优</strong>: ADR-010 三项优化（HSD 直接解析 + completed_days 缓存 + 多进程）</li>
+<li><strong>预计完成</strong>: ~3 天 (实测 ~237 文件/分)</li>
+<li><strong>监控</strong>: watchdog.sh + SNS 邮件告警 (jinhui.sg@gmail.com)</li>
+</ul>
+<h3 id="_7">处理流程</h3>
+<div class="highlight"><pre><span></span><code>AWS S3 (L1b HSD, Segment S05 only)
+  ↓ s3 cp --no-sign-request
+本地 /tmp (BZ2 压缩)
+  ↓ hsd_parser.py: bz2.decompress → struct.unpack → np.frombuffer
+亮温数组 (550×5500 segment)
+  ↓ 固定 crop bounds (455:496, 891:928) — satpy 验证过
+裁剪后 (41×37) .npy
+  ↓ 上传 S3 → 删本地
+s3://weather-ai-models-de08370c/processed/satellite-3ch/
+</code></pre></div>
+
+<h3 id="_8">性能优化历史</h3>
+<table>
+<thead>
+<tr>
+<th>日期</th>
+<th>优化</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>02-17 14:51</td>
+<td>4 workers, t3.large, satpy</td>
+<td>~53 文件/分</td>
+</tr>
+<tr>
+<td>02-17 16:00</td>
+<td>升级 t3.xlarge, 8 workers</td>
+<td>~69 文件/分 (+30%)</td>
+</tr>
+<tr>
+<td>02-17 17:30</td>
+<td>12 workers</td>
+<td>~107 文件/分 (+55%)</td>
+</tr>
+<tr>
+<td>02-17 20:57</td>
+<td>ADR-010: HSD 解析 + 多进程 + 缓存</td>
+<td>预估 ~150-200 文件/分</td>
+</tr>
+<tr>
+<td>02-17 21:08</td>
+<td>部署后实测 (新数据处理阶段)</td>
+<td><strong>~237 文件/分 (+120%)</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="02-17-2108">部署后实测数据 (02-17 21:08)</h4>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>优化前 (satpy+threads)</th>
+<th>优化后 (hsd+process)</th>
+<th>变化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU</td>
+<td>88% us, 7% sy</td>
+<td>96.5% us, 3% sy</td>
+<td>真并行利用更充分</td>
+</tr>
+<tr>
+<td>Load Average</td>
+<td>6.41 (4核)</td>
+<td>9.04</td>
+<td>12 进程真并行</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>2.5 GB</td>
+<td>2.0 GB</td>
+<td>-20%</td>
+</tr>
+<tr>
+<td>网络下载</td>
+<td>—</td>
+<td>9,108 KB/s (~9MB/s)</td>
+<td>带宽利用更高</td>
+</tr>
+<tr>
+<td>处理速度</td>
+<td>~107 文件/分</td>
+<td><strong>~237 文件/分</strong></td>
+<td><strong>+120%</strong></td>
+</tr>
+<tr>
+<td>预计总时间</td>
+<td>~6 天</td>
+<td><strong>~3 天</strong></td>
+<td>-50%</td>
+</tr>
+<tr>
+<td>预计总费用</td>
+<td>~$30</td>
+<td><strong>~$15</strong></td>
+<td>-50%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_9">瓶颈分析</h3>
+<h4 id="aws">AWS 限流 — 不是瓶颈</h4>
+<table>
+<thead>
+<tr>
+<th>服务</th>
+<th>限制</th>
+<th>我们的实际用量</th>
+<th>余量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>S3 GET/HEAD</strong></td>
+<td>5,500 req/s/prefix</td>
+<td>~1.8 req/s</td>
+<td>3000×</td>
+</tr>
+<tr>
+<td><strong>S3 PUT</strong></td>
+<td>3,500 req/s/prefix</td>
+<td>~0.6 req/s</td>
+<td>5800×</td>
+</tr>
+<tr>
+<td><strong>AWS Open Data</strong></td>
+<td>无显式配额 (fair use)</td>
+<td>~1.8 req/s, ~54KB/s</td>
+<td>远低于阈值</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>AWS Open Data 无公开速率限制,极端使用时返回 <code>503 SlowDown</code>。当前用量远低于触发阈值。</p>
+</blockquote>
+<h4 id="cpu">CPU — 主要瓶颈（优化前）</h4>
+<p>12 workers + satpy 时实测:</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU 使用率</td>
+<td>88% (us+sy)</td>
+<td>接近满载</td>
+</tr>
+<tr>
+<td>CPU Idle</td>
+<td>10.7%</td>
+<td>余量极小</td>
+</tr>
+<tr>
+<td>Load Average</td>
+<td>6.41 (4 核)</td>
+<td>超核数，任务排队</td>
+</tr>
+<tr>
+<td>CPU Steal</td>
+<td>0.9%</td>
+<td>T3 积分暂未被限</td>
+</tr>
+</tbody>
+</table>
+<p>原因: satpy Scene 初始化 + dask + xarray 开销大; Python GIL 限制多线程 CPU 密集并行。</p>
+<h4 id="_10">优化方案评估</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>投入</th>
+<th>预期收益</th>
+<th>采纳</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HSD 直接解析替代 satpy</td>
+<td>新文件 ~120 行</td>
+<td>CPU -45%, 速度 +80%</td>
+<td>✅ ADR-010</td>
+</tr>
+<tr>
+<td>Thread → Process</td>
+<td>改 ~20 行</td>
+<td>多核真并行</td>
+<td>✅ ADR-010</td>
+</tr>
+<tr>
+<td>completed_days 缓存</td>
+<td>改 ~15 行</td>
+<td>重启追赶 → 0 秒</td>
+<td>✅ ADR-010</td>
+</tr>
+<tr>
+<td>换 c6i.xlarge</td>
+<td>换实例</td>
+<td>单核 +30%, 价格更低</td>
+<td>❌ 暂不需要</td>
+</tr>
+<tr>
+<td>升级 t3.2xlarge (8 vCPU)</td>
+<td>双倍费用</td>
+<td>受网络带宽限制</td>
+<td>❌ 性价比低</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_11">已解决的问题</h3>
+<ul>
+<li>satpy <code>resample()</code> 全盘 KDTree 超时 → 改用 <code>get_lonlats()</code> 直接切片</li>
+<li>boto3 并发创建 client 线程安全 → ~~主线程预创建 client 池~~ → 多进程 + 进程级缓存</li>
+<li>8 workers OOM (t3.large 8GB) → 升级 t3.xlarge (16GB)，最终 12 workers</li>
+<li>~~OpenMP 冲突 (torch + satpy)~~ → 不再使用 satpy，问题消失</li>
+<li>CPU 饱和 (88%, GIL 限制) → HSD 直接解析 (-45% CPU) + ProcessPoolExecutor (真并行)</li>
+<li>重启 S3 扫描延迟 → .completed_days 本地缓存（零请求跳过）</li>
+</ul>
+<h3 id="_12">时区注意</h3>
+<ul>
+<li>卫星文件名 = <strong>UTC</strong></li>
+<li>传感器 CSV = <strong>SGT (UTC+8)</strong></li>
+<li><code>prepare_station_data.py</code> 查找时减 8 小时</li>
+</ul>
+<hr />
+<h2 id="3">3. 旧版单通道卫星（已弃用）</h2>
+<p><strong>来源</strong>: JAXA FTP → Himawari NC 全盘文件</p>
+<ul>
+<li>路径: <code>processed_data/SAT_128_YYYYMMDD_HHMM.npy</code> (128×128, 单通道)</li>
+<li>覆盖: 2025-10 ~ 2026-02</li>
+<li><strong>已弃用原因</strong>: 被 3 通道 L1b 方案取代</li>
+<li>S3 旧 NC 文件 (10.1TB) 已于 2026-02-17 删除</li>
+<li>本地 processed_data/ 保留用于兼容旧模型</li>
+</ul>
+<hr />
+<h2 id="4">4. 存储使用</h2>
+<h3 id="s3-s3weather-ai-models-de08370c">S3 (s3://weather-ai-models-de08370c)</h3>
+<table>
+<thead>
+<tr>
+<th>前缀</th>
+<th>文件数</th>
+<th>大小</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>processed/satellite-3ch/</td>
+<td>~970K (最终)</td>
+<td>~6GB</td>
+<td>新 3ch .npy</td>
+</tr>
+<tr>
+<td>processed/satellite/</td>
+<td>~50K</td>
+<td>~2.5GB</td>
+<td>旧单通道 .npy</td>
+</tr>
+<tr>
+<td>models/</td>
+<td>~280</td>
+<td>75MB</td>
+<td>训练模型权重</td>
+</tr>
+<tr>
+<td>satellite/</td>
+<td>0</td>
+<td>0</td>
+<td>~~10.1TB 旧 NC~~ 已删</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_13">预估月费</h3>
+<ul>
+<li>清理前: ~$53/月 (10.1TB)</li>
+<li>清理后: <strong>&lt; $1/月</strong> (~8.5GB)</li>
+</ul>
+        <footer>Weather AI — Data Source & Cleansing Progress — Generated 2026-02-14</footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#64748b',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#0f172a',
+                fontSize: '14px'
+            }
+        });
+    </script>
+</body>
+</html>

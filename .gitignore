@@ -52,3 +52,6 @@ station_data/
 *.npz
 
 infra/terraform-gcc/.terraform/
+infra/terraform-gcc/terraform.tfstate*
+*.db-shm
+*.db-wal

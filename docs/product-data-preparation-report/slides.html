@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singapore Weather AI — Data Preparation</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #333;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .slide {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            background: #FFF8E1;
+            padding: 60px 80px;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .slide.active {
+            display: flex;
+        }
+
+        .slide h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 32px;
+            line-height: 1.2;
+        }
+
+        .slide h2 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .slide-body {
+            display: flex;
+            gap: 48px;
+            flex: 1;
+            align-items: flex-start;
+        }
+
+        .slide-left {
+            flex: 1.2;
+        }
+
+        .slide-right {
+            flex: 1;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #444;
+        }
+
+        .slide-right p {
+            margin-bottom: 12px;
+        }
+
+        .slide-right em {
+            font-style: italic;
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        /* Dark card */
+        .dark-card {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 28px;
+            color: #e2e8f0;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .dark-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #38bdf8;
+            margin-bottom: 16px;
+        }
+
+        .dark-card table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+        }
+
+        .dark-card th {
+            text-align: left;
+            padding: 6px 10px;
+            color: #38bdf8;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .dark-card td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #1e293b;
+            vertical-align: top;
+            font-size: 0.8rem;
+        }
+
+        .dark-card .highlight {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        .dark-card .warn {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        .dark-card .danger {
+            color: #f87171;
+            font-weight: 600;
+        }
+
+        .dark-card .accent {
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        .dark-card code {
+            background: #1e293b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .dark-card .metric-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .dark-card .metric {
+            flex: 1;
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .dark-card .metric .value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #38bdf8;
+        }
+
+        .dark-card .metric .label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        /* Pipeline steps */
+        .pipeline {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            margin: 12px 0;
+            flex-wrap: wrap;
+        }
+
+        .pipe-step {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .pipe-arrow {
+            color: #94a3b8;
+            font-size: 1.2rem;
+        }
+
+        .bronze {
+            background: #4e342e;
+            color: #efebe9;
+        }
+
+        .silver {
+            background: #37474f;
+            color: #eceff1;
+        }
+
+        .gold {
+            background: #e65100;
+            color: #fff3e0;
+        }
+
+        /* Title slide */
+        .title-slide {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .title-slide h1 {
+            font-size: 3rem;
+            color: #fff;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title-slide .subtitle {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-top: 16px;
+        }
+
+        .title-slide .meta {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 32px;
+        }
+
+        /* Full-width content slide */
+        .full-content {
+            flex: 1;
+        }
+
+        .full-content table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .full-content th {
+            text-align: left;
+            padding: 10px 14px;
+            font-weight: 600;
+            color: #1a1a2e;
+            border-bottom: 2px solid #333;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .full-content td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+        }
+
+        .full-content td strong {
+            color: #1a1a2e;
+        }
+
+        /* Mermaid container */
+        .mermaid-container {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Nav */
+        .nav {
+            position: fixed;
+            bottom: 24px;
+            right: 32px;
+            z-index: 100;
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav button {
+            background: rgba(26, 26, 46, 0.8);
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .nav button:hover {
+            background: rgba(26, 26, 46, 1);
+        }
+
+        .slide-counter {
+            position: fixed;
+            bottom: 28px;
+            left: 32px;
+            font-size: 0.8rem;
+            color: #999;
+            z-index: 100;
+        }
+
+        /* Bullet list in slide-right */
+        .slide-right ul {
+            padding-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .slide-right li {
+            margin-bottom: 6px;
+        }
+
+        /* Section badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .badge-blue {
+            background: #e3f2fd;
+            color: #0d47a1;
+        }
+
+        .badge-green {
+            background: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        .badge-orange {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .badge-red {
+            background: #fce4ec;
+            color: #c62828;
+        }
+
+        /* Two-column dark cards */
+        .two-cards {
+            display: flex;
+            gap: 16px;
+        }
+
+        .two-cards .dark-card {
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Slide 1: Title -->
+    <div class="slide title-slide active" id="s1">
+        <h2 style="color:#64748b; margin-bottom:16px;">Singapore Weather AI</h2>
+        <h1>Data Preparation Report</h1>
+        <div class="subtitle">From Raw Satellite Data to Production ML Pipeline</div>
+        <div class="meta">Version 1.0 &nbsp;|&nbsp; February 2026 &nbsp;|&nbsp; 3-Channel Download In Progress (56.9%)
+        </div>
+    </div>
+
+    <!-- Slide 2: Product Vision -->
+    <div class="slide" id="s2">
+        <h2>Product Vision</h2>
+        <h1>AI-Powered Weather Prediction for Singapore</h1>
+        <div class="slide-body">
+            <div class="slide-left">
+                <div class="dark-card">
+                    <h3>🎯 What We're Building</h3>
+                    <div class="metric-row">
+                        <div class="metric">
+                            <div class="value">10 min</div>
+                            <div class="label">Forecast Horizon</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value">69</div>
+                            <div class="label">Ground Stations</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value">3</div>
+                            <div class="label">Satellite Bands</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value">7</div>
+                            <div class="label">Sensor Features</div>
+                        </div>
+                    </div>
+                    <h3>📊 Data Inputs</h3>
+                    <table>
+                        <tr>
+                            <td class="accent">🛰️ Satellite</td>
+                            <td>Himawari-8/9 L1b — B08, B11, B13 bands</td>
+                        </tr>
+                        <tr>
+                            <td class="accent">📡 Sensor</td>
+                            <td>Temperature, humidity, rainfall, PM2.5, wind (speed + direction)</td>
+                        </tr>
+                        <tr>
+                            <td class="accent">📍 Location</td>
+                            <td>GPS coordinate embedding + hour/month cycle</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="slide-right">
+                <p><strong>Core idea:</strong> Combine satellite imagery (cloud patterns) with ground sensor readings
+                    (temperature, humidity, wind) to predict rainfall at any GPS coordinate in Singapore, 10 minutes
+                    ahead.</p>
+                <p>The system evolved from a single-channel IR satellite model to a <strong>3-channel multi-sensor
+                        fusion architecture</strong> over 11 versions in 25 days.</p>
+                <p>Key innovation: <strong>Local Patch + Coordinate Embedding</strong> — instead of looking at the
+                    entire satellite image, the model crops a 32×32 pixel patch directly above each station, learning
+                    "will the cloud overhead produce rain here?"</p>
+                <p><em>Built with React + FastAPI + PyTorch on AWS (EC2 + S3)</em></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Version Timeline -->
+    <div class="slide" id="s3">
+        <h2>Development Journey</h2>
+        <h1>11 Versions in 25 Days</h1>
+        <div class="slide-body">
+            <div class="full-content">
+                <table>
+                    <tr>
+                        <th>Version</th>
+                        <th>Date</th>
+                        <th>Milestone</th>
+                        <th>Category</th>
+                    </tr>
+                    <tr>
+                        <td><strong>v0.1.0</strong></td>
+                        <td>Jan 26</td>
+                        <td>Initial full-stack: React + FastAPI, single predict API</td>
+                        <td><span class="badge badge-blue">Foundation</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>v0.2–0.4</strong></td>
+                        <td>Feb 1-4</td>
+                        <td>Popular search, path query, sensor limit + logging refactor</td>
+                        <td><span class="badge badge-blue">Foundation</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>v0.5.0</strong></td>
+                        <td>Feb 5</td>
+                        <td>AWS deployment, CloudFront proxy, PM2.5 integration, monitor dashboard</td>
+                        <td><span class="badge badge-green">Infrastructure</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>v0.6.0</strong></td>
+                        <td>Feb 8</td>
+                        <td>Training pipeline 7-bug fix, Vitest, multi-recipient email</td>
+                        <td><span class="badge badge-green">Infrastructure</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>v0.7.0</strong></td>
+                        <td>Feb 10</td>
+                        <td>SQLite cache layer + ThreadPool parallel inference</td>
+                        <td><span class="badge badge-green">Infrastructure</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>v0.8.0</strong></td>
+                        <td>Feb 12</td>
+                        <td>Forecast vs Actual closed-loop (SQLite schema)</td>
+                        <td><span class="badge badge-orange">Data Quality</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>v0.9.x</strong></td>
+                        <td>Feb 14-15</td>
+                        <td>Real-time sensor, WeightedRandomSampler, wind + cloud animation</td>
+                        <td><span class="badge badge-orange">Data Quality</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>v0.10.0</strong></td>
+                        <td>Feb 17</td>
+                        <td>NOAA data source migration + model tuning experiments</td>
+                        <td><span class="badge badge-red">Optimization</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>v0.11.0</strong></td>
+                        <td>Feb 17</td>
+                        <td>Telegram Bot, GCC Terraform, HSD parser (10× perf), 3-channel download</td>
+                        <td><span class="badge badge-red">Optimization</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Data Source Evolution -->
+    <div class="slide" id="s4">
+        <h2>Satellite Data</h2>
+        <h1>Three Generations of Data Sources</h1>
+        <div class="slide-body">
+            <div class="slide-left">
+                <div class="dark-card">
+                    <h3>Evolution: JAXA → NOAA → AWS Open Data</h3>
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>v1: JAXA FTP</th>
+                            <th>v2: NOAA ISatSS</th>
+                            <th>v3: AWS L1b ✅</th>
+                        </tr>
+                        <tr>
+                            <td>Format</td>
+                            <td>NetCDF Full Disk</td>
+                            <td>NetCDF L2 tile</td>
+                            <td class="highlight">HSD .bz2 segment</td>
+                        </tr>
+                        <tr>
+                            <td>Size/file</td>
+                            <td class="danger">~700MB</td>
+                            <td>~3MB</td>
+                            <td class="highlight">~30KB</td>
+                        </tr>
+                        <tr>
+                            <td>Channels</td>
+                            <td>C13 (1 ch)</td>
+                            <td>C13 (1 ch)</td>
+                            <td class="highlight">B08+B11+B13 (3 ch)</td>
+                        </tr>
+                        <tr>
+                            <td>Output</td>
+                            <td>128×128 .npy</td>
+                            <td>128×128 .npy</td>
+                            <td class="highlight">41×37 .npy × 3</td>
+                        </tr>
+                        <tr>
+                            <td>Auth</td>
+                            <td class="danger">JAXA account</td>
+                            <td class="highlight">No auth</td>
+                            <td class="highlight">No auth</td>
+                        </tr>
+                        <tr>
+                            <td>6-yr raw</td>
+                            <td class="danger">224 TB</td>
+                            <td>968 GB</td>
+                            <td class="highlight">29 GB</td>
+                        </tr>
+                        <tr>
+                            <td>6-yr proc</td>
+                            <td>20 GB</td>
+                            <td>20 GB</td>
+                            <td class="highlight">6 GB</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="slide-right">
+                <p><strong>Key decisions:</strong></p>
+                <ul>
+                    <li><strong>v1 → v2:</strong> JAXA FTP was slow and unreliable across the ocean. Migrated to AWS
+                        same-region for speed.</li>
+                    <li><strong>v2 → v3:</strong> 10.1TB of raw NetCDF accumulated on S3 ($53/mo). Switched to L1b HSD —
+                        23,000× smaller per file, 3 channels instead of 1.</li>
+                </ul>
+                <p><strong>3-channel advantage:</strong></p>
+                <ul>
+                    <li><strong>B08</strong> (6.2μm) — Water vapor / moisture</li>
+                    <li><strong>B11</strong> (8.6μm) — Cloud phase (ice vs liquid)</li>
+                    <li><strong>B13</strong> (10.4μm) — Cloud top height</li>
+                </ul>
+                <p>Together, these let the model distinguish rain-producing cumulonimbus from harmless cirrus clouds.
+                </p>
+                <p><em>Impact: +15-25% expected precision improvement</em></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Sensor Features -->
+    <div class="slide" id="s5">
+        <h2>Sensor Data</h2>
+        <h1>Progressive Feature Expansion (3 → 7 Features)</h1>
+        <div class="slide-body">
+            <div class="slide-left">
+                <div class="dark-card">
+                    <h3>Feature Evolution per Training Phase</h3>
+                    <table>
+                        <tr>
+                            <th>Phase</th>
+                            <th>Features</th>
+                            <th>Count</th>
+                            <th>Motivation</th>
+                        </tr>
+                        <tr>
+                            <td>Phase 1<br /><span style="color:#64748b">v0.1–v0.4</span></td>
+                            <td>🌡️ Temperature<br />💧 Humidity<br />🌧️ Rainfall</td>
+                            <td><strong>3</strong></td>
+                            <td>Core weather variables for basic prediction</td>
+                        </tr>
+                        <tr>
+                            <td>Phase 2<br /><span style="color:#64748b">v0.5</span></td>
+                            <td>+ 🏭 PM2.5</td>
+                            <td><strong>4</strong></td>
+                            <td>Haze correlation + NEA outdoor activity advisory (PSI >100)</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight">Phase 3<br /><span style="color:#64748b">v0.9.1</span></td>
+                            <td class="highlight">+ 🌬️ Wind Speed<br />+ 📐 Wind Dir (sin/cos)</td>
+                            <td class="highlight"><strong>7</strong></td>
+                            <td>Wind direction indicates incoming rain systems</td>
+                        </tr>
+                    </table>
+                    <div
+                        style="margin-top:12px; padding:10px; background:#1e293b; border-radius:8px; font-size:0.75rem;">
+                        <strong style="color:#fbbf24;">⚠️ Wind encoding:</strong> Direction is decomposed to sin(θ) and
+                        cos(θ) to avoid circular discontinuity (359° ≈ 1°)
+                    </div>
+                </div>
+            </div>
+            <div class="slide-right">
+                <p><strong>Data source:</strong> data.gov.sg APIs — 5 endpoints returning 3 different JSON structures:
+                </p>
+                <ul>
+                    <li><strong>Standard</strong> (temp, humidity, rainfall) — station-level readings</li>
+                    <li><strong>Regional</strong> (PM2.5) — region-level, mapped to nearest station</li>
+                    <li><strong>Wind</strong> — standard format but requires sin/cos post-processing</li>
+                </ul>
+                <p><strong>69 weather stations</strong> across Singapore provide ground truth. Each API is polled and
+                    stored as station-specific CSV files.</p>
+                <p><em>PM2.5 also supports outdoor activity recommendations per NEA safety advice (e.g. PSI >100 =
+                        reduce prolonged outdoor exertion)</em></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 6: Bronze/Silver/Gold -->
+    <div class="slide" id="s6">
+        <h2>Data Pipeline</h2>
+        <h1>Data Quality Tiers: Bronze → Silver → Gold</h1>
+        <div class="slide-body">
+            <div class="full-content">
+                <div class="pipeline" style="justify-content:center; margin-bottom:24px;">
+                    <div class="pipe-step bronze">🟫 BRONZE<br /><small>Raw Source</small></div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step silver">🩶 SILVER<br /><small>Cleansed & Aligned</small></div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step gold">🥇 GOLD<br /><small>Distributable</small></div>
+                </div>
+                <table style="font-size:0.82rem;">
+                    <tr>
+                        <th>Tier</th>
+                        <th>Source</th>
+                        <th>Location</th>
+                        <th>Format</th>
+                        <th>Key Transformation</th>
+                    </tr>
+                    <tr>
+                        <td><span class="pipe-step bronze" style="padding:4px 8px;font-size:0.7rem;">BRONZE</span></td>
+                        <td>Satellite</td>
+                        <td><code>s3://noaa-himawari8/9/</code></td>
+                        <td>HSD .bz2</td>
+                        <td>None — raw from AWS Open Data</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pipe-step bronze" style="padding:4px 8px;font-size:0.7rem;">BRONZE</span></td>
+                        <td>Sensor</td>
+                        <td><code>api.data.gov.sg</code></td>
+                        <td>JSON (3 formats)</td>
+                        <td>None — raw API response</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pipe-step silver" style="padding:4px 8px;font-size:0.7rem;">SILVER</span></td>
+                        <td>Satellite</td>
+                        <td><code>s3://…/processed/satellite-3ch/</code></td>
+                        <td>41×37 .npy</td>
+                        <td>Decompress → calibrate → crop → validate</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pipe-step silver" style="padding:4px 8px;font-size:0.7rem;">SILVER</span></td>
+                        <td>Sensor</td>
+                        <td><code>s3://…/processed/sensor/</code></td>
+                        <td>7-feature CSV</td>
+                        <td>Parse → SGT→UTC → resample 10-min → fill gaps</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pipe-step silver" style="padding:4px 8px;font-size:0.7rem;">SILVER</span></td>
+                        <td>Combined</td>
+                        <td>Time-aligned in S3</td>
+                        <td>Paired records</td>
+                        <td>Match satellite ↔ sensor within ±5 min</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pipe-step gold" style="padding:4px 8px;font-size:0.7rem;">GOLD</span></td>
+                        <td>Training</td>
+                        <td><code>s3://…/processed/</code></td>
+                        <td>.npz per station</td>
+                        <td>32×32 patch + 6-step LSTM seq + coord</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pipe-step gold" style="padding:4px 8px;font-size:0.7rem;">GOLD</span></td>
+                        <td>Frontend</td>
+                        <td>API server</td>
+                        <td>PNG stream</td>
+                        <td>B13 → grayscale cloud animation overlay</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 7: Data File Issues -->
+    <div class="slide" id="s7">
+        <h2>Data Cleansing</h2>
+        <h1>File Availability Issues (Discovered During Download)</h1>
+        <div class="slide-body">
+            <div class="slide-left">
+                <div class="dark-card">
+                    <h3>⚠️ Issues Not Known Upfront</h3>
+                    <table>
+                        <tr>
+                            <th>#</th>
+                            <th>Issue</th>
+                            <th>Code Fix</th>
+                        </tr>
+                        <tr>
+                            <td>1</td>
+                            <td class="warn">Missing timestamps on S3</td>
+                            <td><code>process_slot()</code> returns <code>"missing"</code></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td class="warn">Himawari-8 → 9 transition</td>
+                            <td><code>_get_bucket(dt)</code> auto-switch at 2022-12-13</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td class="warn">Filename prefix H08 vs H09</td>
+                            <td><code>_s3_key()</code> dynamic prefix</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td class="warn">Older NC files use NC_H08_/H09_</td>
+                            <td>Dual glob pattern scan</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td class="warn">Sporadic S3 failures</td>
+                            <td>Per-slot try/except, day-level retry</td>
+                        </tr>
+                    </table>
+                    <div style="margin-top:12px;padding:10px;background:#1e293b;border-radius:8px;font-size:0.75rem;">
+                        <code style="color:#fbbf24;">H8_END = datetime(2022, 12, 13)</code><br />
+                        <code style="color:#94a3b8;">def _get_bucket(dt):</code><br />
+                        <code
+                            style="color:#94a3b8;">&nbsp;&nbsp;return "noaa-himawari8" if dt < H8_END else "noaa-himawari9"</code>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-right">
+                <p><strong>Key lesson:</strong> When downloading 6 years of historical data across a satellite
+                    transition boundary, file naming conventions and bucket locations are <strong>not uniform</strong>.
+                </p>
+                <p>These issues were discovered progressively during the download — none are documented in the AWS Open
+                    Data catalog.</p>
+                <p>The pipeline must be resilient to:</p>
+                <ul>
+                    <li>~2-5% of timestamps missing per day (satellite outage/maintenance)</li>
+                    <li>Bucket name changes mid-dataset</li>
+                    <li>Filename prefix changes</li>
+                    <li>Network throttling during burst downloads</li>
+                </ul>
+                <p><strong>Current status:</strong> 1273/2239 days processed (56.9%), ETA ~Feb 20 evening. Zero failed
+                    days.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 8: Training Strategy -->
+    <div class="slide" id="s8">
+        <h2>Training Strategy</h2>
+        <h1>Per-Station Regional Training</h1>
+        <div class="slide-body">
+            <div class="slide-left">
+                <div class="dark-card">
+                    <h3>📍 Station Selection per Region</h3>
+                    <table>
+                        <tr>
+                            <th>Region</th>
+                            <th>Station</th>
+                            <th>Why This Site</th>
+                        </tr>
+                        <tr>
+                            <td class="accent">West</td>
+                            <td>S66 (Tengah)</td>
+                            <td>First landfall for Sumatra squalls. Open terrain, ~98% data completeness</td>
+                        </tr>
+                        <tr>
+                            <td class="accent">Central</td>
+                            <td>S77 (Marina Bay)</td>
+                            <td>Busiest pedestrian area — highest user value for rain alerts</td>
+                        </tr>
+                        <tr>
+                            <td class="accent">East</td>
+                            <td>S107 (East Coast)</td>
+                            <td>Coastal, directly exposed to NE monsoon. Sea-land boundary</td>
+                        </tr>
+                        <tr>
+                            <td class="accent">North</td>
+                            <td>S104 (Woodlands)</td>
+                            <td>Near Johor Strait — Malaysia weather systems arrive first here</td>
+                        </tr>
+                    </table>
+                    <div style="margin-top:12px;padding:10px;background:#1e293b;border-radius:8px;font-size:0.75rem;">
+                        <code style="color:#4ade80;">python3 prepare_station_data.py --station S66</code><br />
+                        <span style="color:#94a3b8;">→ rain_samples.npz + dry_samples.npz</span>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-right">
+                <p><strong>Why per-station training?</strong></p>
+                <p>Singapore is small (~50km) but microclimates differ significantly. A single model trained on all
+                    stations averages out local patterns.</p>
+                <p>Each station's training data pairs its sensor readings with a <strong>32×32 satellite patch directly
+                        overhead</strong>. The model learns <em>"will it rain at this location"</em> rather than
+                    <em>"will it rain somewhere in Singapore."</em></p>
+                <p><strong>Selection criteria:</strong></p>
+                <ul>
+                    <li>High data completeness</li>
+                    <li>Geographic spread across NEA regions</li>
+                    <li>Pedestrian relevance</li>
+                    <li>Microclimate diversity (coastal, urban, open)</li>
+                </ul>
+                <p><em>69 stations available in station_coords.json</em></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 9: Model Iterations -->
+    <div class="slide" id="s9">
+        <h2>Model Tuning</h2>
+        <h1>6 Architecture Iterations → F1 61.5%</h1>
+        <div class="slide-body">
+            <div class="slide-left">
+                <div class="dark-card">
+                    <h3>🧪 Model Architecture Iterations</h3>
+                    <table>
+                        <tr>
+                            <th>Round</th>
+                            <th>Change</th>
+                            <th>F1</th>
+                            <th>Verdict</th>
+                        </tr>
+                        <tr>
+                            <td>Baseline</td>
+                            <td>Conv2d + GAP + LSTM</td>
+                            <td>55.7%</td>
+                            <td>Starting point</td>
+                        </tr>
+                        <tr>
+                            <td>R1</td>
+                            <td>+ Spatial Attention</td>
+                            <td>57.7%</td>
+                            <td class="highlight">Better cloud focus</td>
+                        </tr>
+                        <tr>
+                            <td>R2</td>
+                            <td>+ Deeper CNN (5 layers)</td>
+                            <td>55.8%</td>
+                            <td class="danger">❌ Overfits</td>
+                        </tr>
+                        <tr>
+                            <td>R3</td>
+                            <td>+ Residual Blocks</td>
+                            <td>54.5%</td>
+                            <td class="danger">❌ Too shallow</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight">R4</td>
+                            <td class="highlight">Local Patch + Coord Embed</td>
+                            <td class="highlight">61.5% ✅</td>
+                            <td class="highlight">✅ Best</td>
+                        </tr>
+                        <tr>
+                            <td>R5</td>
+                            <td>+ Dropout2d in CNN</td>
+                            <td>—</td>
+                            <td class="danger">❌ Patch too small</td>
+                        </tr>
+                    </table>
+                    <h3 style="margin-top:16px;">🎯 Rain Threshold Evolution</h3>
+                    <table>
+                        <tr>
+                            <th>Threshold</th>
+                            <th>Rain %</th>
+                            <th>F1</th>
+                            <th>Problem</th>
+                        </tr>
+                        <tr>
+                            <td>0.1mm</td>
+                            <td>30.3%</td>
+                            <td>46.6%</td>
+                            <td>Too sensitive — drizzle triggers</td>
+                        </tr>
+                        <tr>
+                            <td>5.0mm</td>
+                            <td>2.0%</td>
+                            <td>35.7%</td>
+                            <td>Too strict — can't learn</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight">1.0mm ✅</td>
+                            <td class="highlight">13.0%</td>
+                            <td class="highlight">61.5%</td>
+                            <td class="highlight">"Need an umbrella" rain</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="slide-right">
+                <p><strong>Key insight — R4 breakthrough:</strong></p>
+                <p>Instead of feeding the entire 128×128 satellite image, R4 crops a <strong>32×32 patch centered on the
+                        target station</strong>. This forces the model to focus on the cloud directly overhead.</p>
+                <p>Combined with <strong>coordinate embedding</strong> (station lat/lon + hour/month cycle encoding),
+                    the model can distinguish afternoon convective rain (2-6 PM) from morning false signals.</p>
+                <p><strong>Rain threshold:</strong> 0.1mm captured insignificant moisture. 5.0mm was too rare (<2%).
+                        <strong>1.0mm</strong> = the rain intensity a pedestrian would notice and want to avoid.</p>
+                <p><em>Training: 80s/epoch on g4dn.xlarge GPU (NVIDIA T4)</em></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 10: Infrastructure -->
+    <div class="slide" id="s10">
+        <h2>Infrastructure</h2>
+        <h1>3-Server Topology at ~$78/month</h1>
+        <div class="slide-body">
+            <div class="slide-left">
+                <div class="dark-card">
+                    <h3>🏗️ Server Topology</h3>
+                    <table>
+                        <tr>
+                            <th>Server</th>
+                            <th>Type</th>
+                            <th>Role</th>
+                            <th>Cost</th>
+                        </tr>
+                        <tr>
+                            <td class="accent">API Server</td>
+                            <td>t3.medium</td>
+                            <td>FastAPI + React frontend</td>
+                            <td>~$1/mo (free tier)</td>
+                        </tr>
+                        <tr>
+                            <td class="accent">Training</td>
+                            <td>g4dn.xlarge</td>
+                            <td>GPU training (NVIDIA T4)</td>
+                            <td>~$62/mo (Spot)</td>
+                        </tr>
+                        <tr>
+                            <td class="accent">Download</td>
+                            <td>t3.xlarge</td>
+                            <td>Satellite data ingestion</td>
+                            <td>~$15/mo</td>
+                        </tr>
+                    </table>
+                    <h3 style="margin-top:16px;">💰 Cost Optimization</h3>
+                    <table>
+                        <tr>
+                            <th>Action</th>
+                            <th>Saving</th>
+                        </tr>
+                        <tr>
+                            <td>S3 raw NC cleanup (10.1TB)</td>
+                            <td class="highlight">$52/mo → &lt;$1/mo</td>
+                        </tr>
+                        <tr>
+                            <td>GPU Spot vs On-Demand</td>
+                            <td class="highlight">70% saving</td>
+                        </tr>
+                        <tr>
+                            <td>HSD parser: 3d vs 13d download</td>
+                            <td class="highlight">53% server cost</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="slide-right">
+                <p><strong>Why not Databricks / Snowflake?</strong></p>
+                <ul>
+                    <li>Our data volume (~6GB processed) is too small to justify cluster overhead</li>
+                    <li>Custom binary format (.npy tensors) doesn't fit SQL/tabular paradigm</li>
+                    <li>Need direct GPU access for custom CNN+LSTM fusion model</li>
+                    <li>Managed platforms add $100-200/mo without benefit</li>
+                </ul>
+                <p><strong>Key decisions:</strong></p>
+                <ul>
+                    <li>3-server split: decouple data-intensive from latency-sensitive</li>
+                    <li>S3 as data lake: "Just-in-Time" processing (150GB raw → 5MB patches → purge)</li>
+                    <li>Spot Instance for training: 70% cost saving, acceptable for batch ML</li>
+                </ul>
+                <p><em>Reconsider managed platforms at >100GB or team size >3</em></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 11: Next Iteration -->
+    <div class="slide" id="s11">
+        <h2>Next Steps</h2>
+        <h1>Next Model Iteration (R5) — Target F1: 72-78%</h1>
+        <div class="slide-body">
+            <div class="full-content">
+                <table>
+                    <tr>
+                        <th>#</th>
+                        <th>Improvement</th>
+                        <th>Current (R4)</th>
+                        <th>Target (R5)</th>
+                        <th>Expected Impact</th>
+                    </tr>
+                    <tr>
+                        <td>1</td>
+                        <td><strong>3-channel input</strong></td>
+                        <td>Single B13 IR</td>
+                        <td>B08 + B11 + B13</td>
+                        <td>+15-25% Precision — distinguish cumulonimbus from cirrus</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong>6× more data</strong></td>
+                        <td>~395K samples (1 yr)</td>
+                        <td>~2.4M samples (6 yr)</td>
+                        <td>Full ENSO cycle + both monsoon seasons</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><strong>Weighted loss</strong></td>
+                        <td>MSE (equal penalty)</td>
+                        <td>3× penalty for missed rain</td>
+                        <td>Current: 38.2% rain events missed (FN=164)</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><strong>Multi-frame input</strong></td>
+                        <td>Single frame at t</td>
+                        <td>3 frames (t-20, t-10, t)</td>
+                        <td>Learn cloud movement direction + speed</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><strong>Asymmetric sampling</strong></td>
+                        <td>50:50 rain:dry</td>
+                        <td>60:40 + oversample heavy rain</td>
+                        <td>Heavy rain (&gt;5mm) is &lt;2% of samples</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td><strong>Chronological split</strong></td>
+                        <td>Random 80:20</td>
+                        <td>Train 2020-24, validate 2025-26</td>
+                        <td>Real-world accuracy: predict future from past</td>
+                    </tr>
+                </table>
+                <div
+                    style="margin-top:24px; padding:16px; background:#0f172a; border-radius:12px; color:#e2e8f0; text-align:center; font-size:1.1rem;">
+                    Expected: F1 <strong style="color:#f87171;">61.5%</strong> (R4) → <strong
+                        style="color:#4ade80;">~72-78%</strong> (R5)
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    Based on published CNN+LSTM literature with multi-channel satellite input
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 12: Thank You -->
+    <div class="slide title-slide" id="s12">
+        <h2 style="color:#64748b; margin-bottom:16px;">Singapore Weather AI</h2>
+        <h1>Thank You</h1>
+        <div class="subtitle">Data Preparation Report v1.0</div>
+        <div class="meta" style="margin-top:48px;">
+            📄 Full report: report.html &nbsp;|&nbsp;
+            📁 Reference docs: reference/*.html
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav">
+        <button onclick="prev()">← Prev</button>
+        <button onclick="next()">Next →</button>
+    </div>
+    <div class="slide-counter" id="counter">1 / 12</div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+        let current = 0;
+        const slides = document.querySelectorAll('.slide');
+        const total = slides.length;
+
+        function show(n) {
+            slides[current].classList.remove('active');
+            current = (n + total) % total;
+            slides[current].classList.add('active');
+            document.getElementById('counter').textContent = `${current + 1} / ${total}`;
+        }
+        function next() { show(current + 1); }
+        function prev() { show(current - 1); }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+        });
+    </script>
+</body>
+
+</html>

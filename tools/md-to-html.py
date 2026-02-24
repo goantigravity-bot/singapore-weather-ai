@@ -39,6 +39,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             padding: 2rem;
         }}
         .container {{ max-width: 1100px; margin: 0 auto; }}
+        .mermaid {{
+            max-width: none;
+            overflow-x: auto;
+            text-align: center;
+        }}
+        .mermaid svg {{
+            min-width: 1000px;
+        }}
 
         h1 {{
             font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
@@ -88,6 +96,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         th, td {{
             text-align: left; padding: 0.6rem 1rem;
             border-bottom: 1px solid var(--border); font-size: 0.9rem;
+            vertical-align: top;
         }}
         th {{
             color: var(--accent); font-weight: 600; font-size: 0.8rem;
@@ -99,8 +108,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         tr:hover td {{ background: rgba(56,189,248,0.04); }}
 
         ul, ol {{ margin: 0.5rem 0 1rem 1.5rem; }}
-        li {{ margin-bottom: 0.3rem; color: var(--text-muted); }}
         strong {{ color: var(--text); }}
+
+        img {{
+            max-width: 100%; height: auto; display: block;
+            margin: 2rem auto; padding: 1rem; background: #ffffff;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }}
 
         .mermaid {{
             display: flex; justify-content: center;
@@ -118,8 +132,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         {content}
         <footer>Weather AI — {title} — Generated 2026-02-14</footer>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-    <script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        
+        mermaid.registerIconPacks([
+            {{ name: 'logos', loader: () => fetch('https://unpkg.com/@iconify-json/logos@1/icons.json').then(res => res.json()) }},
+            {{ name: 'mdi', loader: () => fetch('https://unpkg.com/@iconify-json/mdi@1/icons.json').then(res => res.json()) }}
+        ]);
+
         mermaid.initialize({{
             startOnLoad: true,
             theme: 'dark',
