@@ -87,7 +87,7 @@ for YEAR in "${YEARS[@]}"; do
 
     YEAR_DIR="$WORK_DIR/processed/$YEAR"
     SAT_DIR="$YEAR_DIR/sat"
-    SENSOR_DIR="$YEAR_DIR/sensor"
+    SENSOR_DIR="$WORK_DIR/processed/sensor/$YEAR"
     CSV_PATH="$SENSOR_DIR/real_sensor_data.csv"
 
     echo "📂 数据路径:" | tee -a "$LOG_FILE"
