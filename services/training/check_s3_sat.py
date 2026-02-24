@@ -1,6 +1,6 @@
 import boto3
 s3 = boto3.client('s3', region_name='ap-southeast-1')
-bucket = 'weather-ai-models-de08370c'
+bucket = 'weather-ai-models-gcc'
 
 # Check what months of satellite data exist in S3
 print('=== S3 Satellite Data (processed/) ===')

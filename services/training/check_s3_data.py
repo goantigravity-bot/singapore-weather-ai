@@ -1,6 +1,6 @@
 import boto3
 s3 = boto3.client('s3', region_name='ap-southeast-1')
-bucket = 'weather-ai-models-de08370c'
+bucket = 'weather-ai-models-gcc'
 
 # List top-level structure
 resp = s3.list_objects_v2(Bucket=bucket, Delimiter='/', MaxKeys=100)

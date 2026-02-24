@@ -16,7 +16,7 @@ import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-S3_BUCKET = os.environ.get("S3_BUCKET", "weather-ai-models-de08370c")
+S3_BUCKET = os.environ.get("S3_BUCKET", "weather-ai-models-gcc")
 GOVDATA_PREFIX = "govdata"
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 

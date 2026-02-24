@@ -29,7 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger("govdata_fetcher")
 
 # --- 配置 ---
-S3_BUCKET = "weather-ai-models-de08370c"
+S3_BUCKET = "weather-ai-models-gcc"
 GOVDATA_PREFIX = "govdata"
 BASE_URL = "https://api.data.gov.sg/v1/environment"
 

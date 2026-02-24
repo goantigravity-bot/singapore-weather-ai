@@ -119,7 +119,7 @@ def train(epochs: int, batch_size: int, lr: float, model_path: str):
     try:
         import boto3
         s3 = boto3.client("s3")
-        bucket = os.environ.get("S3_BUCKET", "weather-ai-models-de08370c")
+        bucket = os.environ.get("S3_BUCKET", "weather-ai-models-gcc")
         s3.upload_file(model_path, bucket, f"models/latest.pth")
         logger.info(f"   ☁️ Uploaded to s3://{bucket}/models/latest.pth")
     except Exception as e:

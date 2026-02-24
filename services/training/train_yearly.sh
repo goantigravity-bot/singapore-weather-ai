@@ -2,8 +2,8 @@
 # GPU 逐年增量训练脚本
 #
 # 数据路径:
-#   S3 卫星源:     s3://weather-ai-models-de08370c/processed/satellite-3ch/{YYYYMMDD}/*.npy
-#   S3 传感器源:   s3://weather-ai-models-de08370c/govdata/{YEAR}/*.json
+#   S3 卫星源:     s3://weather-ai-models-gcc/processed/satellite-3ch/{YYYYMMDD}/*.npy
+#   S3 传感器源:   s3://weather-ai-models-gcc/govdata/{YEAR}/*.json
 #   本地卫星:      processed/{YEAR}/sat/{MM}/*.npy
 #   本地传感器:    processed/{YEAR}/sensor/real_sensor_data.csv
 #   训练读取:      SAT_DIR=processed/{YEAR}/sat, CSV_PATH=processed/{YEAR}/sensor/real_sensor_data.csv
