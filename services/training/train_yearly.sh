@@ -17,7 +17,7 @@ set +e
 WORK_DIR="${WORK_DIR:-$(pwd)}"
 cd "$WORK_DIR"
 
-S3_BUCKET="weather-ai-models-de08370c"
+S3_BUCKET="weather-ai-models-gcc"
 if [ -n "$TRAIN_YEARS" ]; then
     IFS=' ' read -ra YEARS <<< "$TRAIN_YEARS"
 else

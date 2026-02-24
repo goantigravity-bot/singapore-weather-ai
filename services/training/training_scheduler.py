@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # 配置
 WORK_DIR = Path(os.environ.get("WORK_DIR", "/Users/jinhui/development/tools/claude-skill/services/training"))
 STATE_FILE = WORK_DIR / "training_state.json"
-S3_BUCKET = "weather-ai-models-de08370c"
+S3_BUCKET = "weather-ai-models-gcc"
 SATELLITE_PREFIX = "satellite"
 GOVDATA_PREFIX = "govdata"
 
