@@ -1,9 +1,11 @@
+# API Server 使用 CPU 版 PyTorch（无需 CUDA，节省 ~5.8GB 磁盘）
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
 fastapi
 uvicorn
 python-multipart
 boto3
 pandas
-torch
 numpy
 scipy
 xarray

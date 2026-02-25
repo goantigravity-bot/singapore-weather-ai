@@ -385,7 +385,7 @@ def startup_event():
         logger.warning("S3_BUCKET not set. Sync disabled.")
 
     send_notification("server_start", source="api",
-                     details=f"version=0.13.0, bucket={S3_BUCKET or 'none'}")
+                     details=f"version=0.14.0, bucket={S3_BUCKET or 'none'}")
 
     try:
         model, df = load_system()
@@ -436,7 +436,7 @@ def set_geocoding_config(body: dict):
 
 @api_router.get("/health")
 def health():
-    return {"status": "ok", "version": "0.13.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
+    return {"status": "ok", "version": "0.14.0", "service": "api", "geocoding_provider": geocoding.get_provider()}
 
 @api_router.get("/stations")
 def get_stations():

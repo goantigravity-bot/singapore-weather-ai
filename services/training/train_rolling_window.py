@@ -24,21 +24,6 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-class WeightedMSELoss(nn.Module):
-    """降雨数据极度不平衡(99%无雨)，普通MSE会让模型学到"永远预测均值"的捷径。
-    给有雨样本更高权重，迫使模型认真学习降雨特征。"""
-    def __init__(self, rain_threshold=0.1, rain_weight=10.0):
-        super().__init__()
-        self.rain_threshold = rain_threshold
-        self.rain_weight = rain_weight
-
-    def forward(self, pred, target):
-        weights = torch.where(
-            target > self.rain_threshold,
-            torch.tensor(self.rain_weight, device=pred.device),
-            torch.tensor(1.0, device=pred.device)
-        )
-        return torch.mean(weights * (pred - target) ** 2)
 
 # --- Hyperparameters ---
 LEARNING_RATE = 1e-3
@@ -54,7 +39,7 @@ else:
 
 # 🆕 动态Epochs配置
 EPOCHS_INITIAL = 30      # 首次训练
-EPOCHS_INCREMENTAL = 15  # 增量训练（Weighted Loss 需要更多轮数收敛）
+EPOCHS_INCREMENTAL = 15  # 增量训练
 
 # 支持环境变量覆盖
 EPOCHS_INITIAL = int(os.environ.get('EPOCHS_INITIAL', EPOCHS_INITIAL))
@@ -168,8 +153,9 @@ def train_model():
     model.to(DEVICE)
     
     # 3. Loss, Optimizer, Scheduler
-    RAIN_WEIGHT = float(os.environ.get('RAIN_WEIGHT', 10.0))
-    criterion = WeightedMSELoss(rain_threshold=0.1, rain_weight=RAIN_WEIGHT)
+    # BCEWithLogitsLoss: 内部合并 Sigmoid + BCE，数值更稳定（避免 log(0)）
+    # 模型输出 raw logits，无需手动加 Sigmoid
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
     # LR Scheduler: val_loss 停滞时自动衰减学习率，帮助精细收敛
@@ -191,7 +177,7 @@ def train_model():
     logger.info(f"  - Epochs: {EPOCHS} (Early Stop patience={EARLY_STOPPING_PATIENCE})")
     logger.info(f"  - Batch Size: {BATCH_SIZE}")
     logger.info(f"  - Learning Rate: {LEARNING_RATE}")
-    logger.info(f"  - Loss: WeightedMSE (rain_weight={RAIN_WEIGHT})")
+    logger.info(f"  - Loss: BCEWithLogitsLoss (binary classification)")
     logger.info(f"  - Device: {DEVICE}")
     logger.info(f"  - AMP (Mixed Precision): {use_amp}")
     logger.info(f"{'='*60}")
@@ -204,7 +190,7 @@ def train_model():
                 "batch_size": BATCH_SIZE,
                 "max_epochs": EPOCHS,
                 "early_stopping_patience": EARLY_STOPPING_PATIENCE,
-                "rain_weight": RAIN_WEIGHT,
+                "loss_function": "BCEWithLogitsLoss",
                 "device": str(DEVICE),
                 "amp_enabled": use_amp,
                 "mode": "incremental" if os.path.exists(MODEL_SAVE_PATH) else "initial",
@@ -217,13 +203,14 @@ def train_model():
     actual_epochs = 0
     total_train_samples = 0
     
-    history = {'train_loss': [], 'val_loss': [], 'train_mae': [], 'val_mae': []}
+    history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
     
     for epoch in range(EPOCHS):
         epoch_start = time.time()
         model.train()
         running_loss = 0.0
-        running_mae = 0.0
+        train_correct = 0
+        train_total = 0
         epoch_samples = 0
         
         for batch_idx, (sat, sensor, coord, target) in enumerate(train_loader):
@@ -236,7 +223,10 @@ def train_model():
                 outputs = model(sat, sensor, coord)
                 loss = criterion(outputs, target)
             
-            mae = torch.mean(torch.abs(outputs - target))
+            # 二分类准确率（训练集）：模型输出 logits，需 sigmoid 转概率
+            predicted = (torch.sigmoid(outputs) > 0.5).float()
+            train_correct += (predicted == target).sum().item()
+            train_total += target.numel()
             
             # Scaled 反向传播（AMP 防止梯度下溢）
             scaler.scale(loss).backward()
@@ -247,39 +237,39 @@ def train_model():
             scaler.update()
             
             running_loss += loss.item()
-            running_mae += mae.item()
             epoch_samples += target.size(0)
         
         avg_train_loss = running_loss / len(train_loader)
-        avg_train_mae = running_mae / len(train_loader)
+        train_accuracy = train_correct / train_total if train_total > 0 else 0.0
         total_train_samples += epoch_samples
         
         # Validation
         model.eval()
         val_loss = 0.0
-        val_mae = 0.0
-        # 降雨二分类准确率：预测值和实际值是否同时 > 阈值（有雨）或同时 <= 阈值（无雨）
-        rain_correct = 0
-        rain_total = 0
-        RAIN_THRESHOLD = 0.1
+        val_correct = 0
+        val_total = 0
+        # F1 指标统计
+        tp = fp = fn = 0
         with torch.no_grad():
             for sat, sensor, coord, target in val_loader:
                 sat, sensor, coord, target = sat.to(DEVICE), sensor.to(DEVICE), coord.to(DEVICE), target.to(DEVICE)
                 with autocast(device_type=DEVICE.type, enabled=use_amp):
                     outputs = model(sat, sensor, coord)
                     loss = criterion(outputs, target)
-                mae = torch.mean(torch.abs(outputs - target))
                 val_loss += loss.item()
-                val_mae += mae.item()
-                # 二分类准确率统计
-                pred_rain = (outputs > RAIN_THRESHOLD).float()
-                actual_rain = (target > RAIN_THRESHOLD).float()
-                rain_correct += (pred_rain == actual_rain).sum().item()
-                rain_total += target.numel()
+                # 二分类准确率 + F1 统计：logits → sigmoid → 阈值
+                predicted = (torch.sigmoid(outputs) > 0.5).float()
+                val_correct += (predicted == target).sum().item()
+                val_total += target.numel()
+                tp += ((predicted == 1) & (target == 1)).sum().item()
+                fp += ((predicted == 1) & (target == 0)).sum().item()
+                fn += ((predicted == 0) & (target == 1)).sum().item()
         
         avg_val_loss = val_loss / len(val_loader)
-        avg_val_mae = val_mae / len(val_loader)
-        rain_accuracy = rain_correct / rain_total if rain_total > 0 else 0.0
+        val_accuracy = val_correct / val_total if val_total > 0 else 0.0
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
         actual_epochs = epoch + 1
         
         history['train_loss'].append(avg_train_loss)
@@ -294,7 +284,8 @@ def train_model():
             f"Epoch [{epoch+1}/{EPOCHS}] "
             f"Time: {epoch_time:.1f}s | "
             f"Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} || "
-            f"MAE: {avg_train_mae:.4f} | Val MAE: {avg_val_mae:.4f} | "
+            f"Train Acc: {train_accuracy*100:.1f}% | Val Acc: {val_accuracy*100:.1f}% | "
+            f"F1: {f1*100:.1f}% | P: {precision*100:.1f}% R: {recall*100:.1f}% | "
             f"LR: {current_lr:.1e}"
         )
 
@@ -304,9 +295,11 @@ def train_model():
                 mlflow.log_metrics({
                     "train_loss": avg_train_loss,
                     "val_loss": avg_val_loss,
-                    "train_mae": avg_train_mae,
-                    "val_mae": avg_val_mae,
-                    "rain_accuracy": rain_accuracy,
+                    "train_accuracy": train_accuracy,
+                    "val_accuracy": val_accuracy,
+                    "f1_score": f1,
+                    "precision": precision,
+                    "recall": recall,
                     "learning_rate": current_lr,
                 }, step=epoch)
             except Exception:
@@ -335,16 +328,17 @@ def train_model():
         "best_val_loss": best_loss,
         "final_epoch": actual_epochs,
         "max_epochs": EPOCHS,
-        "last_train_mae": avg_train_mae,
-        "last_val_mae": avg_val_mae,
-        "rmse": best_loss ** 0.5,
-        "rain_accuracy": rain_accuracy,
+        "train_accuracy": train_accuracy,
+        "val_accuracy": val_accuracy,
+        "f1_score": f1,
+        "precision": precision,
+        "recall": recall,
         "total_train_samples": total_train_samples,
         "training_time_seconds": round(total_time, 1),
         "early_stopped": no_improve_count >= EARLY_STOPPING_PATIENCE,
         "device": str(DEVICE),
         "batch_size": BATCH_SIZE,
-        "rain_weight": RAIN_WEIGHT,
+        "loss_function": "BCEWithLogitsLoss",
         "success": True
     }
     
@@ -361,8 +355,10 @@ def train_model():
         try:
             mlflow.log_metrics({
                 "best_val_loss": best_loss,
-                "best_rmse": best_loss ** 0.5,
-                "final_rain_accuracy": rain_accuracy,
+                "final_accuracy": val_accuracy,
+                "final_f1": f1,
+                "final_precision": precision,
+                "final_recall": recall,
                 "training_time_seconds": round(total_time, 1),
             })
             mlflow.log_artifact(metrics_path)

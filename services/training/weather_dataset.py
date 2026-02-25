@@ -267,9 +267,10 @@ class WeatherDataset(Dataset):
         
         sensor_tensor = torch.tensor(sensor_seq, dtype=torch.float32)
         
-        # 2. Target（纯 numpy）
+        # 2. Target（二值化：> 0.1mm 为有雨）
         target_val = self._rainfall_cache[sensor_id][target_idx]
-        target_tensor = torch.tensor([target_val], dtype=torch.float32)
+        target_binary = 1.0 if target_val > 0.1 else 0.0
+        target_tensor = torch.tensor([target_binary], dtype=torch.float32)
         
         # 3. 卫星图（预计算 UTC 字符串，直接查缓存）
         utc_str = self._sat_utc_cache[sensor_id][input_end - 1]

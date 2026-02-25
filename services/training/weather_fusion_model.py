@@ -88,6 +88,7 @@ class WeatherFusionNet(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(64, prediction_dim)
+            # 不加 Sigmoid：配合 BCEWithLogitsLoss 使用，数值更稳定
         )
 
     def forward(self, sat_img, sensor_data, coord):

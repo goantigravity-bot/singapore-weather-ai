@@ -1,8 +1,8 @@
 """
-模型诊断脚本：分析模型输出的分布，验证评估器是否正确。
+模型诊断脚本：分析二分类模型输出的分布，验证降雨预测能力。
 用法: WORK_DIR=$PWD python3 diagnose_model.py
 
-核心目的：搞清楚模型到底在输出什么值，然后判断"是否降雨"的评估逻辑对不对。
+核心目的：模型输出 logits → sigmoid 转概率，评估二分类性能。
 """
 import os
 import sys
@@ -55,45 +55,47 @@ def diagnose():
                 sat.to(device), sensor.to(device),
                 coord.to(device), target.to(device)
             )
-            outputs = model(sat, sensor, coord)
-            all_preds.append(outputs.cpu().numpy().flatten())
+            logits = model(sat, sensor, coord)
+            # 模型输出 logits，转概率用于评估
+            probs = torch.sigmoid(logits)
+            all_preds.append(probs.cpu().numpy().flatten())
             all_targets.append(target.cpu().numpy().flatten())
 
     preds = np.concatenate(all_preds)
     targets = np.concatenate(all_targets)
 
     logger.info(f"\n{'='*60}")
-    logger.info(f"📊 模型输出分布 (共 {len(preds)} 个样本)")
+    logger.info(f"📊 模型输出概率分布 (共 {len(preds)} 个样本)")
     logger.info(f"{'='*60}")
 
     # 1. 基本统计
-    logger.info(f"\n--- 模型预测值 (outputs) ---")
+    logger.info(f"\n--- 模型预测概率 (sigmoid outputs) ---")
     logger.info(f"  Min:    {preds.min():.4f}")
     logger.info(f"  Max:    {preds.max():.4f}")
     logger.info(f"  Mean:   {preds.mean():.4f}")
     logger.info(f"  Median: {np.median(preds):.4f}")
     logger.info(f"  Std:    {preds.std():.4f}")
 
-    logger.info(f"\n--- 真实值 (targets) ---")
+    logger.info(f"\n--- 真实标签 (targets: 0=无雨, 1=有雨) ---")
     logger.info(f"  Min:    {targets.min():.4f}")
     logger.info(f"  Max:    {targets.max():.4f}")
     logger.info(f"  Mean:   {targets.mean():.4f}")
     logger.info(f"  Median: {np.median(targets):.4f}")
     logger.info(f"  Std:    {targets.std():.4f}")
 
-    # 2. 降雨分布
-    rain_threshold = 0.1
-    actual_rain_count = (targets > rain_threshold).sum()
-    actual_dry_count = (targets <= rain_threshold).sum()
+    # 2. 标签分布（已二值化）
+    actual_rain_count = (targets == 1).sum()
+    actual_dry_count = (targets == 0).sum()
     rain_ratio = actual_rain_count / len(targets)
 
-    logger.info(f"\n--- 类别分布 (阈值={rain_threshold}mm) ---")
-    logger.info(f"  有雨样本: {actual_rain_count} ({rain_ratio*100:.1f}%)")
-    logger.info(f"  无雨样本: {actual_dry_count} ({(1-rain_ratio)*100:.1f}%)")
+    logger.info(f"\n--- 类别分布 ---")
+    logger.info(f"  有雨样本 (target=1): {actual_rain_count} ({rain_ratio*100:.1f}%)")
+    logger.info(f"  无雨样本 (target=0): {actual_dry_count} ({(1-rain_ratio)*100:.1f}%)")
 
-    # 3. 模型输出 vs 阈值 — 这就是当前评估器在做的事
-    pred_rain = preds > rain_threshold
-    actual_rain = targets > rain_threshold
+    # 3. 二分类评估（概率 > 0.5 判定有雨）
+    THRESHOLD = 0.5
+    pred_rain = preds > THRESHOLD
+    actual_rain = targets == 1
 
     tp = ((pred_rain == True) & (actual_rain == True)).sum()
     fp = ((pred_rain == True) & (actual_rain == False)).sum()
@@ -106,7 +108,7 @@ def diagnose():
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
 
     logger.info(f"\n{'='*60}")
-    logger.info(f"📐 当前评估器结果 (阈值={rain_threshold}mm)")
+    logger.info(f"📐 二分类评估结果 (阈值={THRESHOLD})")
     logger.info(f"{'='*60}")
     logger.info(f"  混淆矩阵:")
     logger.info(f"              预测有雨  预测无雨")
@@ -118,12 +120,12 @@ def diagnose():
     logger.info(f"  Recall:    {recall*100:.2f}% (实际有雨时，被模型找到的比例)")
     logger.info(f"  F1 Score:  {f1*100:.2f}%")
 
-    # 4. 预测值 > 0.1 的比例 — 检验我们的假设
-    pred_above_threshold = (preds > rain_threshold).sum() / len(preds)
-    logger.info(f"\n--- 假设验证 ---")
-    logger.info(f"  模型输出 > 0.1 的比例: {pred_above_threshold*100:.1f}%")
-    logger.info(f"  如果接近 100%，说明评估器 bug 已确认 ✅")
-    logger.info(f"  如果接近实际下雨比例 ({rain_ratio*100:.1f}%)，说明模型已学到有意义的信号")
+    # 4. 概率分布诊断
+    pred_above_threshold = (preds > THRESHOLD).sum() / len(preds)
+    logger.info(f"\n--- 概率分布诊断 ---")
+    logger.info(f"  模型输出 > {THRESHOLD} 的比例: {pred_above_threshold*100:.1f}%")
+    logger.info(f"  实际有雨比例: {rain_ratio*100:.1f}%")
+    logger.info(f"  如果两者接近，说明模型学到了有意义的分类能力")
 
     # 5. 尝试不同阈值，找最优
     logger.info(f"\n{'='*60}")
@@ -134,9 +136,9 @@ def diagnose():
     best_f1 = 0
     best_threshold = 0
 
-    for t in np.arange(preds.min() - 0.1, preds.max() + 0.1, 0.05):
+    for t in np.arange(0.05, 0.95, 0.05):
         p_rain = preds > t
-        a_rain = targets > rain_threshold  # 实际降雨始终用 0.1mm
+        a_rain = targets == 1  # 二值标签
 
         t_tp = ((p_rain) & (a_rain)).sum()
         t_fp = ((p_rain) & (~a_rain)).sum()
@@ -163,16 +165,15 @@ def diagnose():
     logger.info(f"📋 诊断结论")
     logger.info(f"{'='*60}")
 
-    if pred_above_threshold > 0.9:
-        logger.info(f"  ❌ 评估器 BUG 已确认：模型输出 {pred_above_threshold*100:.0f}% > 0.1")
-        logger.info(f"     当前 5% 准确率是因为 pred_rain 永远=1，与实际无雨冲突")
-        logger.info(f"     修复方法: 使用最优阈值 {best_threshold:.3f} 或改用分类模型")
+    if best_f1 > 0.5:
+        logger.info(f"  ✅ 模型具有良好的降雨判别能力 (best F1={best_f1*100:.1f}%)")
+        logger.info(f"     最优阈值: {best_threshold:.3f}")
     elif best_f1 > 0.3:
         logger.info(f"  ⚠️ 模型有一定判别能力，最优 F1={best_f1*100:.1f}%")
-        logger.info(f"     建议使用阈值 {best_threshold:.3f} 替换当前 0.1")
+        logger.info(f"     建议使用阈值 {best_threshold:.3f}")
     else:
-        logger.info(f"  ❌ 模型对降雨几乎没有判别能力 (best F1={best_f1*100:.1f}%)")
-        logger.info(f"     需要改用分类模型 (BCELoss + Sigmoid)")
+        logger.info(f"  ❌ 模型降雨判别能力不足 (best F1={best_f1*100:.1f}%)")
+        logger.info(f"     建议增加训练数据或调整模型结构")
 
     # 保存结果
     results = {
