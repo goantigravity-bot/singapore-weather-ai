@@ -283,7 +283,9 @@ class SensorDataManager:
             writer.writeheader()
             for row in all_rows:
                 clean_row = {
-                    k: ("" if isinstance(v, float) and v != v else v)
+                    k: ("" if isinstance(v, float) and v != v  # NaN → NULL
+                        else round(v, 2) if isinstance(v, float)  # round to 2dp
+                        else v)
                     for k, v in row.items()
                 }
                 writer.writerow(clean_row)
