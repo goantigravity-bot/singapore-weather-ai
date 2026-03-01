@@ -80,7 +80,13 @@ def build_station_region_map(s3, year):
 
 
 def parse_json_file(s3, key, dtype, station_region_map):
-    """解析单个 JSON 文件，返回 {(timestamp, sensor_id): value} 字典。"""
+    """解析单个 JSON 文件，返回 {(timestamp, sensor_id): value} 字典。
+
+    支持两种 NEA API 格式:
+      格式 A (rainfall / temperature / humidity): 顶层含 "items" 列表
+      格式 B (wind-speed / wind-direction):       顶层含 "data" 字典,
+                readings 在 data.readings 内, 站点 key 为 stationId
+    """
     try:
         obj = s3.get_object(Bucket=S3_BUCKET, Key=key)
         data = json.loads(obj['Body'].read().decode('utf-8'))
@@ -88,12 +94,15 @@ def parse_json_file(s3, key, dtype, station_region_map):
         logger.warning(f"Error reading {key}: {e}")
         return {}
 
-    if not data or 'items' not in data:
+    if not data:
         return {}
 
     result = {}
 
+    # --- PM2.5: 区域级数据，映射到各站点 ---
     if dtype == 'pm25':
+        if 'items' not in data:
+            return {}
         for item in data['items']:
             ts = item['timestamp']
             readings = item.get('readings', {})
@@ -101,13 +110,31 @@ def parse_json_file(s3, key, dtype, station_region_map):
             for sid, region_key in station_region_map.items():
                 if region_key in pm25_data:
                     result[(ts, sid)] = pm25_data[region_key]
-    else:
-        for item in data['items']:
-            ts = item['timestamp']
-            for r in item.get('readings', []):
-                val = r.get('value')
-                if val is not None:
-                    result[(ts, r['station_id'])] = val
+        return result
+
+    # --- 格式 B: wind-speed / wind-direction ---
+    # { "code": 0, "data": { "readings": [{"timestamp": "...", "data": [{"stationId": "Sxx", "value": N}]}] } }
+    if 'data' in data and 'items' not in data:
+        data_section = data.get('data', {})
+        if isinstance(data_section, dict):
+            for reading_block in data_section.get('readings', []):
+                ts = reading_block.get('timestamp', '')
+                for r in reading_block.get('data', []):
+                    sid = r.get('stationId')
+                    val = r.get('value')
+                    if sid and val is not None:
+                        result[(ts, sid)] = val
+        return result
+
+    # --- 格式 A: rainfall / temperature / humidity ---
+    if 'items' not in data:
+        return {}
+    for item in data['items']:
+        ts = item['timestamp']
+        for r in item.get('readings', []):
+            val = r.get('value')
+            if val is not None:
+                result[(ts, r['station_id'])] = val
 
     return result
 
@@ -136,13 +163,16 @@ def process_day(s3, year, date_str, station_region_map):
             'sensor_id': sid,
         }
         for col_name in DATA_TYPES:
-            row[col_name] = type_data[col_name].get((ts, sid), 0.0)
+            val = type_data[col_name].get((ts, sid))
+            # Use NaN for missing values so resampling mean ignores them.
+            # Only rainfall defaults to 0 (no rain = 0 is semantically correct).
+            row[col_name] = val if val is not None else (0.0 if col_name == 'rainfall' else float('nan'))
         rows.append(row)
 
     # 10 分钟重采样：减少数据量 ~75%，避免训练时重复计算
     import pandas as pd
     df = pd.DataFrame(rows)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     # 按 station 分组，10 分钟聚合（rainfall 求和，其余取均值）
     df['ts_bucket'] = df['timestamp'].dt.floor('10min')
     agg_dict = {col: ('sum' if col == 'rainfall' else 'mean')
@@ -151,6 +181,8 @@ def process_day(s3, year, date_str, station_region_map):
     resampled.rename(columns={'ts_bucket': 'timestamp'}, inplace=True)
     # 转回 ISO 格式字符串
     resampled['timestamp'] = resampled['timestamp'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+    # rainfall NaN → 0; other metrics keep NaN (→ empty string in CSV → NULL in Snowflake)
+    resampled['rainfall'] = resampled['rainfall'].fillna(0.0)
 
     return resampled.to_dict('records')
 
@@ -236,7 +268,14 @@ def main():
 
         for i, date_str in enumerate(remaining):
             rows = process_day(s3, year, date_str, station_region_map)
-            writer.writerows(rows)
+            # Convert NaN to empty string for NULL semantics in CSV
+            clean_rows = [
+                {k: ("" if isinstance(v, float) and v != v else
+                     round(v, 2) if isinstance(v, float) else v)
+                 for k, v in row.items()}
+                for row in rows
+            ]
+            writer.writerows(clean_rows)
             f.flush()  # 每天写完 flush，确保中断时数据不丢
 
             if (i + 1) % 30 == 0 or (i + 1) == len(remaining):
