@@ -81,25 +81,53 @@ def _build_station_region_map(s3, bucket: str, target_dates: list[date]) -> dict
 
 
 def _parse_json(data: dict, dtype: str, station_region_map: dict) -> dict:
-    """解析单个 JSON 内容，返回 {(timestamp, sensor_id): value}。"""
-    if not data or "items" not in data:
+    """解析单个 JSON 内容，返回 {(timestamp, sensor_id): value}。
+
+    支持两种 NEA API 格式:
+      格式 A (rainfall / temperature / humidity): 顶层含 "items" 列表
+      格式 B (wind-speed / wind-direction):       顶层含 "data" 字典,
+                readings 在 data.readings 内, 站点 key 为 stationId
+    """
+    if not data:
         return {}
 
     result = {}
+
+    # --- PM2.5: 区域级数据，映射到各站点 ---
     if dtype == "pm25":
+        if "items" not in data:
+            return {}
         for item in data["items"]:
             ts = item["timestamp"]
             pm25_data = item.get("readings", {}).get("pm25_one_hourly", {})
             for sid, region_key in station_region_map.items():
                 if region_key in pm25_data:
                     result[(ts, sid)] = pm25_data[region_key]
-    else:
-        for item in data["items"]:
-            ts = item["timestamp"]
-            for r in item.get("readings", []):
-                val = r.get("value")
-                if val is not None:
-                    result[(ts, r["station_id"])] = val
+        return result
+
+    # --- 格式 B: wind-speed / wind-direction ---
+    # { "code": 0, "data": { "readings": [{"timestamp": "...", "data": [{"stationId": "Sxx", "value": N}]}] } }
+    if "data" in data and "items" not in data:
+        data_section = data.get("data", {})
+        if isinstance(data_section, dict):
+            for reading_block in data_section.get("readings", []):
+                ts = reading_block.get("timestamp", "")
+                for r in reading_block.get("data", []):
+                    sid = r.get("stationId")
+                    val = r.get("value")
+                    if sid and val is not None:
+                        result[(ts, sid)] = val
+        return result
+
+    # --- 格式 A: rainfall / temperature / humidity ---
+    if "items" not in data:
+        return {}
+    for item in data["items"]:
+        ts = item["timestamp"]
+        for r in item.get("readings", []):
+            val = r.get("value")
+            if val is not None:
+                result[(ts, r["station_id"])] = val
     return result
 
 
@@ -148,15 +176,17 @@ def _process_day_from_local(
 
     # 10 分钟重采样（NaN values are excluded from mean automatically）
     df = pd.DataFrame(rows)
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
     df["ts_bucket"] = df["timestamp"].dt.floor("10min")
     agg_dict = {col: ("sum" if col == "rainfall" else "mean") for col in DATA_TYPES}
     resampled = df.groupby(["ts_bucket", "sensor_id"]).agg(agg_dict).reset_index()
     resampled.rename(columns={"ts_bucket": "timestamp"}, inplace=True)
     resampled["timestamp"] = resampled["timestamp"].dt.strftime("%Y-%m-%dT%H:%M:%S")
 
-    # Replace remaining NaN with 0 for the CSV (rain NaN → 0 is correct)
-    resampled = resampled.fillna(0.0)
+    # Only fill rainfall NaN → 0 (cumulative: no rain = 0 is semantically correct).
+    # All other metrics keep NaN — the CSV writer converts them to empty string,
+    # which Snowflake loads as NULL rather than 0.
+    resampled["rainfall"] = resampled["rainfall"].fillna(0.0)
 
     return resampled.to_dict("records")
 
@@ -247,11 +277,16 @@ class SensorDataManager:
             logger.error("No sensor data found for any day!")
             return self.csv_path
 
-        # 写入 CSV
+        # 写入 CSV — NaN 转为空字符串，Snowflake 加载时识别为 NULL
         with open(self.csv_path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
+            writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS, extrasaction="ignore")
             writer.writeheader()
-            writer.writerows(all_rows)
+            for row in all_rows:
+                clean_row = {
+                    k: ("" if isinstance(v, float) and v != v else v)
+                    for k, v in row.items()
+                }
+                writer.writerow(clean_row)
 
         logger.info(f"✅ CSV generated: {self.csv_path} ({len(all_rows)} rows)")
         return self.csv_path
