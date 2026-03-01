@@ -98,7 +98,8 @@ LIMIT 10;
 -- "0.0" appeared 16M+ times — a clear data pipeline bug, not real observations
 ```
 
-> **Note:** A set of Databricks/Snowflake notebooks was used both as **evidence of the issue** and to **verify data quality after the fix was applied**, confirming that zero values were replaced by proper NULLs and that wind speed/direction columns were now populated.
+> **Note:** A Snowflake/Databricks notebook was used both as **evidence of the issue** and to **verify data quality after the fix was applied**, confirming that zero values were replaced by proper NULLs and that wind speed/direction columns were now populated.
+> See: [`docs/model-tuned/weather-playground-cleanup-20260301.ipynb`](model-tuned/weather-playground-cleanup-20260301.ipynb)
 
 **Root causes identified:**
 
