@@ -80,6 +80,38 @@
 
 ## 2. Sensor Data Pipeline Detail
 
+### Data Quality Issues — Discovery & Fix (March 2026)
+
+After loading `real_sensor_data.csv` into **Snowflake**, distribution analysis across millions of rows immediately surfaced an anomaly that would have been **extremely difficult to spot manually** by inspecting raw files:
+
+- **~16 million temperature records had a value of exactly `0`** — clearly wrong for Singapore's climate
+- Many stations that only collect rainfall were showing `0` for temperature, humidity, and wind
+
+The Snowflake query that revealed the problem:
+
+```sql
+SELECT temperature, COUNT(*) AS cnt
+FROM real_sensor_data
+GROUP BY temperature
+ORDER BY cnt DESC
+LIMIT 10;
+-- "0.0" appeared 16M+ times — a clear data pipeline bug, not real observations
+```
+
+> **Note:** A set of Databricks/Snowflake notebooks was used both as **evidence of the issue** and to **verify data quality after the fix was applied**, confirming that zero values were replaced by proper NULLs and that wind speed/direction columns were now populated.
+
+**Root causes identified:**
+
+| Issue | Cause | Fix |
+|:---|:---|:---|
+| Temperature/humidity zero-filled | `fillna(0.0)` applied to all columns, not just rainfall | Only fill `rainfall` with `0`; others use `NaN` → `""` → `NULL` |
+| Wind speed/direction all zero | NEA uses a different JSON format for wind (Format B) — parser didn't handle it | Added Format B parser (`data.readings[].data[].stationId`) |
+| Long float decimals in CSV | No rounding applied | Round all floats to 2 decimal places on write |
+
+**Lesson:** Loading pipeline output into a columnar analytics platform and running distribution checks is a fast and reliable way to surface data quality bugs that are invisible at the individual file level.
+
+---
+
 The raw JSON files from NEA come in two formats:
 
 | Sensor Type | JSON Format | Station Key |
