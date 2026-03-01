@@ -15,8 +15,15 @@
 │  ├── Pull NEA APIs → save JSON to S3 (govdata/)          │
 │  │     rainfall, temperature, humidity,                  │
 │  │     pm25, wind-speed, wind-direction                  │
-│  └── Download JAXA satellite images                      │
-│        → process into .npy arrays                        │
+│  └── Download satellite imagery                          │
+│        Source: NOAA AWS Open Data (public, no auth)      │
+│          s3://noaa-himawari9/AHI-L2-FLDK-ISatSS/         │
+│          Satellite: Himawari-9 (AHI sensor)              │
+│          Band: C13 (10.41μm IR brightness temperature)   │
+│          Tile: T036 (covers Singapore ~0°N–2.65°N)       │
+│          Cadence: 10-min UTC slots, ~30 min delay        │
+│        → crop 128×128 px around Singapore                │
+│        → save as .npy arrays                             │
 │        → upload to S3 (processed/satellite-3ch/)         │
 └──────────────────────┬───────────────────────────────────┘
                        │  S3: govdata/*.json
