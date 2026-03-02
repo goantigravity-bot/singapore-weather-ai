@@ -59,9 +59,12 @@ def train(epochs: int, batch_size: int, lr: float, model_path: str,
         logger.info(f"   GPU: {torch.cuda.get_device_name(0)}")
 
     # 数据加载（启用时间切分验证）
+    # 路径支持环境变量覆盖（train_yearly.sh 逐年传入不同路径）
     logger.info("📊 Loading dataset...")
-    csv_path = "real_sensor_data.csv"
-    sat_dir = "processed_data"
+    csv_path = os.environ.get("CSV_PATH", "real_sensor_data.csv")
+    sat_dir = os.environ.get("SAT_DIR", "processed_data")
+    logger.info(f"   CSV: {csv_path}")
+    logger.info(f"   SAT: {sat_dir}")
     train_loader, val_loader = get_dataloaders(
         csv_path, sat_dir, batch_size=batch_size, temporal_split=True
     )
@@ -78,6 +81,14 @@ def train(epochs: int, batch_size: int, lr: float, model_path: str,
 
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"🧠 Model: WeatherFusionNet V3 ({total_params:,} params)")
+
+    # 增量训练：若模型文件已存在，加载权重继续训练
+    if os.path.exists(model_path):
+        state_dict = torch.load(model_path, map_location=device, weights_only=True)
+        model.load_state_dict(state_dict)
+        logger.info(f"   📂 Loaded existing weights from {model_path} (incremental training)")
+    else:
+        logger.info(f"   🆕 Training from scratch (no existing model at {model_path})")
 
     # 组合损失: Focal Loss + 物理约束
     loss_fn = get_combined_loss(

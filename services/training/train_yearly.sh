@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GPU 逐年增量训练脚本
+# GPU 逐年增量训练脚本 (V3: ResNet + CrossAttention + FocalLoss)
 #
 # 数据路径:
 #   S3 卫星源:     s3://weather-ai-models-gcc/processed/satellite-3ch/{YYYYMMDD}/*.npy
@@ -61,10 +61,13 @@ if [ ! -d "$LOG_DIR" ]; then
     echo "📁 创建日志目录: $LOG_DIR"
 fi
 
-# 首次训练前删除旧模型，确保从零开始
-if [ -f "$WORK_DIR/weather_fusion_model.pth" ]; then
-    echo "🗑️  删除旧模型 weather_fusion_model.pth，从零开始训练"
-    rm -f "$WORK_DIR/weather_fusion_model.pth"
+# V3 模型文件名（与 V2 隔离，不覆盖线上模型）
+V3_MODEL="weather_fusion_model_v3.pth"
+
+# 首次训练前删除旧 V3 模型，确保从零开始
+if [ -f "$WORK_DIR/$V3_MODEL" ]; then
+    echo "🗑️  删除旧 V3 模型 $V3_MODEL，从零开始训练"
+    rm -f "$WORK_DIR/$V3_MODEL"
 fi
 
 echo "============================================" | tee "$LOG_DIR/train_summary.log"
@@ -219,19 +222,23 @@ for YEAR in "${YEARS[@]}"; do
 
     TRAIN_MODE="initial"
     TRAIN_EPOCHS=$EPOCHS_INITIAL
-    if [ -f "$WORK_DIR/weather_fusion_model.pth" ]; then
+    if [ -f "$WORK_DIR/$V3_MODEL" ]; then
         TRAIN_MODE="incremental"
         TRAIN_EPOCHS=$EPOCHS_INCREMENTAL
     fi
-    echo "🚀 训练 (${YEAR}): mode=$TRAIN_MODE, epochs=$TRAIN_EPOCHS" | tee -a "$LOG_FILE"
+    echo "🚀 V3 训练 (${YEAR}): mode=$TRAIN_MODE, epochs=$TRAIN_EPOCHS" | tee -a "$LOG_FILE"
     notify train_start "$YEAR" "mode=$TRAIN_MODE,epochs=$TRAIN_EPOCHS,sat_files=$LOCAL_NPY_COUNT"
     EPOCH_START=$(date '+%Y-%m-%d %H:%M:%S')
 
-    if [ "$TRAIN_MODE" = "initial" ]; then
-        EPOCHS_INITIAL=$EPOCHS_INITIAL $PYTHON train_rolling_window.py 2>&1 | tee -a "$LOG_FILE"
-    else
-        EPOCHS_INCREMENTAL=$EPOCHS_INCREMENTAL $PYTHON train_rolling_window.py 2>&1 | tee -a "$LOG_FILE"
-    fi
+    # V3: 使用 train_direct.py（Focal Loss + CrossAttention + 13维特征）
+    # --model-path 指向 V3 文件名，不覆盖线上 V2
+    # 增量训练时 PyTorch 会自动加载已有权重继续训练
+    CSV_PATH="$CSV_PATH" \
+    $PYTHON train_direct.py \
+        --epochs $TRAIN_EPOCHS \
+        --batch-size 128 \
+        --model-path "$WORK_DIR/$V3_MODEL" \
+        2>&1 | tee -a "$LOG_FILE"
     TRAIN_EXIT=${PIPESTATUS[0]}
 
     stop_resource_monitor
@@ -248,25 +255,29 @@ for YEAR in "${YEARS[@]}"; do
     notify train_end "$YEAR" "mode=$TRAIN_MODE,start=$EPOCH_START,end=$(date '+%H:%M:%S'),last_epoch=$LAST_EPOCH"
 
     # ========== 4. 逐年评估 ==========
-    echo "📋 评估 ${YEAR} 年模型..." | tee -a "$LOG_FILE"
-    # diagnose_model.py 读取 $WORK_DIR 下的固定文件名，创建 symlink 指向当前年份
+    echo "📋 评估 ${YEAR} 年 V3 模型..." | tee -a "$LOG_FILE"
+    # 创建 symlink 指向当前年份数据，供 diagnose_model.py 读取
     ln -sf "$CSV_PATH" "$WORK_DIR/real_sensor_data.csv"
     ln -sfn "$SAT_DIR" "$WORK_DIR/processed_data"
+    # V3 模型路径：暂时 symlink 到标准路径供诊断脚本使用
+    ln -sf "$WORK_DIR/$V3_MODEL" "$WORK_DIR/weather_fusion_model.pth"
     CSV_PATH="$CSV_PATH" SAT_DIR="$SAT_DIR" $PYTHON diagnose_model.py 2>&1 | tee -a "$LOG_FILE"
+    # 还原 symlink 防止干扰
+    rm -f "$WORK_DIR/weather_fusion_model.pth"
 
     if [ -f "$WORK_DIR/diagnosis_results.json" ]; then
-        cp "$WORK_DIR/diagnosis_results.json" "$YEAR_DIR/evaluation.json"
-        echo "   💾 评估结果: $YEAR_DIR/evaluation.json" | tee -a "$LOG_FILE"
+        cp "$WORK_DIR/diagnosis_results.json" "$YEAR_DIR/evaluation_v3.json"
+        echo "   💾 V3 评估结果: $YEAR_DIR/evaluation_v3.json" | tee -a "$LOG_FILE"
         EVAL_SUMMARY=$(python3 -c "import json;d=json.load(open('$WORK_DIR/diagnosis_results.json'));print(','.join(f'{k}={v}' for k,v in d.items() if isinstance(v,(int,float,str))))" 2>/dev/null || echo "N/A")
-        notify eval "$YEAR" "$EVAL_SUMMARY"
+        notify eval "$YEAR" "V3: $EVAL_SUMMARY"
     fi
 
-    # ========== 5. 备份模型（本地 + S3）==========
-    if [ -f "$WORK_DIR/weather_fusion_model.pth" ]; then
-        cp "$WORK_DIR/weather_fusion_model.pth" "$YEAR_DIR/weather_fusion_model_${YEAR}.pth"
-        aws s3 cp "$WORK_DIR/weather_fusion_model.pth" \
-            "s3://${S3_BUCKET}/models/weather_fusion_model_${YEAR}.pth" --quiet 2>/dev/null
-        echo "   💾 模型备份: $YEAR_DIR/ + s3://models/" | tee -a "$LOG_FILE"
+    # ========== 5. 备份 V3 模型（本地 + S3，不覆盖 V2 latest）==========
+    if [ -f "$WORK_DIR/$V3_MODEL" ]; then
+        cp "$WORK_DIR/$V3_MODEL" "$YEAR_DIR/weather_fusion_model_v3_${YEAR}.pth"
+        aws s3 cp "$WORK_DIR/$V3_MODEL" \
+            "s3://${S3_BUCKET}/models/v3/weather_fusion_model_v3_${YEAR}.pth" --quiet 2>/dev/null
+        echo "   💾 V3 模型备份: $YEAR_DIR/ + s3://models/v3/" | tee -a "$LOG_FILE"
     fi
 
     # 记录到汇总日志
@@ -278,9 +289,10 @@ done
 rm -f /tmp/full_sensor_data.csv
 
 echo "============================================" | tee -a "$LOG_DIR/train_summary.log"
-echo "🎉 全部训练完成！ $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "$LOG_DIR/train_summary.log"
-echo "   模型: $WORK_DIR/weather_fusion_model.pth" | tee -a "$LOG_DIR/train_summary.log"
+echo "🎉 V3 全部训练完成！ $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "$LOG_DIR/train_summary.log"
+echo "   V3 模型: $WORK_DIR/$V3_MODEL" | tee -a "$LOG_DIR/train_summary.log"
 echo "   日志: $LOG_DIR/" | tee -a "$LOG_DIR/train_summary.log"
+echo "   ⚠️  模型未推送到 S3 latest，需手动确认后推送" | tee -a "$LOG_DIR/train_summary.log"
 echo "============================================" | tee -a "$LOG_DIR/train_summary.log"
 
 notify complete "" "years=${YEARS[*]},start=$TRAIN_START_TIME,end=$(date '+%Y-%m-%d %H:%M:%S')"
