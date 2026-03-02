@@ -1,17 +1,18 @@
 """
-模型评估脚本 — 用验证集评估训练好的 WeatherFusionNet
+evaluate.py V3 — 分类模型评估
+
+改进:
+  - 直接评估二分类 (sigmoid → 概率)
+  - AUC-ROC + Precision-Recall 曲线
+  - 最优阈值搜索
+  - 概率分布直方图
+  - Calibration 校准分析
 
 用法: cd services/training && python3 ../../tools/evaluate.py
-或:   在 services/training 目录下直接 python3 ../../tools/evaluate.py
-
-输出:
-  - evaluation_results.json (指标)
-  - evaluation_plot.png (时序 + 散点图)
 """
 import sys
 import os
 
-# 确保 services/training 在 Python 搜索路径中
 TRAINING_DIR = os.path.join(os.path.dirname(__file__), "..", "services", "training")
 sys.path.insert(0, os.path.abspath(TRAINING_DIR))
 os.chdir(os.path.abspath(TRAINING_DIR))
@@ -26,28 +27,47 @@ from weather_dataset import get_dataloaders
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from sklearn.metrics import roc_auc_score, precision_recall_curve, roc_curve
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# --- Config ---
 MODEL_PATH = "weather_fusion_model.pth"
 CSV_PATH = "real_sensor_data.csv"
 SAT_DIR = "satellite_data"
 DEVICE = torch.device("cpu")
-RAIN_THRESHOLD = 1.0  # mm，区分有雨/无雨的阈值（1mm/10min ≈ 小到中雨）
+
+
+def find_best_threshold(probs, targets):
+    """搜索 F1 最大化的阈值。"""
+    best_f1 = 0
+    best_t = 0.5
+    for t in np.arange(0.1, 0.9, 0.01):
+        pred = probs > t
+        tp = ((pred) & (targets == 1)).sum()
+        fp = ((pred) & (targets == 0)).sum()
+        fn = ((~pred) & (targets == 1)).sum()
+        prec = tp / max(tp + fp, 1)
+        rec = tp / max(tp + fn, 1)
+        f1 = 2 * prec * rec / max(prec + rec, 1e-8)
+        if f1 > best_f1:
+            best_f1 = f1
+            best_t = t
+    return best_t, best_f1
 
 
 def evaluate_model():
     torch.manual_seed(42)
 
-    # 1. 加载验证集（batch_size=32 提升推理速度）
     logger.info("Loading validation dataset...")
-    _, val_loader = get_dataloaders(CSV_PATH, SAT_DIR, batch_size=32, split=0.8)
+    _, val_loader = get_dataloaders(CSV_PATH, SAT_DIR, batch_size=32, temporal_split=True)
     logger.info(f"Val batches: {len(val_loader)}")
 
-    # 2. 加载模型 — sensor_features=7 (temp, rain, humidity, pm25, wind_speed, wind_sin, wind_cos)
-    model = WeatherFusionNet(sat_channels=1, sensor_features=7, prediction_dim=1)
+    # 加载 V3 模型 (sensor_features=13)
+    model = WeatherFusionNet(
+        sat_channels=3, sensor_features=13, coord_dim=2,
+        num_sat_frames=1, use_cross_attention=True
+    )
     if not os.path.exists(MODEL_PATH):
         logger.error(f"Model file not found: {MODEL_PATH}")
         return None
@@ -55,100 +75,139 @@ def evaluate_model():
     model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE, weights_only=True))
     model.to(DEVICE)
     model.eval()
-    logger.info(f"Loaded model from {MODEL_PATH}")
+    logger.info(f"Loaded V3 model from {MODEL_PATH}")
 
-    # 3. 推理
-    predictions = []
-    actuals = []
+    # 推理
+    all_probs = []
+    all_targets = []
 
     with torch.no_grad():
         for sat, sensor, coord, target in val_loader:
             sat, sensor, coord = sat.to(DEVICE), sensor.to(DEVICE), coord.to(DEVICE)
-            output = model(sat, sensor, coord)
-            # clamp 避免负降雨量
-            preds = torch.clamp(output, min=0.0).cpu().numpy().flatten()
-            predictions.extend(preds)
-            actuals.extend(target.numpy().flatten())
+            logits = model(sat, sensor, coord)
+            probs = torch.sigmoid(logits).cpu().numpy().flatten()
+            all_probs.extend(probs)
+            all_targets.extend(target.numpy().flatten())
 
-    predictions = np.array(predictions)
-    actuals = np.array(actuals)
+    probs = np.array(all_probs)
+    targets = np.array(all_targets)
 
-    # 4. 回归指标
-    mae = np.mean(np.abs(predictions - actuals))
-    rmse = np.sqrt(np.mean((predictions - actuals) ** 2))
+    # 最优阈值
+    best_t, best_f1 = find_best_threshold(probs, targets)
 
-    # 5. 分类指标（有雨 vs 无雨）
-    pred_rain = predictions > RAIN_THRESHOLD
-    true_rain = actuals > RAIN_THRESHOLD
-    accuracy = np.mean(pred_rain == true_rain)
-
-    tp = int(np.sum(pred_rain & true_rain))
-    tn = int(np.sum(~pred_rain & ~true_rain))
-    fp = int(np.sum(pred_rain & ~true_rain))
-    fn = int(np.sum(~pred_rain & true_rain))
+    # 在最优阈值下的指标
+    preds = probs > best_t
+    tp = int(((preds) & (targets == 1)).sum())
+    tn = int(((~preds) & (targets == 0)).sum())
+    fp = int(((preds) & (targets == 0)).sum())
+    fn = int(((~preds) & (targets == 1)).sum())
     precision = tp / max(tp + fp, 1)
     recall = tp / max(tp + fn, 1)
     f1 = 2 * precision * recall / max(precision + recall, 1e-8)
+    accuracy = (tp + tn) / len(preds)
 
-    # 输出结果
-    print("\n" + "=" * 50)
-    print("模型评估结果")
-    print("=" * 50)
-    print(f"样本数:        {len(predictions)}")
-    print(f"MAE:           {mae:.4f} mm")
-    print(f"RMSE:          {rmse:.4f} mm")
-    print(f"Rain Acc:      {accuracy * 100:.2f}% (threshold={RAIN_THRESHOLD}mm)")
+    # AUC-ROC
+    try:
+        auc_roc = roc_auc_score(targets, probs)
+    except ValueError:
+        auc_roc = 0.0
+
+    # 输出
+    print("\n" + "=" * 60)
+    print("📊 Model Evaluation Results (V3 Classification)")
+    print("=" * 60)
+    print(f"样本数:        {len(probs)}")
+    print(f"最优阈值:      {best_t:.3f}")
+    print(f"AUC-ROC:       {auc_roc:.4f}")
+    print(f"Accuracy:      {accuracy * 100:.2f}%")
     print(f"Precision:     {precision * 100:.2f}%")
     print(f"Recall:        {recall * 100:.2f}%")
     print(f"F1 Score:      {f1 * 100:.2f}%")
     print(f"TP={tp}  TN={tn}  FP={fp}  FN={fn}")
-    print(f"Actual rain:   {np.sum(true_rain)}/{len(actuals)} ({np.sum(true_rain) / len(actuals) * 100:.1f}%)")
-    print(f"Pred range:    [{predictions.min():.4f}, {predictions.max():.4f}]")
-    print(f"Actual range:  [{actuals.min():.4f}, {actuals.max():.4f}]")
-    print("=" * 50)
+    print(f"Rain ratio:    {targets.sum()}/{len(targets)} ({targets.mean() * 100:.1f}%)")
+    print(f"Pred range:    [{probs.min():.4f}, {probs.max():.4f}]")
+    print("=" * 60)
 
-    # 6. 绘图
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    # 绘图 (2x2)
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.suptitle("WeatherFusionNet V3 — Classification Evaluation", fontsize=14, fontweight='bold')
 
-    # 左: 时序对比（前 200 个样本）
-    n_show = min(200, len(predictions))
-    axes[0].plot(actuals[:n_show], label="Actual", color='#2196F3', alpha=0.7, linewidth=1)
-    axes[0].plot(predictions[:n_show], label="Predicted", color='#FF9800', alpha=0.7, linewidth=1, linestyle='--')
-    axes[0].set_title(f"Time Series (first {n_show} samples)")
-    axes[0].set_xlabel("Sample Index")
-    axes[0].set_ylabel("Rainfall (mm)")
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
+    # 左上: 概率分布直方图
+    ax = axes[0, 0]
+    ax.hist(probs[targets == 0], bins=50, alpha=0.6, label='Dry', color='#3498db', density=True)
+    ax.hist(probs[targets == 1], bins=50, alpha=0.6, label='Rain', color='#e74c3c', density=True)
+    ax.axvline(x=best_t, color='green', linestyle='--', label=f'Threshold={best_t:.2f}')
+    ax.set_xlabel("Predicted Probability")
+    ax.set_ylabel("Density")
+    ax.set_title("Probability Distribution (Rain vs Dry)")
+    ax.legend()
 
-    # 右: 散点图（Pred vs Actual）
-    axes[1].scatter(actuals, predictions, alpha=0.3, s=8, c='#4CAF50')
-    max_val = max(np.max(actuals), np.max(predictions), 1.0)
-    axes[1].plot([0, max_val], [0, max_val], 'r--', linewidth=1, label="Ideal (y=x)")
-    axes[1].set_title("Predicted vs Actual")
-    axes[1].set_xlabel("Actual Rain (mm)")
-    axes[1].set_ylabel("Predicted Rain (mm)")
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
-    axes[1].set_xlim(0, max_val * 1.05)
-    axes[1].set_ylim(0, max_val * 1.05)
+    # 右上: ROC 曲线
+    ax = axes[0, 1]
+    try:
+        fpr, tpr, _ = roc_curve(targets, probs)
+        ax.plot(fpr, tpr, color='#e74c3c', linewidth=2, label=f'AUC = {auc_roc:.3f}')
+        ax.plot([0, 1], [0, 1], 'k--', alpha=0.3)
+        ax.set_xlabel("False Positive Rate")
+        ax.set_ylabel("True Positive Rate")
+        ax.set_title("ROC Curve")
+        ax.legend()
+    except Exception:
+        ax.text(0.5, 0.5, 'Insufficient data', ha='center', va='center')
+
+    # 左下: Precision-Recall 曲线
+    ax = axes[1, 0]
+    try:
+        prec_curve, rec_curve, thresholds = precision_recall_curve(targets, probs)
+        ax.plot(rec_curve, prec_curve, color='#2ecc71', linewidth=2)
+        ax.axhline(y=precision, color='r', linestyle='--', alpha=0.5,
+                   label=f'Prec@opt={precision:.2f}')
+        ax.axvline(x=recall, color='b', linestyle='--', alpha=0.5,
+                   label=f'Rec@opt={recall:.2f}')
+        ax.set_xlabel("Recall")
+        ax.set_ylabel("Precision")
+        ax.set_title("Precision-Recall Curve")
+        ax.legend()
+    except Exception:
+        ax.text(0.5, 0.5, 'Insufficient data', ha='center', va='center')
+
+    # 右下: F1 vs Threshold
+    ax = axes[1, 1]
+    thresholds_search = np.arange(0.1, 0.9, 0.01)
+    f1_scores = []
+    for t in thresholds_search:
+        p = probs > t
+        t_tp = ((p) & (targets == 1)).sum()
+        t_fp = ((p) & (targets == 0)).sum()
+        t_fn = ((~p) & (targets == 1)).sum()
+        t_prec = t_tp / max(t_tp + t_fp, 1)
+        t_rec = t_tp / max(t_tp + t_fn, 1)
+        t_f1 = 2 * t_prec * t_rec / max(t_prec + t_rec, 1e-8)
+        f1_scores.append(t_f1)
+    ax.plot(thresholds_search, f1_scores, color='#9b59b6', linewidth=2)
+    ax.axvline(x=best_t, color='green', linestyle='--', label=f'Best t={best_t:.2f}, F1={best_f1:.3f}')
+    ax.set_xlabel("Threshold")
+    ax.set_ylabel("F1 Score")
+    ax.set_title("F1 Score vs Threshold")
+    ax.legend()
 
     plt.tight_layout()
     plot_path = "evaluation_plot.png"
     plt.savefig(plot_path, dpi=150)
     logger.info(f"Plot saved: {plot_path}")
 
-    # 7. 保存 JSON
+    # 保存 JSON
     results = {
-        'mae': float(mae),
-        'rmse': float(rmse),
+        'model_version': 'V3',
+        'auc_roc': float(auc_roc),
+        'best_threshold': float(best_t),
         'accuracy': float(accuracy),
         'precision': float(precision),
         'recall': float(recall),
         'f1': float(f1),
-        'threshold': float(RAIN_THRESHOLD),
-        'num_samples': len(predictions),
+        'num_samples': len(probs),
         'confusion_matrix': {'tp': tp, 'tn': tn, 'fp': fp, 'fn': fn},
-        'rain_ratio': float(np.sum(true_rain) / len(actuals)),
+        'rain_ratio': float(targets.mean()),
     }
 
     results_file = "evaluation_results.json"

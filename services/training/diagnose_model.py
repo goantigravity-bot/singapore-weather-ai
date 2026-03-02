@@ -34,7 +34,7 @@ def diagnose():
 
     # 加载模型
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    model = WeatherFusionNet(sat_channels=3, sensor_features=7, coord_dim=2, prediction_dim=1)
+    model = WeatherFusionNet(sat_channels=3, sensor_features=13, coord_dim=2, use_cross_attention=True)
     model.load_state_dict(torch.load(MODEL_PATH, map_location=device, weights_only=True))
     model.to(device)
     model.eval()
