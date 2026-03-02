@@ -230,15 +230,12 @@ for YEAR in "${YEARS[@]}"; do
     notify train_start "$YEAR" "mode=$TRAIN_MODE,epochs=$TRAIN_EPOCHS,sat_files=$LOCAL_NPY_COUNT"
     EPOCH_START=$(date '+%Y-%m-%d %H:%M:%S')
 
-    # V3: 使用 train_direct.py（Focal Loss + CrossAttention + 13维特征）
-    # --model-path 指向 V3 文件名，不覆盖线上 V2
-    # 增量训练时 PyTorch 会自动加载已有权重继续训练
-    CSV_PATH="$CSV_PATH" \
-    $PYTHON train_direct.py \
-        --epochs $TRAIN_EPOCHS \
-        --batch-size 128 \
-        --model-path "$WORK_DIR/$V3_MODEL" \
-        2>&1 | tee -a "$LOG_FILE"
+    # V3 改动已集成到 train_rolling_window.py（Focal Loss + 13维特征 + CrossAttention）
+    if [ "$TRAIN_MODE" = "initial" ]; then
+        EPOCHS_INITIAL=$EPOCHS_INITIAL MODEL_SAVE_PATH="$WORK_DIR/$V3_MODEL" $PYTHON train_rolling_window.py 2>&1 | tee -a "$LOG_FILE"
+    else
+        EPOCHS_INCREMENTAL=$EPOCHS_INCREMENTAL MODEL_SAVE_PATH="$WORK_DIR/$V3_MODEL" $PYTHON train_rolling_window.py 2>&1 | tee -a "$LOG_FILE"
+    fi
     TRAIN_EXIT=${PIPESTATUS[0]}
 
     stop_resource_monitor

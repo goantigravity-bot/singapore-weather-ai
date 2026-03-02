@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.amp import autocast, GradScaler
-from weather_fusion_model import WeatherFusionNet
+from weather_fusion_model import WeatherFusionNet, get_combined_loss
 from weather_dataset import get_dataloaders
 import os
 import time
@@ -70,7 +70,7 @@ SAT_DIR = os.environ.get("SAT_DIR", os.path.join(WORK_DIR, "processed_data"))
 # Model is saved to /app/models or root?
 # training_service.py expects to upload from somewhere.
 # Let's save to current dir or specific output dir.
-MODEL_SAVE_PATH = "weather_fusion_model.pth" 
+MODEL_SAVE_PATH = os.environ.get("MODEL_SAVE_PATH", "weather_fusion_model_v3.pth")
 
 
 def train_model():
@@ -105,7 +105,9 @@ def train_model():
 
     
     # 2. Model
-    model = WeatherFusionNet(sat_channels=3, sensor_features=7, coord_dim=2, prediction_dim=1)
+    # V3: 13维传感器特征 + CrossAttention 融合
+    model = WeatherFusionNet(sat_channels=3, sensor_features=13, coord_dim=2,
+                             num_sat_frames=1, use_cross_attention=True)
     
     # 增量学习: 检查是否存在已训练模型
     if os.path.exists(MODEL_SAVE_PATH):
@@ -152,16 +154,12 @@ def train_model():
     
     model.to(DEVICE)
     
-    # 3. Loss, Optimizer, Scheduler
-    # BCEWithLogitsLoss: 内部合并 Sigmoid + BCE，数值更稳定（避免 log(0)）
-    # 模型输出 raw logits，无需手动加 Sigmoid
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    # V3: Focal Loss + 物理约束组合损失（替代 BCEWithLogitsLoss）
+    criterion = get_combined_loss(alpha=0.75, gamma=2.0, physics_weight=0.1)
+    optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-4)
     
-    # LR Scheduler: val_loss 停滞时自动衰减学习率，帮助精细收敛
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=2, min_lr=1e-6
-    )
+    # V3: 余弦退火学习率调度（替代 ReduceLROnPlateau）
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS, eta_min=1e-6)
     
     # Mixed Precision: 仅在 CUDA 上启用，FP16 可加速 ~2x 并节省显存
     use_amp = (DEVICE.type == 'cuda')
@@ -177,7 +175,9 @@ def train_model():
     logger.info(f"  - Epochs: {EPOCHS} (Early Stop patience={EARLY_STOPPING_PATIENCE})")
     logger.info(f"  - Batch Size: {BATCH_SIZE}")
     logger.info(f"  - Learning Rate: {LEARNING_RATE}")
-    logger.info(f"  - Loss: BCEWithLogitsLoss (binary classification)")
+    logger.info(f"  - Loss: Focal Loss (α=0.75, γ=2.0) + Physics Constraint")
+    logger.info(f"  - Optimizer: AdamW (weight_decay=1e-4)")
+    logger.info(f"  - LR Schedule: CosineAnnealing (T_max={EPOCHS})")
     logger.info(f"  - Device: {DEVICE}")
     logger.info(f"  - AMP (Mixed Precision): {use_amp}")
     logger.info(f"{'='*60}")
@@ -190,7 +190,8 @@ def train_model():
                 "batch_size": BATCH_SIZE,
                 "max_epochs": EPOCHS,
                 "early_stopping_patience": EARLY_STOPPING_PATIENCE,
-                "loss_function": "BCEWithLogitsLoss",
+                "loss_function": "FocalLoss+PhysicsConstraint",
+                "model_version": "V3",
                 "device": str(DEVICE),
                 "amp_enabled": use_amp,
                 "mode": "incremental" if os.path.exists(MODEL_SAVE_PATH) else "initial",
@@ -198,8 +199,8 @@ def train_model():
         except Exception as e:
             logger.warning(f"MLflow log_params failed: {e}")
     
-    logger.info("Starting Training...")
-    best_loss = float('inf')
+    logger.info("Starting V3 Training...")
+    best_loss = 0.0  # V3: 追踪 best F1（而非 best val_loss）
     actual_epochs = 0
     total_train_samples = 0
     
@@ -221,7 +222,7 @@ def train_model():
             # Mixed Precision 前向传播
             with autocast(device_type=DEVICE.type, enabled=use_amp):
                 outputs = model(sat, sensor, coord)
-                loss = criterion(outputs, target)
+                loss = criterion(outputs, target, sensor)  # V3: Focal + Physics 需要 sensor
             
             # 二分类准确率（训练集）：模型输出 logits，需 sigmoid 转概率
             predicted = (torch.sigmoid(outputs) > 0.5).float()
@@ -255,7 +256,7 @@ def train_model():
                 sat, sensor, coord, target = sat.to(DEVICE), sensor.to(DEVICE), coord.to(DEVICE), target.to(DEVICE)
                 with autocast(device_type=DEVICE.type, enabled=use_amp):
                     outputs = model(sat, sensor, coord)
-                    loss = criterion(outputs, target)
+                    loss = criterion(outputs, target, sensor)  # V3: Focal + Physics
                 val_loss += loss.item()
                 # 二分类准确率 + F1 统计：logits → sigmoid → 阈值
                 predicted = (torch.sigmoid(outputs) > 0.5).float()
@@ -275,8 +276,8 @@ def train_model():
         history['train_loss'].append(avg_train_loss)
         history['val_loss'].append(avg_val_loss)
         
-        # LR Scheduler 根据 val_loss 自动调整学习率
-        scheduler.step(avg_val_loss)
+        # V3: 余弦退火不需要 val_loss 输入
+        scheduler.step()
         current_lr = optimizer.param_groups[0]['lr']
         
         epoch_time = time.time() - epoch_start
@@ -305,17 +306,18 @@ def train_model():
             except Exception:
                 pass
         
-        # Early Stopping + Best Model 保存
-        if avg_val_loss < best_loss:
-            best_loss = avg_val_loss
+        # V3: 用 F1 作为模型选择标准（而非 val_loss）
+        if f1 > best_loss:  # best_loss 这里实际追踪 best_f1
+            best_loss = f1
             no_improve_count = 0
             torch.save(model.state_dict(), MODEL_SAVE_PATH)
+            logger.info(f"   💾 Best model saved (F1={f1*100:.1f}%, Prec={precision*100:.1f}%)")
         else:
             no_improve_count += 1
             if no_improve_count >= EARLY_STOPPING_PATIENCE:
                 logger.info(
-                    f"⏹️ Early Stopping: val_loss 连续 {EARLY_STOPPING_PATIENCE} epochs 未改善 "
-                    f"(best={best_loss:.4f}, current={avg_val_loss:.4f})"
+                    f"⏹️ Early Stopping: F1 连续 {EARLY_STOPPING_PATIENCE} epochs 未改善 "
+                    f"(best_F1={best_loss*100:.1f}%, current={f1*100:.1f}%)"
                 )
                 break
 
@@ -338,7 +340,8 @@ def train_model():
         "early_stopped": no_improve_count >= EARLY_STOPPING_PATIENCE,
         "device": str(DEVICE),
         "batch_size": BATCH_SIZE,
-        "loss_function": "BCEWithLogitsLoss",
+        "loss_function": "FocalLoss+PhysicsConstraint",
+        "model_version": "V3",
         "success": True
     }
     
