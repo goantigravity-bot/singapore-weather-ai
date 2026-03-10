@@ -2,6 +2,7 @@
 Weather AI - Database Module
 结构化存储用户查询、地点、预测结果、实际结果。
 """
+import re
 import json
 import sqlite3
 import logging
@@ -40,10 +41,12 @@ def create_tables():
             CREATE TABLE IF NOT EXISTS user_activity (
                 query_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 query TEXT NOT NULL,
+                place_id INTEGER,
                 response_time_ms REAL,
                 forecast_outcome TEXT,
                 ip_address TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (place_id) REFERENCES place(place_id)
             )
         """)
 
@@ -67,6 +70,7 @@ def create_tables():
                 lon REAL NOT NULL,
                 point_index INTEGER,
                 label TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (place_id) REFERENCES place(place_id)
             )
         """)
@@ -74,10 +78,21 @@ def create_tables():
         c.execute("""
             CREATE TABLE IF NOT EXISTS activity (
                 activity_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                query_id INTEGER NOT NULL,
                 activity_name TEXT NOT NULL,
                 rain_tolerance REAL,
-                FOREIGN KEY (query_id) REFERENCES user_activity(query_id)
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(activity_name)
+            )
+        """)
+
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS user_activity_map (
+                query_id INTEGER NOT NULL,
+                activity_id INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (query_id, activity_id),
+                FOREIGN KEY (query_id) REFERENCES user_activity(query_id),
+                FOREIGN KEY (activity_id) REFERENCES activity(activity_id)
             )
         """)
 
@@ -144,12 +159,18 @@ def create_tables():
         c.execute("CREATE INDEX IF NOT EXISTS idx_forecast_loc_time ON forecast_result(loc_id, forecast_time)")
         # accuracy 查询按 source='backtest' 过滤
         c.execute("CREATE INDEX IF NOT EXISTS idx_forecast_source ON forecast_result(source)")
+        # 去重约束：同一地点同一时刻只能有一条 actual，防止 collect_actuals() 重复配对写入
+        c.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_actual_loc_obs
+            ON actual_result(loc_id, observation_time)
+        """)
 
         # 迁移：为已存在的表添加新列（ALTER TABLE 是幂等安全的，列已存在会忽略）
         for stmt in [
             "ALTER TABLE forecast_result ADD COLUMN source TEXT DEFAULT 'user'",
             "ALTER TABLE actual_result ADD COLUMN station_id TEXT",
             "ALTER TABLE actual_result ADD COLUMN match_distance_km REAL",
+            "ALTER TABLE user_activity ADD COLUMN place_id INTEGER REFERENCES place(place_id)",
         ]:
             try:
                 c.execute(stmt)
@@ -159,8 +180,45 @@ def create_tables():
     logger.info("Database tables initialized")
 
 
+def normalize_place_name(name: str) -> str:
+    """Normalize place name to reduce duplicates.
+
+    Strips common prefixes (forecast for, weather at, rain in, ...),
+    suffixes (now, today, tonight, this morning, ...), and returns title case.
+    Used as a safety net — Gemini NLU should already return clean names,
+    but this catches the /predict path and any edge cases.
+    """
+    if not name:
+        return name
+    s = name.strip().lower()
+    # Strip leading phrases
+    s = re.sub(
+        r'^(?:forecast\s+(?:for|at|in|near)\s+|'
+        r'weather\s+(?:at|in|for|near)\s+|'
+        r'rain\s+(?:at|in|near)\s+|'
+        r'will\s+it\s+rain\s+(?:at|in|near)\s+|'
+        r'(?:at|in|near|around)\s+)',
+        '', s,
+    )
+    # Strip trailing time words
+    s = re.sub(
+        r'\s+(?:now|today|tonight|tomorrow|this\s+(?:morning|afternoon|evening)|'
+        r'right\s+now|later|soon)\s*$',
+        '', s,
+    )
+    s = s.strip()
+    if not s:
+        return name.strip()
+    return s.title()
+
+
 def get_or_create_place(place_name, place_type="point", center_lat=None, center_lon=None):
-    """获取已有 place 或创建新的，返回 place_id"""
+    """获取已有 place 或创建新的，返回 place_id。
+
+    Place name is normalized before lookup/insert to prevent duplicates like
+    'botanic gardens' vs 'Botanic Gardens tonight' vs 'forecast for botanic gardens'.
+    """
+    place_name = normalize_place_name(place_name)
     with get_db() as conn:
         c = conn.cursor()
         row = c.execute(
@@ -215,24 +273,39 @@ def save_locations_for_place(place_id, points):
     return loc_ids
 
 
-def save_user_activity(query, response_time_ms, forecast_outcome, ip_address=None):
-    """保存用户查询记录，返回 query_id"""
+def get_or_create_activity(activity_name, rain_tolerance=None):
+    """获取已有 activity 或创建新的，返回 activity_id"""
     with get_db() as conn:
         c = conn.cursor()
+        row = c.execute(
+            "SELECT activity_id FROM activity WHERE activity_name = ?",
+            (activity_name,)
+        ).fetchone()
+        if row:
+            return row["activity_id"]
         c.execute(
-            "INSERT INTO user_activity (query, response_time_ms, forecast_outcome, ip_address) VALUES (?, ?, ?, ?)",
-            (query, response_time_ms, forecast_outcome, ip_address)
+            "INSERT INTO activity (activity_name, rain_tolerance) VALUES (?, ?)",
+            (activity_name, rain_tolerance)
         )
         return c.lastrowid
 
 
-def save_activity(query_id, activity_name, rain_tolerance=None):
-    """保存活动记录"""
+def link_activity_to_query(query_id, activity_id):
+    """将活动关联到查询（M:N junction table）"""
+    with get_db() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO user_activity_map (query_id, activity_id) VALUES (?, ?)",
+            (query_id, activity_id)
+        )
+
+
+def save_user_activity(query, response_time_ms, forecast_outcome, ip_address=None, place_id=None):
+    """保存用户查询记录，返回 query_id"""
     with get_db() as conn:
         c = conn.cursor()
         c.execute(
-            "INSERT INTO activity (query_id, activity_name, rain_tolerance) VALUES (?, ?, ?)",
-            (query_id, activity_name, rain_tolerance)
+            "INSERT INTO user_activity (query, place_id, response_time_ms, forecast_outcome, ip_address) VALUES (?, ?, ?, ?, ?)",
+            (query, place_id, response_time_ms, forecast_outcome, ip_address)
         )
         return c.lastrowid
 
@@ -266,11 +339,14 @@ def save_forecast_results(query_id, results, source="user"):
 
 def save_actual_result(loc_id, actual_rainfall_mm, observation_time,
                        source="NEA", station_id=None, match_distance_km=None):
-    """保存实际观测结果，附带匹配站点信息以追溯数据质量"""
+    """保存实际观测结果，附带匹配站点信息以追溯数据质量。
+    使用 INSERT OR IGNORE：同一 (loc_id, observation_time) 重复时静默跳过，
+    防止 collect_actuals() 每 5 分钟对同一 forecast 反复写入。
+    """
     with get_db() as conn:
         c = conn.cursor()
         c.execute(
-            """INSERT INTO actual_result
+            """INSERT OR IGNORE INTO actual_result
                (loc_id, actual_rainfall_mm, source, station_id, match_distance_km, observation_time)
                VALUES (?, ?, ?, ?, ?, ?)""",
             (loc_id, actual_rainfall_mm, source, station_id, match_distance_km, observation_time)
@@ -279,22 +355,19 @@ def save_actual_result(loc_id, actual_rainfall_mm, observation_time,
 
 
 # ── Forecast vs Actual 闭环查询 ──
-# Accuracy API 只统计 backtest 预测（固定 10 个测试点，每 10 分钟），
-# 数据量可控（~百行级），JOIN 性能 <10ms。
-# 用户查询的 forecast 分布过广（30K+ × 130K+），julianday JOIN 无法利用索引。
-# 时间匹配窗口：0.021 天 ≈ 30 分钟
+# Accuracy API 统计所有来源的 forecast（user / backtest / simulate），
+# 全量评估模型准确率。时间匹配窗口：0.021 天 ≈ 30 分钟
 
 _ACCURACY_JOIN = """
     FROM forecast_result f
     JOIN actual_result a
         ON a.loc_id = f.loc_id
         AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
-    WHERE f.source = 'backtest'
 """
 
 
-def get_unmatched_forecasts(hours=2):
-    """获取最近 N 小时内尚未配对 actual 的 backtest forecast"""
+def get_unmatched_forecasts(hours=1):
+    """获取最近 N 小时内尚未配对 actual 的所有 forecast（包括 user / backtest / simulate）"""
     with get_db() as conn:
         rows = conn.execute("""
             SELECT f.forecast_id, f.loc_id, f.rainfall_mm, f.forecast_time,
@@ -306,7 +379,6 @@ def get_unmatched_forecasts(hours=2):
                 ON a.loc_id = f.loc_id
                 AND ABS(julianday(f.forecast_time) - julianday(a.observation_time)) < 0.021
             WHERE a.actual_id IS NULL
-              AND f.source = 'backtest'
               AND f.forecast_time >= datetime('now', ? || ' hours')
               AND f.forecast_time <= datetime('now')
         """, (f"-{hours}",)).fetchall()

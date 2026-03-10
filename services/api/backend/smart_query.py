@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Smart Query Interface for Weather AI
-Handles Natural Language Processing (Regex/Keywords) and Activity Advice.
+Handles Natural Language Processing (Gemini Flash + Regex fallback) and Activity Advice.
 """
 import sys
 import re
@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import numpy as np
 from predict import fetch_osm_path, process_and_sample_path, predict_ensemble, load_system, get_station_mapping
+import gemini_nlu
 
 logger = logging.getLogger(__name__)
 
@@ -41,86 +42,109 @@ ACTIVITY_RULES = {
 
 def parse_query(query):
     """
-    Parse natural language query to extract:
-    - Location (e.g. "rail corridor")
-    - Activity (e.g. "ride bicycle")
-    - Time Range (e.g. "2 to 5pm", "14:00-17:00")
+    Parse natural language query to extract location, activity, time.
+    Strategy: try Gemini Flash first, fall back to regex on failure.
     """
-    query = query.lower()
-    
+    # --- Try Gemini NLU first ---
+    gemini_result = gemini_nlu.extract(query)
+    if gemini_result:
+        activity_name = gemini_result.get("activity")
+        tolerance = 2.0
+        if activity_name:
+            # Match to ACTIVITY_RULES for rain tolerance
+            for key, rule in ACTIVITY_RULES.items():
+                if rule['name'] == activity_name:
+                    tolerance = rule['rain_tolerance']
+                    break
+        else:
+            activity_name = "General Activity"
+
+        location = gemini_result.get("place") or "Singapore"
+        start_hour = gemini_result.get("start_hour")
+        end_hour = gemini_result.get("end_hour")
+
+        # Default time if Gemini didn't extract it
+        if start_hour is None or end_hour is None:
+            now = datetime.now()
+            start_hour = now.hour
+            end_hour = min(23, now.hour + 3)
+
+        logger.info(f"NLU(gemini): {query!r} → place={location}, activity={activity_name}")
+        return {
+            'location': location,
+            'activity': activity_name,
+            'tolerance': tolerance,
+            'start_hour': start_hour,
+            'end_hour': end_hour,
+        }
+
+    # --- Regex fallback ---
+    logger.info(f"NLU(regex): Gemini unavailable, using regex for {query!r}")
+    q = query.lower()
+
     # 1. Extract Activity
     activity = None
-    tolerance = 2.0 # Default High Tolerance
-    
+    tolerance = 2.0
     for key, rule in ACTIVITY_RULES.items():
-        if key in query:
+        if key in q:
             activity = rule['name']
             tolerance = rule['rain_tolerance']
             break
-            
     if not activity:
         activity = "General Activity"
-        
-    # 2. Extract Location (Simple Heuristic: Everything after 'at' or 'in' or 'to'?)
-    # A better way for this specific demo is known locations + regex
-    # Or just assume the user mentions a place.
-    # Let's try to find known keywords or use a greedy approach.
-    
-    known_places = ["rail corridor", "sentosa", "east coast park", "macritchie", "fort canning", "marina bay"]
+
+    # 2. Extract Location
+    known_places = [
+        "rail corridor", "sentosa", "east coast park", "macritchie",
+        "fort canning", "marina bay", "botanic gardens", "changi airport",
+        "clementi", "woodlands", "ang mo kio", "tuas", "jurong",
+        "bishan", "orchard", "newton", "bedok", "tampines",
+    ]
     location = None
-    
     for place in known_places:
-        if place in query:
-            location = place
+        if place in q:
+            location = place.title()
             break
-            
+
     if not location:
-        # Fallback: Regex for "at [Location]"
-        match = re.search(r'(?:at|in|near)\s+([a-z\s]+?)(?:\s+today|\s+tomorrow|\s+from|\s+at\s+\d|$)', query)
+        match = re.search(
+            r'(?:at|in|near|around)\s+([a-z\s]+?)(?:\s+today|\s+tonight|\s+tomorrow|\s+this\s+\w+|\s+from|\s+at\s+\d|$)',
+            q,
+        )
         if match:
-            location = match.group(1).strip()
-    
+            location = match.group(1).strip().title()
+
     if not location:
-        location = "Singapore" # Default
-        
+        location = "Singapore"
+
     # 3. Extract Time Range
-    # Supported formats: "2 to 5pm", "14:00-17:00", "2pm - 5pm"
     start_hour = None
     end_hour = None
-    
-    # Regex for "X to Y pm" or "X-Y"
-    # Case A: "2 to 5pm", "2-5pm"
-    time_match = re.search(r'(\d{1,2})(?::00)?\s*(?:to|-)\s*(\d{1,2})(?::00)?\s*(am|pm)?', query)
-    
+    time_match = re.search(r'(\d{1,2})(?::00)?\s*(?:to|-)\s*(\d{1,2})(?::00)?\s*(am|pm)?', q)
     if time_match:
         h1 = int(time_match.group(1))
         h2 = int(time_match.group(2))
-        meridiem = time_match.group(3) # pm
-        
-        # Normalize to 24h
+        meridiem = time_match.group(3)
         if meridiem == 'pm':
             if h1 < 12: h1 += 12
             if h2 < 12: h2 += 12
         elif not meridiem:
-            # Infer PM if small numbers and "today"? Or just assume 24h if > 12
-            if h1 < 10 and h2 < 10: # Likely 2-5 -> 14-17
-                 h1 += 12
-                 h2 += 12
-                 
+            if h1 < 10 and h2 < 10:
+                h1 += 12
+                h2 += 12
         start_hour = h1
         end_hour = h2
     else:
-        # Default: Now + 3 hours
         now = datetime.now()
         start_hour = now.hour
         end_hour = min(23, now.hour + 3)
-        
+
     return {
         'location': location,
         'activity': activity,
         'tolerance': tolerance,
         'start_hour': start_hour,
-        'end_hour': end_hour
+        'end_hour': end_hour,
     }
 
 def analyze_path_weather(location, start_hour, end_hour, tolerance, model, df, stations_meta):
@@ -198,7 +222,8 @@ def analyze_path_weather(location, start_hour, end_hour, tolerance, model, df, s
                 "status": res['status'],
                 "rainfall": float(f"{rain:.2f}"),
                 "icon": status_icon,
-                "is_risky": bool(is_risky)
+                "is_risky": bool(is_risky),
+                "confidence": res.get('confidence', 0.5)
             })
     
     # Summary
