@@ -34,14 +34,16 @@ C1, L1 = latlon2xy(SG_LAT_MAX, SG_LON_MIN)
 SG_LAT_MIN, SG_LON_MAX = 1.15, 104.1
 C2, L2 = latlon2xy(SG_LAT_MIN, SG_LON_MAX)
 
-# 卫星参数：与训练代码 weather_dataset.py 保持一致
+# 卫星参数：与训练代码 weather_dataset.py V3 保持一致
 SAT_BANDS = ['B08', 'B11', 'B13']  # 3 通道卫星波段
 SAT_CHANNELS = len(SAT_BANDS)
-IMG_SIZE = 128   # 裁剪后的新加坡区域尺寸
-PATCH_SIZE = 32  # 基站局部 patch 尺寸
+# V3 训练使用 41×37 全新加坡区域图，不再裁剪 patch
+SAT_HEIGHT = 41
+SAT_WIDTH = 37
+IMG_SIZE = 41    # 用于坐标归一化
 
 def _latlon_to_pixel(lat, lon):
-    """基站经纬度 → 128×128 卫星图的像素坐标 (px, py)。"""
+    """基站经纬度 → 卫星图的像素坐标 (px, py)，与 V3 训练一致。"""
     py = int((SG_LAT_MAX - lat) / (SG_LAT_MAX - SG_LAT_MIN) * IMG_SIZE)
     px = int((lon - SG_LON_MIN) / (SG_LON_MAX - SG_LON_MIN) * IMG_SIZE)
     return px, py
@@ -59,21 +61,59 @@ def _crop_patch(sat_full, px, py):
         patch = padded
     return patch
 
+def _load_single_satellite_frame(utc_str):
+    """Load one 3-channel satellite frame by UTC timestamp string.
+    Returns (3, H, W) tensor or None if unavailable."""
+    processed_dir = "processed_data"
+    band_data = {}
+    for band in SAT_BANDS:
+        pattern = f"SAT_{band}_{utc_str}*.npy"
+        matches = glob.glob(os.path.join(processed_dir, pattern))
+        if matches:
+            try:
+                band_data[band] = np.load(matches[0])
+            except Exception:
+                pass
+
+    if len(band_data) == SAT_CHANNELS:
+        layers = [band_data[b] for b in SAT_BANDS]
+        stacked = np.stack(layers, axis=0)
+        tensor = torch.tensor(stacked, dtype=torch.float32)
+        tensor = torch.nan_to_num(tensor, nan=0.0)
+        tensor = (tensor - 200) / 100.0
+        return tensor
+    return None
+
+
 def load_system():
     print("Loading Model...")
-    # 3 通道卫星 + 7 维传感器 + 2 维坐标嵌入
-    model = WeatherFusionNet(sat_channels=SAT_CHANNELS, sensor_features=7, coord_dim=2, prediction_dim=1)
-    if not os.path.exists(MODEL_PATH):
-        print(f"Warning: Model file {MODEL_PATH} not found. Starting with initialized model (random weights).")
-    else:
+    num_sat_frames = 1
+    if os.path.exists(MODEL_PATH):
         try:
-            state_dict = torch.load(MODEL_PATH, map_location=DEVICE, weights_only=True)
+            checkpoint = torch.load(MODEL_PATH, map_location=DEVICE, weights_only=False)
+            if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+                num_sat_frames = checkpoint.get('num_sat_frames', 1)
+                state_dict = checkpoint['model_state_dict']
+            else:
+                state_dict = checkpoint
+
+            model = WeatherFusionNet(
+                sat_channels=SAT_CHANNELS, sensor_features=13, coord_dim=2,
+                num_sat_frames=num_sat_frames
+            )
             model.load_state_dict(state_dict)
-            print("Model loaded successfully.")
+            model.num_sat_frames = num_sat_frames
+            print(f"Model loaded (num_sat_frames={num_sat_frames}).")
         except Exception as e:
-            print(f"⚠️ Error loading model weights: {e}")
-            print("⚠️ Starting with initialized model (random weights) for testing/verification.")
-    
+            print(f"Error loading model weights: {e}")
+            print("Starting with initialized model (random weights).")
+            model = WeatherFusionNet(sat_channels=SAT_CHANNELS, sensor_features=13, coord_dim=2)
+            model.num_sat_frames = 1
+    else:
+        print(f"Warning: Model file {MODEL_PATH} not found. Using random weights.")
+        model = WeatherFusionNet(sat_channels=SAT_CHANNELS, sensor_features=13, coord_dim=2)
+        model.num_sat_frames = 1
+
     model.to(DEVICE)
     model.eval()
     
@@ -93,7 +133,7 @@ def load_system():
         df['timestamp'] = df['timestamp'].dt.tz_convert('Asia/Singapore')
     return model, df
 
-def get_input_data(df, sensor_id, target_time, station_lat=None, station_lon=None, seq_len=6):
+def get_input_data(df, sensor_id, target_time, station_lat=None, station_lon=None, seq_len=6, num_sat_frames=1):
     """
     Prepare inputs for the model for a specific sensor at a specific time.
     We need:
@@ -157,95 +197,83 @@ def get_input_data(df, sensor_id, target_time, station_lat=None, station_lon=Non
         padding = pd.concat([pad_row] * deficit, ignore_index=False)
         recent_data = pd.concat([padding, recent_data])
 
-    # R4: 7 维传感器特征 [temp, rain, humidity, pm25, wind_speed, wind_dir_sin, wind_dir_cos]
+    # V3: 13 维传感器特征
+    # [temp, rain, humidity, pm25, wind_speed, wind_dir_sin, wind_dir_cos,
+    #  hour_sin, hour_cos, month_sin, month_cos, delta_humidity, delta_temp]
     raw = recent_data[['temperature', 'rainfall', 'humidity', 'pm25', 'wind_speed', 'wind_direction']].values.astype(np.float32)
     wind_dir_rad = np.radians(raw[:, 5])
-    features = np.column_stack([
-        raw[:, :5],           # temp, rain, humidity, pm25, wind_speed
-        np.sin(wind_dir_rad), # wind_dir_sin
-        np.cos(wind_dir_rad)  # wind_dir_cos
+
+    # 基础 5 维 + 风向 sin/cos
+    normed = np.zeros((len(raw), 5), dtype=np.float32)
+    normed[:, 0] = (raw[:, 0] - 28.0) / 5.0   # temperature
+    normed[:, 1] = raw[:, 1] / 10.0            # rainfall
+    normed[:, 2] = (raw[:, 2] - 80.0) / 20.0   # humidity
+    normed[:, 3] = (raw[:, 3] - 20.0) / 20.0   # pm25
+    normed[:, 4] = raw[:, 4] / 10.0             # wind_speed
+
+    # 时间周期特征 — 编码当前时刻和月份的周期性
+    hour_val = target_time.hour + target_time.minute / 60.0
+    month_val = float(target_time.month)
+    time_feats = np.column_stack([
+        np.full(seq_len, np.sin(2 * np.pi * hour_val / 24), dtype=np.float32),
+        np.full(seq_len, np.cos(2 * np.pi * hour_val / 24), dtype=np.float32),
+        np.full(seq_len, np.sin(2 * np.pi * month_val / 12), dtype=np.float32),
+        np.full(seq_len, np.cos(2 * np.pi * month_val / 12), dtype=np.float32),
     ])
+
+    # 变化率特征 — 序列内湿度和温度的趋势
+    delta_humidity = (raw[-1, 2] - raw[0, 2]) / 20.0
+    delta_temp = (raw[-1, 0] - raw[0, 0]) / 5.0
+    delta_feats = np.column_stack([
+        np.full(seq_len, delta_humidity, dtype=np.float32),
+        np.full(seq_len, delta_temp, dtype=np.float32),
+    ])
+
+    # 拼接为 13 维
+    features = np.column_stack([
+        normed,                        # (seq, 5)
+        np.sin(wind_dir_rad)[:, None], # (seq, 1)
+        np.cos(wind_dir_rad)[:, None], # (seq, 1)
+        time_feats,                    # (seq, 4)
+        delta_feats,                   # (seq, 2)
+    ])
+
+    sensor_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0)  # (1, seq, 13)
     
-    # NORMALIZATION (Must match weather_dataset.py)
-    features[:, 0] = (features[:, 0] - 28.0) / 5.0   # Temp
-    features[:, 1] = features[:, 1] / 10.0            # Rain
-    features[:, 2] = (features[:, 2] - 80.0) / 20.0   # Humidity
-    features[:, 3] = (features[:, 3] - 20.0) / 20.0   # PM2.5
-    features[:, 4] = features[:, 4] / 10.0             # Wind speed
-    # sin/cos 已在 [-1, 1]，无需归一化
-    
-    sensor_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0) # Batch dim
-    
-    # 2. Fetch Satellite Image
-    # Match minute to nearest 10
+    # 2. Fetch Satellite Image(s)
     minute = (target_time.minute // 10) * 10
     sat_ts = target_time.replace(minute=minute, second=0)
-    
-    # Try finding file
-    # Try finding file
-    processed_dir = "processed_data"
-    
-    # Timezone fix: Timestamp usually local, files UTC.
-    # Simple heuristic: If raw file missing, try constructing UTC name
-    # But files search usually works with wildcards.
-    
-    # 加载 3 通道卫星数据 (B08/B11/B13)，与训练时一致
-    utc_str = (sat_ts - timedelta(hours=8)).strftime('%Y%m%d_%H%M')
-    
-    # 默认 3 通道全零 tensor
-    sat_tensor = torch.zeros(1, SAT_CHANNELS, IMG_SIZE, IMG_SIZE)
-    
-    # 优先加载 3-channel .npy (SAT_B08_*, SAT_B11_*, SAT_B13_*)
-    band_data = {}
-    for band in SAT_BANDS:
-        pattern = f"SAT_{band}_{utc_str}*.npy"
-        matches = glob.glob(os.path.join(processed_dir, pattern))
-        if matches:
-            try:
-                band_data[band] = np.load(matches[0])
-            except Exception as e:
-                print(f"Error loading {band}: {e}")
-    
-    if len(band_data) == SAT_CHANNELS:
-        # 堆叠 3 波段 → (3, H, W)，与训练 weather_dataset.py 一致
-        layers = [band_data[b] for b in SAT_BANDS]
-        stacked = np.stack(layers, axis=0)
-        sat_tensor = torch.tensor(stacked, dtype=torch.float32).unsqueeze(0)
-        sat_tensor = torch.nan_to_num(sat_tensor, nan=0.0)
-        sat_tensor = (sat_tensor - 200) / 100.0
-        print(f"Loaded 3ch satellite: {utc_str} ({sat_tensor.shape})")
+
+    if num_sat_frames > 1:
+        # Multi-frame: load T consecutive frames for temporal satellite encoder
+        frames = []
+        for i in range(num_sat_frames):
+            frame_time = sat_ts - timedelta(minutes=10 * (num_sat_frames - 1 - i))
+            utc_str = (frame_time - timedelta(hours=8)).strftime('%Y%m%d_%H%M')
+            frame = _load_single_satellite_frame(utc_str)
+            if frame is None:
+                frame = torch.zeros(SAT_CHANNELS, SAT_HEIGHT, SAT_WIDTH)
+            frames.append(frame)
+        sat_tensor = torch.stack(frames).unsqueeze(0)  # (1, T, C, H, W)
+        loaded_count = sum(1 for f in frames if f.abs().sum() > 0)
+        print(f"Loaded {loaded_count}/{num_sat_frames} satellite frames ending at {sat_ts}")
     else:
-        # 回退：尝试旧格式单通道 .npy（NC_H08/H09）或 .nc
-        npy_files = []
-        for sat_prefix in ["NC_H08_", "NC_H09_"]:
-            npy_files.extend(glob.glob(os.path.join(processed_dir, f"{sat_prefix}{utc_str}_*.npy")))
-        
-        if npy_files:
-            try:
-                data = np.load(npy_files[0])
-                single_ch = torch.tensor(data, dtype=torch.float32)
-                if single_ch.ndim == 2:
-                    single_ch = single_ch.unsqueeze(0)
-                # 复制单通道到 3 通道以兼容模型
-                sat_tensor = single_ch.expand(SAT_CHANNELS, -1, -1).unsqueeze(0)
-                sat_tensor = (sat_tensor - 200) / 100.0
-                print(f"Loaded 1ch satellite (expanded to 3ch): {os.path.basename(npy_files[0])}")
-            except Exception as e:
-                print(f"Error loading sat image: {e}")
+        # Single-frame (original behavior)
+        utc_str = (sat_ts - timedelta(hours=8)).strftime('%Y%m%d_%H%M')
+        frame = _load_single_satellite_frame(utc_str)
+        if frame is not None:
+            sat_tensor = frame.unsqueeze(0)  # (1, C, H, W)
+            print(f"Loaded 3ch satellite: {utc_str} ({sat_tensor.shape})")
         else:
+            sat_tensor = torch.zeros(1, SAT_CHANNELS, SAT_HEIGHT, SAT_WIDTH)
             print(f"Satellite image missing for {sat_ts}")
 
-    # 裁剪基站上方的 PATCH_SIZE×PATCH_SIZE patch + 生成坐标特征
+    # V3: 使用全图 (41×37)，不裁剪 patch，只计算坐标特征
     coord_tensor = None
     if station_lat is not None and station_lon is not None:
         px, py = _latlon_to_pixel(station_lat, station_lon)
-        patch = _crop_patch(sat_tensor[0], px, py)  # (3, 32, 32)
-        sat_tensor = patch.unsqueeze(0)  # (1, 3, 32, 32)
         coord_tensor = torch.tensor([[px / IMG_SIZE, py / IMG_SIZE]], dtype=torch.float32)
     else:
-        cx, cy = IMG_SIZE // 2, IMG_SIZE // 2
-        patch = _crop_patch(sat_tensor[0], cx, cy)
-        sat_tensor = patch.unsqueeze(0)
         coord_tensor = torch.tensor([[0.5, 0.5]], dtype=torch.float32)
 
     return sat_tensor, sensor_tensor, coord_tensor
@@ -294,7 +322,10 @@ def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size
                 s_lon = s['location']['longitude']
                 break
 
-        sat_in, sensor_in, coord_in = get_input_data(df, sensor_id, time_obj, station_lat=s_lat, station_lon=s_lon)
+        sat_in, sensor_in, coord_in = get_input_data(
+            df, sensor_id, time_obj, station_lat=s_lat, station_lon=s_lon,
+            num_sat_frames=getattr(model, 'num_sat_frames', 1)
+        )
         
         if sat_in is None or sensor_in is None:
             continue
@@ -325,7 +356,12 @@ def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size
     weights = weights / weights.sum()
     
     final_pred = np.sum(predictions * weights)
-    
+
+    # V3: logit → probability via sigmoid
+    # Threshold 0.70 from V3 diagnose_model evaluation (best F1=71.6%)
+    RAIN_THRESHOLD = 0.70
+    rain_prob = 1.0 / (1.0 + np.exp(-final_pred))  # sigmoid
+
     # 2. Confidence Score
     # Based on standard deviation of predictions
     # If std is high -> low confidence
@@ -335,11 +371,11 @@ def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size
         confidence = max(0.0, 1.0 - std_dev)
     else:
         confidence = 0.5 # Single sensor default
-        
+
     # 3. Cloud Cover Analysis
     is_cloudy = False
     cloud_msg = ""
-    # TBB threshold: < 15°C (288K). 
+    # TBB threshold: < 15°C (288K).
     # Usually < 273K is definitely cloud. < 240K is deep convection.
     if tbb_val:
         if tbb_val < 288.0:
@@ -348,23 +384,24 @@ def predict_ensemble(lat, lon, time_obj, model, df, stations_meta, ensemble_size
         else:
             cloud_msg = f"(Clear Sky: {tbb_val:.1f}K)"
 
-    # Status Determination
+    # Status Determination — based on sigmoid probability, not raw logit value
     status = "Unknown"
-    if final_pred < 0.1:
+    if rain_prob < RAIN_THRESHOLD:
         status = "Cloudy" if is_cloudy else "Clear"
-    elif final_pred < 2.0:
+    elif rain_prob < 0.80:
         status = "Light Rain"
     else:
         status = "Heavy Rain"
-        
+
     return {
-        'rainfall': final_pred,
+        'rainfall': float(rain_prob),   # expose sigmoid probability (0-1)
         'status': status,
         'confidence': confidence,
         'cloud_cover': is_cloudy,
         'contributing_sensors': contributing_sensor_ids,
-        'debug': f"Ens: {', '.join(debug_info)} {cloud_msg}"
+        'debug': f"Ens: {', '.join(debug_info)} prob={rain_prob:.3f} thr={RAIN_THRESHOLD} {cloud_msg}"
     }
+
 
 def predict(sensor_id=None, time_str=None):
     # wrapper for backward compatibility or simple testing

@@ -32,17 +32,28 @@ def diagnose():
         logger.error(f"❌ 模型不存在: {MODEL_PATH}")
         return
 
-    # 加载模型
+    # 加载模型（支持旧 state_dict 和新 dict 格式）
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    model = WeatherFusionNet(sat_channels=3, sensor_features=13, coord_dim=2, use_cross_attention=True)
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=device, weights_only=True))
+    checkpoint = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+    if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+        num_sat_frames = checkpoint.get('num_sat_frames', 1)
+        state_dict = checkpoint['model_state_dict']
+    else:
+        num_sat_frames = 1
+        state_dict = checkpoint
+
+    model = WeatherFusionNet(
+        sat_channels=3, sensor_features=13, coord_dim=2,
+        num_sat_frames=num_sat_frames, use_cross_attention=True
+    )
+    model.load_state_dict(state_dict)
     model.to(device)
     model.eval()
-    logger.info(f"✅ 模型已加载: {MODEL_PATH}")
+    logger.info(f"✅ 模型已加载: {MODEL_PATH} (num_sat_frames={num_sat_frames})")
     logger.info(f"   设备: {device}")
 
     # 加载数据（用验证集）
-    _, val_loader = get_dataloaders(CSV_PATH, SAT_DIR, batch_size=32)
+    _, val_loader = get_dataloaders(CSV_PATH, SAT_DIR, batch_size=32, num_sat_frames=num_sat_frames)
     logger.info(f"✅ 验证集: {len(val_loader)} batches")
 
     # 收集所有预测值和真实值
@@ -155,7 +166,7 @@ def diagnose():
             best_threshold = t
 
         # 只打印有意义的范围
-        if t_acc > 0.5 or abs(t - rain_threshold) < 0.01:
+        if t_acc > 0.5 or abs(t - rain_ratio) < 0.01:
             logger.info(f"  {t:>8.3f}  {t_acc*100:>7.1f}%  {t_prec*100:>7.1f}%  {t_rec*100:>7.1f}%  {t_f1*100:>7.1f}%")
 
     logger.info(f"\n  ✅ 最优阈值: {best_threshold:.3f} (F1={best_f1*100:.2f}%)")

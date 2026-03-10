@@ -51,7 +51,8 @@ def compute_classification_metrics(logits, targets, threshold=0.5):
 
 def train(epochs: int, batch_size: int, lr: float, model_path: str,
           focal_alpha: float = 0.75, focal_gamma: float = 2.0,
-          physics_weight: float = 0.1, no_upload: bool = True):
+          physics_weight: float = 0.1, no_upload: bool = True,
+          num_sat_frames: int = 1):
     device = torch.device("cuda" if torch.cuda.is_available() else
                           "mps" if torch.backends.mps.is_available() else "cpu")
     logger.info(f"🔧 Device: {device}")
@@ -66,7 +67,8 @@ def train(epochs: int, batch_size: int, lr: float, model_path: str,
     logger.info(f"   CSV: {csv_path}")
     logger.info(f"   SAT: {sat_dir}")
     train_loader, val_loader = get_dataloaders(
-        csv_path, sat_dir, batch_size=batch_size, temporal_split=True
+        csv_path, sat_dir, batch_size=batch_size, temporal_split=True,
+        num_sat_frames=num_sat_frames
     )
     logger.info(f"   Train batches: {len(train_loader)}, Val batches: {len(val_loader)}")
 
@@ -75,7 +77,7 @@ def train(epochs: int, batch_size: int, lr: float, model_path: str,
     #                     h_sin, h_cos, m_sin, m_cos, Δh, Δt
     model = WeatherFusionNet(
         sat_channels=3, sensor_features=13, coord_dim=2,
-        num_sat_frames=1, use_cross_attention=True
+        num_sat_frames=num_sat_frames, use_cross_attention=True
     )
     model.to(device)
 
@@ -84,8 +86,11 @@ def train(epochs: int, batch_size: int, lr: float, model_path: str,
 
     # 增量训练：若模型文件已存在，加载权重继续训练
     if os.path.exists(model_path):
-        state_dict = torch.load(model_path, map_location=device, weights_only=True)
-        model.load_state_dict(state_dict)
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+            model.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            model.load_state_dict(checkpoint)
         logger.info(f"   📂 Loaded existing weights from {model_path} (incremental training)")
     else:
         logger.info(f"   🆕 Training from scratch (no existing model at {model_path})")
@@ -190,7 +195,10 @@ def train(epochs: int, batch_size: int, lr: float, model_path: str,
         if metrics['f1'] > best_val_f1:
             best_val_f1 = metrics['f1']
             best_epoch = epoch
-            torch.save(model.state_dict(), model_path)
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'num_sat_frames': num_sat_frames,
+            }, model_path)
             logger.info(
                 f"   💾 Best model saved (epoch {epoch}, "
                 f"F1={metrics['f1']:.3f}, Prec={metrics['precision']:.3f})"
@@ -230,8 +238,10 @@ if __name__ == "__main__":
                         help="Physics constraint loss weight")
     parser.add_argument("--upload", action="store_true", default=False,
                         help="Upload to S3 after training (default: NO upload)")
+    parser.add_argument("--sat-frames", type=int, default=1,
+                        help="Number of satellite frames (1=single, 6=temporal)")
     args = parser.parse_args()
 
     train(args.epochs, args.batch_size, args.lr, args.model_path,
           args.focal_alpha, args.focal_gamma, args.physics_weight,
-          no_upload=not args.upload)
+          no_upload=not args.upload, num_sat_frames=args.sat_frames)

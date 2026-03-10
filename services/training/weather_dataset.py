@@ -80,11 +80,12 @@ class WeatherDataset(Dataset):
     每个样本由 sequence_length 个 10 分钟步长组成，
     预测 prediction_horizon 步后是否下雨。
     """
-    def __init__(self, csv_file, sat_dir, sequence_length=6, prediction_horizon=1):
+    def __init__(self, csv_file, sat_dir, sequence_length=6, prediction_horizon=1, num_sat_frames=1):
         self.sensor_df = pd.read_csv(csv_file)
         self.sat_dir = sat_dir
         self.seq_len = sequence_length
         self.horizon = prediction_horizon
+        self.num_sat_frames = num_sat_frames
 
         self.sensor_df['timestamp'] = pd.to_datetime(self.sensor_df['timestamp'])
 
@@ -313,15 +314,33 @@ class WeatherDataset(Dataset):
         target_binary = 1.0 if target_val > 0.1 else 0.0
         target_tensor = torch.tensor([target_binary], dtype=torch.float32)
 
-        # 3. 卫星图
-        utc_str = self._sat_utc_cache[sensor_id][input_end - 1]
-        data = self._sat_cache.get(utc_str)
-        if data is not None:
-            sat_img = torch.tensor(data, dtype=torch.float32)
-            sat_img = (sat_img - 200) / 100.0
-            sat_img = torch.nan_to_num(sat_img, nan=0.0)
+        # 3. 卫星图（单帧或多帧）
+        if self.num_sat_frames > 1:
+            frames = []
+            for offset in range(self.num_sat_frames):
+                idx = input_end - self.num_sat_frames + offset
+                if 0 <= idx < len(self._sat_utc_cache[sensor_id]):
+                    utc_str = self._sat_utc_cache[sensor_id][idx]
+                    data = self._sat_cache.get(utc_str)
+                else:
+                    data = None
+                if data is not None:
+                    frame = torch.tensor(data, dtype=torch.float32)
+                    frame = (frame - 200) / 100.0
+                    frame = torch.nan_to_num(frame, nan=0.0)
+                else:
+                    frame = torch.zeros(len(SAT_BANDS), SAT_HEIGHT, SAT_WIDTH)
+                frames.append(frame)
+            sat_img = torch.stack(frames)  # (T, C, H, W)
         else:
-            sat_img = torch.zeros(len(SAT_BANDS), SAT_HEIGHT, SAT_WIDTH)
+            utc_str = self._sat_utc_cache[sensor_id][input_end - 1]
+            data = self._sat_cache.get(utc_str)
+            if data is not None:
+                sat_img = torch.tensor(data, dtype=torch.float32)
+                sat_img = (sat_img - 200) / 100.0
+                sat_img = torch.nan_to_num(sat_img, nan=0.0)
+            else:
+                sat_img = torch.zeros(len(SAT_BANDS), SAT_HEIGHT, SAT_WIDTH)
 
         # 4. 坐标
         px, py = self._station_pixel.get(sensor_id, (IMG_SIZE // 2, IMG_SIZE // 2))
@@ -364,14 +383,14 @@ def _build_weighted_sampler(subset, rain_threshold=0.1):
     return WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
 
 
-def get_dataloaders(csv_path, sat_dir, batch_size=4, split=0.8, temporal_split=True):
+def get_dataloaders(csv_path, sat_dir, batch_size=4, split=0.8, temporal_split=True, num_sat_frames=1):
     """
     构建训练/验证 DataLoader。
 
     🆕 temporal_split=True 时使用按时间切分（前80%训练/后20%验证），
     避免数据泄露（相邻10分钟天气几乎相同，随机切分会泄露）。
     """
-    dataset = WeatherDataset(csv_path, sat_dir)
+    dataset = WeatherDataset(csv_path, sat_dir, num_sat_frames=num_sat_frames)
 
     if len(dataset) == 0:
         raise ValueError(
