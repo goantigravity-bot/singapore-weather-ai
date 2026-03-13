@@ -8,23 +8,26 @@
 
 ## Overview
 
-The `sync-docs` skill reads staged git changes, identifies affected documentation, proposes targeted edits with reasons, waits for user confirmation, then applies the changes. Code fix and doc updates are committed together in a single commit.
+The `sync-docs` skill reads staged git changes, identifies affected documentation, proposes targeted edits with reasons, waits for user confirmation, then applies and stages the changes. Code fix and doc updates are committed together in a single commit.
 
 **Trigger**: Two ways:
 1. **Manual** — developer runs `/sync-docs` after finishing a fix, before committing
-2. **Pre-commit hook** — auto-triggers on `git commit` so it can never be forgotten
+2. **Git pre-commit hook** — auto-triggers on `git commit` via a shell script in `.git/hooks/pre-commit`
 
 ---
 
 ## Phase 1: Analysis
 
-### Step 1 — Read staged changes
+### Step 1 — Guard check
+Skip immediately (exit 0) if **all** staged files are under `docs/` — this prevents re-entry when the skill itself stages doc edits and a retry commit is attempted.
+
+### Step 2 — Read staged changes
 ```bash
 git diff --staged
 ```
 Extracts: changed files, added/removed lines, inferred change type.
 
-### Step 2 — Classify the change
+### Step 3 — Classify the change
 | Changed Path | Inferred Type |
 |---|---|
 | `services/api/backend/` | Bug fix or API improvement |
@@ -33,7 +36,7 @@ Extracts: changed files, added/removed lines, inferred change type.
 | `db/` | Schema change |
 | `infra/` or `tools/` | Infrastructure or tooling change |
 
-### Step 3 — Scan docs in priority order
+### Step 4 — Scan docs in priority order
 
 | Priority | Folder | What it checks |
 |---|---|---|
@@ -53,9 +56,11 @@ Extracts: changed files, added/removed lines, inferred change type.
 | 9 | `docs/90.reports/work-report/*.md` | Notable work items to log |
 | 9 | `docs/90.reports/releases/*.md` | Version bump if applicable |
 | 9 | `docs/90.reports/presentations/**/*.md` | Presentation docs referencing resolved issues |
-| 9 | `docs/90.reports/changelog.md` | **Always updated** — new entry for every change |
+| 9 | `docs/90.reports/changelog.md` | **Always updated** — exempt from skip rule (see Constraints) |
 
-### Step 4 — Produce proposal report
+> `docs/99.data/` is excluded entirely (in `.gitignore`).
+
+### Step 5 — Produce proposal report
 
 For each affected doc, output:
 ```
@@ -68,13 +73,21 @@ For each affected doc, output:
    CHANGE: Append new entry — [2026-03-13] Fix confidence NULL in smart-query forecast records
 ```
 
-User reviews the full proposal and confirms before any files are touched.
+### Step 6 — Confirmation
+
+After presenting the full proposal, the skill asks:
+```
+Apply these changes? (yes / no / edit)
+```
+- `yes` — proceed to Phase 2
+- `no` — abort, no files touched
+- `edit` — user can specify which docs to include/exclude before proceeding
 
 ---
 
 ## Phase 2: Apply
 
-After user confirmation, apply changes in priority order (10 → 90):
+Apply changes in priority order (10 → 90):
 
 ### Edit types
 | Change Type | What is written |
@@ -87,39 +100,56 @@ After user confirmation, apply changes in priority order (10 → 90):
 | Architecture change | Updates component or data flow description |
 | Always | Appends new entry to `docs/90.reports/changelog.md` |
 
-### Confirmation output per edit
+### Per-edit confirmation output
+After writing each file, the skill stages it immediately:
+```bash
+git add <edited-doc-path>
 ```
-✅ Updated docs/60.bugs/20260306-confidence-null-in-smart-query.md — Status: Open → Fixed
-✅ Updated docs/90.reports/changelog.md — New entry added
+Then prints:
+```
+✅ Updated docs/60.bugs/20260306-confidence-null-in-smart-query.md — Status: Open → Fixed  [staged]
+✅ Updated docs/90.reports/changelog.md — New entry added  [staged]
 ```
 
 ### Constraints
 - **Surgical edits only** — no full document rewrites
-- **No auto-commit** — doc changes are staged alongside code, developer does the final commit
-- **Skip if no connection** — docs with no relevant link to the staged change are not touched
+- **No auto-commit** — developer runs `git commit` manually after the skill completes
+- **Skip if no connection** — docs with no relevant link to the staged change are not touched; `docs/90.reports/changelog.md` is explicitly exempt from this rule and always updated
+- **Guard against re-entry** — if all staged files are under `docs/`, the skill exits immediately (Step 1)
 
 ---
 
 ## End State
 
 After the skill completes:
-- All affected docs updated and staged
-- `docs/90.reports/changelog.md` has a new entry
+- All affected docs updated and staged via `git add`
+- `docs/90.reports/changelog.md` has a new entry and is staged
 - Developer runs one `git commit` that includes both code fix + doc updates together
 
 ---
 
 ## Pre-commit Hook Integration
 
-Add to `.claude/hooks/` (Claude Code hook config):
-```json
-{
-  "event": "PreCommit",
-  "command": "/sync-docs"
-}
+The Claude Code hooks system does not support a `PreCommit` event. Instead, a standard git pre-commit shell hook is used:
+
+**File**: `.git/hooks/pre-commit`
+```bash
+#!/bin/bash
+# Trigger sync-docs skill before every commit
+# Guard: skip if only doc files are staged (prevents re-entry loop)
+NON_DOC_STAGED=$(git diff --staged --name-only | grep -v '^docs/')
+if [ -z "$NON_DOC_STAGED" ]; then
+  exit 0
+fi
+claude --skill sync-docs
 ```
 
-This ensures the skill is always triggered before a commit, making doc sync impossible to forget.
+Make executable:
+```bash
+chmod +x .git/hooks/pre-commit
+```
+
+> Note: `.git/hooks/` is not committed to the repo. Document the setup step in `docs/50.deployment/local-setup.md`.
 
 ---
 
