@@ -378,8 +378,38 @@ const WindLayer: React.FC = () => {
         };
     }, [map]);
 
-    // 组件本身不渲染 DOM 元素（Canvas 通过 useEffect 手动管理）
-    return null;
+    // 风速图例（m/s → km/h）
+    const legend = WIND_COLORS.map((wc, i) => {
+        const nextThreshold = WIND_COLORS[i + 1]?.threshold;
+        const kmhMin = Math.round(wc.threshold * 3.6);
+        const kmhMax = nextThreshold != null ? Math.round(nextThreshold * 3.6) : null;
+        const label = kmhMax != null ? `${kmhMin}–${kmhMax}` : `>${kmhMin}`;
+        return { color: wc.color, label };
+    });
+
+    return (
+        <div style={{
+            position: 'absolute', bottom: '10px', left: '10px', zIndex: 1100,
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+            borderRadius: '10px', padding: '8px 12px',
+            pointerEvents: 'auto', display: 'flex', flexDirection: 'column', gap: '4px',
+        }}>
+            <span style={{ color: '#999', fontSize: '10px', fontWeight: 600, letterSpacing: '0.5px' }}>
+                WIND (km/h)
+            </span>
+            {legend.map((item) => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                        width: '20px', height: '3px', borderRadius: '1px',
+                        background: `rgb(${item.color[0]},${item.color[1]},${item.color[2]})`,
+                    }} />
+                    <span style={{ color: '#ccc', fontSize: '11px', fontFamily: 'monospace' }}>
+                        {item.label}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
 };
 
 export default WindLayer;
