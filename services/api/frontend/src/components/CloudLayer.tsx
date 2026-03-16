@@ -190,62 +190,98 @@ const CloudLayer: React.FC = () => {
         setCurrentIdx(idx);
     };
 
+    // 生成整点时刻标记
+    const hourMarks: { pct: number; label: string }[] = [];
+    if (frames.length > 1) {
+        const seen = new Set<number>();
+        frames.forEach((f, i) => {
+            const d = new Date(f.timestamp);
+            const h = d.getHours();
+            if (d.getMinutes() === 0 && !seen.has(h)) {
+                seen.add(h);
+                hourMarks.push({
+                    pct: (i / (frames.length - 1)) * 100,
+                    label: `${h}`,
+                });
+            }
+        });
+    }
+
     return (
         <div style={{
-            position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute', bottom: '10px', right: '10px',
             zIndex: 1100,
             background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
-            borderRadius: '12px', padding: '8px 16px',
-            display: 'flex', alignItems: 'center', gap: '12px',
-            minWidth: '320px', pointerEvents: 'auto',
+            borderRadius: '12px', padding: '10px 14px',
+            display: 'flex', flexDirection: 'column', gap: '6px',
+            width: '420px', pointerEvents: 'auto',
             boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
             border: '1px solid rgba(255,255,255,0.08)',
         }}>
-            {/* 播放/暂停 */}
-            <button
-                onClick={() => setIsPlaying(prev => !prev)}
-                style={{
-                    background: 'none', border: 'none', color: '#fff',
-                    cursor: 'pointer', fontSize: '18px', padding: '4px',
-                    flexShrink: 0,
-                }}
-                title={isPlaying ? 'Pause' : 'Play'}
-            >
-                {isPlaying ? '⏸' : '▶️'}
-            </button>
+            {/* 顶部行：播放按钮 + 标题 + 时间 + 帧计数 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                    onClick={() => setIsPlaying(prev => !prev)}
+                    style={{
+                        background: 'none', border: 'none', color: '#fff',
+                        cursor: 'pointer', fontSize: '18px', padding: '2px 4px',
+                        flexShrink: 0,
+                    }}
+                    title={isPlaying ? 'Pause' : 'Play'}
+                >
+                    {isPlaying ? '⏸' : '▶️'}
+                </button>
+                <span style={{ color: '#999', fontSize: '11px', flexShrink: 0 }}>🛰️ IR Cloud</span>
+                <span style={{
+                    color: '#fff', fontSize: '15px', fontWeight: 700,
+                    fontFamily: 'monospace', flexShrink: 0, marginLeft: 'auto',
+                }}>
+                    {new Date(currentFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+            </div>
 
-            {/* 标题 + 时间 */}
-            <span style={{ color: '#999', fontSize: '11px', flexShrink: 0 }}>
-                🛰️
-            </span>
-            <span style={{ color: '#fff', fontSize: '14px', fontWeight: 700, fontFamily: 'monospace', flexShrink: 0, minWidth: '50px' }}>
-                {new Date(currentFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-
-            {/* 可点击进度条 */}
+            {/* 可点击进度条 + 整点标记 */}
             <div
                 onClick={handleProgressClick}
                 style={{
-                    flex: 1, height: '20px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center',
+                    width: '100%', height: '24px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', position: 'relative',
                 }}
             >
+                {/* 进度条轨道 */}
                 <div style={{
                     width: '100%', height: '4px', borderRadius: '2px',
                     background: 'rgba(255,255,255,0.15)', position: 'relative',
                 }}>
+                    {/* 进度填充 */}
                     <div style={{
                         width: `${progress}%`, height: '100%', borderRadius: '2px',
                         background: 'var(--accent-cyan, #00bcd4)',
                         transition: 'width 0.15s ease',
                     }} />
+                    {/* 播放头 */}
+                    <div style={{
+                        position: 'absolute', top: '-4px',
+                        left: `${progress}%`, transform: 'translateX(-50%)',
+                        width: '10px', height: '10px', borderRadius: '50%',
+                        background: 'var(--accent-cyan, #00bcd4)',
+                        border: '2px solid #fff',
+                        boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+                    }} />
                 </div>
             </div>
 
-            {/* 帧计数 */}
-            <span style={{ color: '#666', fontSize: '11px', flexShrink: 0, fontFamily: 'monospace' }}>
-                {currentIdx + 1}/{frames.length}
-            </span>
+            {/* 整点刻度标签 */}
+            <div style={{ width: '100%', position: 'relative', height: '14px' }}>
+                {hourMarks.map((m) => (
+                    <span key={m.label} style={{
+                        position: 'absolute', left: `${m.pct}%`, transform: 'translateX(-50%)',
+                        fontSize: '9px', color: '#666', fontFamily: 'monospace',
+                    }}>
+                        {m.label}:00
+                    </span>
+                ))}
+            </div>
         </div>
     );
 };
