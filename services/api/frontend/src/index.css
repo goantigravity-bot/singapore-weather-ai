@@ -45,8 +45,9 @@ body {
   z-index: 1;
 }
 
-/* Dark Mode Map Tiles Filter */
-.leaflet-tile-pane {
+/* Dark Mode Map Tiles Filter — 应用到单个瓦片而非整个 pane，
+   避免 pane 级 filter 创建层叠上下文导致云图覆盖层出现白色方框伪影 */
+.leaflet-tile-pane img {
   filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
 

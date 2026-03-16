@@ -276,16 +276,25 @@ def sync_satellite_data(s3, bucket):
         try:
             arr = np.load(npy_path)
             # 与 _npy_to_base64_png 渲染逻辑一致
-            tbb_min, tbb_max = 200.0, 290.0
+            tbb_min, tbb_max = 200.0, 280.0
             alpha = np.clip((tbb_max - arr) / (tbb_max - tbb_min), 0.0, 1.0)
+            alpha = np.power(alpha, 1.5)
+            alpha_u8 = (alpha * 100).astype(np.uint8)
+            cloud_mask = alpha_u8 > 0
             rgba = np.zeros((*arr.shape, 4), dtype=np.uint8)
-            rgba[:, :, 0] = 255
-            rgba[:, :, 1] = 255
-            rgba[:, :, 2] = 255
-            rgba[:, :, 3] = (alpha * 220).astype(np.uint8)
+            rgba[:, :, 0][cloud_mask] = 255
+            rgba[:, :, 1][cloud_mask] = 255
+            rgba[:, :, 2][cloud_mask] = 255
+            rgba[:, :, 3] = alpha_u8
             from PIL import Image
             img = Image.fromarray(rgba, 'RGBA')
             img = img.resize((512, 512), Image.BILINEAR)
+            # 消除低 alpha 像素（晴空区域残留白雾）
+            ALPHA_FLOOR = 50
+            arr_out = np.array(img)
+            low_mask = arr_out[:, :, 3] < ALPHA_FLOOR
+            arr_out[low_mask] = 0  # 清除 RGBA 全部通道
+            img = Image.fromarray(arr_out, 'RGBA')
             img.save(png_path, format='PNG', optimize=True)
             convert_count += 1
         except Exception as e:
@@ -649,15 +658,16 @@ def predict_weather(
 
             # 新表：结构化存储（独立 try，不受旧表影响）
             try:
+                place_id = weather_db.get_or_create_place(
+                    place_name=location, place_type="point",
+                    center_lat=lat, center_lon=lon
+                )
                 query_id = weather_db.save_user_activity(
                     query=location,
                     response_time_ms=round(elapsed_ms, 1),
                     forecast_outcome=recommendation,
-                    ip_address=client_ip
-                )
-                place_id = weather_db.get_or_create_place(
-                    place_name=location, place_type="point",
-                    center_lat=lat, center_lon=lon
+                    ip_address=client_ip,
+                    place_id=place_id
                 )
                 loc_ids = weather_db.save_locations_for_place(place_id, [(lat, lon)])
                 weather_db.save_forecast_results(query_id, [{
@@ -791,19 +801,6 @@ def smart_query_endpoint(q: str, request: Request):
         # 新表：结构化存储（独立 try）
         try:
             forecast_outcome = result.get('recommendation', 'Unknown')
-            query_id = weather_db.save_user_activity(
-                query=q,
-                response_time_ms=round(elapsed_ms, 1),
-                forecast_outcome=forecast_outcome,
-                ip_address=client_ip
-            )
-
-            # 保存活动
-            weather_db.save_activity(
-                query_id=query_id,
-                activity_name=parsed.get('activity', 'General Activity'),
-                rain_tolerance=parsed.get('tolerance')
-            )
 
             # 保存地点和坐标
             location_name = parsed.get('location', 'Singapore')
@@ -815,6 +812,21 @@ def smart_query_endpoint(q: str, request: Request):
                 place_name=location_name, place_type=place_type,
                 center_lat=center_lat, center_lon=center_lon
             )
+
+            query_id = weather_db.save_user_activity(
+                query=q,
+                response_time_ms=round(elapsed_ms, 1),
+                forecast_outcome=forecast_outcome,
+                ip_address=client_ip,
+                place_id=place_id
+            )
+
+            # 关联活动（M:N — 一个查询可能涉及多个活动）
+            activity_id = weather_db.get_or_create_activity(
+                activity_name=parsed.get('activity', 'General Activity'),
+                rain_tolerance=parsed.get('tolerance')
+            )
+            weather_db.link_activity_to_query(query_id, activity_id)
 
             # 保存各点坐标
             if details:
@@ -829,7 +841,7 @@ def smart_query_endpoint(q: str, request: Request):
                         "loc_id": loc_ids[i],
                         "rainfall_mm": d.get('rainfall', 0),
                         "status": d.get('status', 'Unknown'),
-                        "confidence": None,
+                        "confidence": d.get('confidence', 0.5),
                         "is_risky": d.get('is_risky', False),
                         "response_time_ms": round(elapsed_ms / max(len(details), 1), 1),
                         "forecast_time": datetime.now().isoformat(),
@@ -871,12 +883,24 @@ def get_popular_searches():
     try:
         conn = sqlite3.connect('weather.db')
         c = conn.cursor()
-        c.execute("SELECT query, COUNT(*) as count FROM search_history GROUP BY query ORDER BY count DESC LIMIT 8")
+        c.execute("""
+            SELECT p.place_name, COUNT(DISTINCT f.query_id) AS count
+            FROM forecast_result f
+            JOIN location l ON f.loc_id = l.loc_id
+            JOIN place p ON l.place_id = p.place_id
+            WHERE p.place_name NOT LIKE 'backtest:%'
+              AND f.query_id IS NOT NULL
+              AND p.center_lat IS NOT NULL
+              AND length(p.place_name) > 2
+              AND p.place_name NOT IN ('Singapore', 'tonight', 'today', 'tomorrow', 'now')
+            GROUP BY p.place_name
+            ORDER BY count DESC
+            LIMIT 8
+        """)
         rows = c.fetchall()
         conn.close()
         if rows:
             return [{"id": i, "name": r[0], "count": r[1]} for i, r in enumerate(rows)]
-        # 无搜索历史时返回默认热门地点
         return DEFAULT_PLACES
     except Exception as e:
         logger.warning(f"Failed to fetch popular searches: {e}")
@@ -1157,19 +1181,32 @@ def _npy_to_base64_png(npy_path: str) -> str | None:
 
     try:
         arr = np.load(npy_path)  # float32, 128×128 or 64×64, Kelvin
-        # 线性映射：TBB → alpha（低温=高不透明度）
-        tbb_min, tbb_max = 200.0, 290.0
+        # 非线性映射：TBB → alpha（低温=高不透明度）
+        # 280K 以上视为晴空（比之前 290K 更激进，去除薄云/霾）
+        tbb_min, tbb_max = 200.0, 280.0
         alpha = np.clip((tbb_max - arr) / (tbb_max - tbb_min), 0.0, 1.0)
-        # RGBA：全白 + alpha 通道控制可见度
+        # gamma=1.5 增强对比：薄云更透明、厚云更明显
+        alpha = np.power(alpha, 1.5)
+        alpha_u8 = (alpha * 100).astype(np.uint8)  # 最高 ~100/255≈39%，确保底图始终清晰可见
+        # RGBA：仅云像素为白色，透明像素 RGB 也置零（预乘 alpha），
+        # 避免浏览器缩放插值时白色 RGB 泄漏到透明区域
+        cloud_mask = alpha_u8 > 0
         rgba = np.zeros((*arr.shape, 4), dtype=np.uint8)
-        rgba[:, :, 0] = 255  # R
-        rgba[:, :, 1] = 255  # G
-        rgba[:, :, 2] = 255  # B
-        rgba[:, :, 3] = (alpha * 220).astype(np.uint8)  # 最高 220 而非 255，保留底图可见性
+        rgba[:, :, 0][cloud_mask] = 255
+        rgba[:, :, 1][cloud_mask] = 255
+        rgba[:, :, 2][cloud_mask] = 255
+        rgba[:, :, 3] = alpha_u8
 
         img = Image.fromarray(rgba, 'RGBA')
         # 上采样到 512×512，双线性插值让云图更平滑
         img = img.resize((512, 512), Image.BILINEAR)
+
+        # 消除低 alpha 像素（晴空区域残留白雾）——上采样后执行以处理插值产生的伪影
+        ALPHA_FLOOR = 50
+        arr_out = np.array(img)
+        low_mask = arr_out[:, :, 3] < ALPHA_FLOOR
+        arr_out[low_mask] = 0  # 清除 RGBA 全部通道
+        img = Image.fromarray(arr_out, 'RGBA')
 
         buf = io.BytesIO()
         img.save(buf, format='PNG', optimize=True)
