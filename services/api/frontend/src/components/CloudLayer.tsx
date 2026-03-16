@@ -207,8 +207,17 @@ const CloudLayer: React.FC = () => {
         });
     }
 
+    // 阻止点击事件穿透到地图（避免放置预测标记）
+    const stopPropagation = (e: React.MouseEvent) => {
+        e.stopPropagation();
+    };
+
     return (
-        <div style={{
+        <div
+            onClick={stopPropagation}
+            onDoubleClick={stopPropagation}
+            onMouseDown={stopPropagation}
+            style={{
             position: 'absolute', bottom: '10px', right: '10px',
             zIndex: 1100,
             background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
