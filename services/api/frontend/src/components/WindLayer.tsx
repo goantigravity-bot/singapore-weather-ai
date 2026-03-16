@@ -389,7 +389,7 @@ const WindLayer: React.FC = () => {
 
     return (
         <div style={{
-            position: 'absolute', bottom: '10px', left: '10px', zIndex: 1100,
+            position: 'absolute', top: '80px', right: '10px', zIndex: 1100,
             background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
             borderRadius: '10px', padding: '8px 12px',
             pointerEvents: 'auto', display: 'flex', flexDirection: 'column', gap: '4px',
