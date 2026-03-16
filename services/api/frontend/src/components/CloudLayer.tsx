@@ -182,52 +182,70 @@ const CloudLayer: React.FC = () => {
     const currentFrame = frames[currentIdx];
     const progress = frames.length > 1 ? (currentIdx / (frames.length - 1)) * 100 : 100;
 
+    // 点击进度条跳转到对应帧
+    const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const idx = Math.round(pct * (frames.length - 1));
+        setCurrentIdx(idx);
+    };
+
     return (
         <div style={{
-            position: 'absolute', bottom: '30px', right: '10px', zIndex: 1000,
-            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
-            borderRadius: '10px', padding: '8px 12px',
-            display: 'flex', flexDirection: 'column', gap: '4px',
-            minWidth: '160px', pointerEvents: 'auto',
+            position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 1100,
+            background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
+            borderRadius: '12px', padding: '8px 16px',
+            display: 'flex', alignItems: 'center', gap: '12px',
+            minWidth: '320px', pointerEvents: 'auto',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            border: '1px solid rgba(255,255,255,0.08)',
         }}>
-            {/* 标题行 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                <span style={{ color: '#ccc', fontSize: '11px', fontWeight: 500 }}>
-                    🛰️ IR Cloud
-                </span>
-                <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace' }}>
-                    {new Date(currentFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-            </div>
+            {/* 播放/暂停 */}
+            <button
+                onClick={() => setIsPlaying(prev => !prev)}
+                style={{
+                    background: 'none', border: 'none', color: '#fff',
+                    cursor: 'pointer', fontSize: '18px', padding: '4px',
+                    flexShrink: 0,
+                }}
+                title={isPlaying ? 'Pause' : 'Play'}
+            >
+                {isPlaying ? '⏸' : '▶️'}
+            </button>
 
-            {/* 进度条 */}
-            <div style={{
-                width: '100%', height: '3px', borderRadius: '2px',
-                background: 'rgba(255,255,255,0.15)',
-            }}>
+            {/* 标题 + 时间 */}
+            <span style={{ color: '#999', fontSize: '11px', flexShrink: 0 }}>
+                🛰️
+            </span>
+            <span style={{ color: '#fff', fontSize: '14px', fontWeight: 700, fontFamily: 'monospace', flexShrink: 0, minWidth: '50px' }}>
+                {new Date(currentFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+
+            {/* 可点击进度条 */}
+            <div
+                onClick={handleProgressClick}
+                style={{
+                    flex: 1, height: '20px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center',
+                }}
+            >
                 <div style={{
-                    width: `${progress}%`, height: '100%', borderRadius: '2px',
-                    background: 'var(--accent-cyan, #00bcd4)',
-                    transition: 'width 0.3s ease',
-                }} />
+                    width: '100%', height: '4px', borderRadius: '2px',
+                    background: 'rgba(255,255,255,0.15)', position: 'relative',
+                }}>
+                    <div style={{
+                        width: `${progress}%`, height: '100%', borderRadius: '2px',
+                        background: 'var(--accent-cyan, #00bcd4)',
+                        transition: 'width 0.15s ease',
+                    }} />
+                </div>
             </div>
 
-            {/* 控制行 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <button
-                    onClick={() => setIsPlaying(prev => !prev)}
-                    style={{
-                        background: 'none', border: 'none', color: '#fff',
-                        cursor: 'pointer', fontSize: '14px', padding: '0 4px',
-                    }}
-                    title={isPlaying ? 'Pause' : 'Play'}
-                >
-                    {isPlaying ? '⏸' : '▶️'}
-                </button>
-                <span style={{ color: '#888', fontSize: '10px' }}>
-                    {currentIdx + 1}/{frames.length}
-                </span>
-            </div>
+            {/* 帧计数 */}
+            <span style={{ color: '#666', fontSize: '11px', flexShrink: 0, fontFamily: 'monospace' }}>
+                {currentIdx + 1}/{frames.length}
+            </span>
         </div>
     );
 };
