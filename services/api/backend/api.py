@@ -1165,7 +1165,9 @@ def accuracy_by_distance():
 # ── 卫星云图帧动画 API ──
 
 # 新加坡+周边区域裁剪框 (128×128, 覆盖 SG+JB+巴淡岛)
-SG_BOUNDS = [[0.05, 102.5], [2.65, 105.1]]
+# 41×37 HSD crop 的实际地理范围（新加坡+柔佛南部，每像素约 2km）
+# 旧值 [[0.05, 102.5], [2.65, 105.1]] 是 128×128 NOAA ISatSS tile 的范围，已废弃
+SG_BOUNDS = [[0.98, 103.49], [1.72, 104.15]]
 
 def _npy_to_base64_png(npy_path: str) -> str | None:
     """将 128×128 TBB .npy 转为 RGBA PNG（白色=云，透明=晴空）并返回 base64。
