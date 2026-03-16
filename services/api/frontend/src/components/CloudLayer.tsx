@@ -208,18 +208,14 @@ const CloudLayer: React.FC = () => {
         });
     }
 
-    // 用 Leaflet API 阻止点击穿透到地图
-    const playerRef = useRef<HTMLDivElement | null>(null);
-    useEffect(() => {
-        if (playerRef.current) {
-            L.DomEvent.disableClickPropagation(playerRef.current);
-            L.DomEvent.disableScrollPropagation(playerRef.current);
-        }
-    });
-
     return (
         <div
-            ref={playerRef}
+            ref={(el) => {
+                if (el) {
+                    L.DomEvent.disableClickPropagation(el);
+                    L.DomEvent.disableScrollPropagation(el);
+                }
+            }}
             style={{
             position: 'absolute', bottom: '10px', right: '10px',
             zIndex: 1100,
